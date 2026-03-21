@@ -204,7 +204,7 @@ export default function DashboardScreen() {
       <View style={styles.quickActions}>
         <Text style={styles.sectionTitle}>Quick actions</Text>
         <View style={styles.actionRow}>
-          <TouchableOpacity style={styles.actionBtn}>
+          <TouchableOpacity style={styles.actionBtn} onPress={() => router.push('/add-transaction')}>
             <Text style={styles.actionIcon}>➕</Text>
             <Text style={styles.actionLabel}>Add transaction</Text>
           </TouchableOpacity>
