@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import { Colors } from '../../constants/colors'
 
+
 const ACCOUNT_TYPES = [
   { id: 'chequing', label: 'Chequing', icon: '💳' },
   { id: 'savings', label: 'Savings', icon: '🏦' },
@@ -56,7 +57,17 @@ export default function AccountsScreen() {
               <Text style={styles.accountIcon}>
                 {ACCOUNT_TYPES.find(t => t.id === account.type)?.icon}
               </Text>
-              <Text style={styles.accountLabel}>{account.label}</Text>
+                <TextInput
+                style={styles.accountLabel}
+                value={account.label}
+                onChangeText={(val) => {
+                    const updated = [...accounts]
+                    updated[index].label = val
+                    setAccounts(updated)
+                }}
+                placeholderTextColor={Colors.textSecondary}
+                selectTextOnFocus
+                />
             </View>
             <View style={styles.accountRight}>
               <TextInput
