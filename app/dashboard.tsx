@@ -12,6 +12,7 @@ export default function DashboardScreen() {
   const [monthlyIncome, setMonthlyIncome] = useState(0)
   const [categories, setCategories] = useState<any[]>([])
   const [accounts, setAccounts] = useState<any[]>([])
+  const [totalSpent, setTotalSpent] = useState(0)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -43,7 +44,33 @@ export default function DashboardScreen() {
         .select('*')
         .eq('user_id', user.id)
 
-      if (cats) setCategories(cats)
+      if (cats) {
+        const { data: txns } = await supabase
+          .from('transactions')
+          .select('category_id, amount, type, is_unexpected')
+          .eq('user_id', user.id)
+          .eq('type', 'expense')
+
+        const catsWithSpent = cats.map((cat: any) => {
+          const spent = txns
+            ? txns
+                .filter((t: any) => t.category_id === cat.id)
+                .reduce((sum: number, t: any) => sum + t.amount, 0)
+            : 0
+          return { ...cat, spent }
+        })
+
+        const unexpectedTotal = txns
+          ? txns
+              .filter((t: any) => t.is_unexpected)
+              .reduce((sum: number, t: any) => sum + t.amount, 0)
+          : 0
+
+        setCategories(catsWithSpent)
+        setTotalSpent(
+          catsWithSpent.reduce((sum: number, c: any) => sum + c.spent, 0) + unexpectedTotal
+        )
+      }
 
       const { data: accs } = await supabase
         .from('accounts')
@@ -152,11 +179,19 @@ export default function DashboardScreen() {
               </View>
             </View>
             <View style={styles.progressBar}>
-              <View style={[styles.progressFill, { width: '0%' as any }]} />
+              <View style={[styles.progressFill, {
+                width: `${Math.min((totalSpent / totalBudgeted) * 100, 100)}%` as any,
+                backgroundColor: totalSpent >= totalBudgeted ? Colors.danger : totalSpent >= totalBudgeted * 0.8 ? Colors.warning : Colors.primary
+              }]} />
             </View>
-            <Text style={styles.budgetSummarySubtext}>
-              Tap to {categoriesExpanded ? 'collapse' : 'expand'} categories
-            </Text>
+            <View style={styles.budgetSummaryFooter}>
+              <Text style={styles.budgetSummarySubtext}>
+                ${totalSpent.toLocaleString('en-CA', { maximumFractionDigits: 0 })} spent · ${(totalBudgeted - totalSpent).toLocaleString('en-CA', { maximumFractionDigits: 0 })} remaining
+              </Text>
+              <Text style={styles.budgetSummarySubtext}>
+                {totalBudgeted > 0 ? ((totalSpent / totalBudgeted) * 100).toFixed(0) : 0}%
+              </Text>
+            </View>
           </TouchableOpacity>
 
           {categoriesExpanded && (
@@ -176,12 +211,20 @@ export default function DashboardScreen() {
                         </Text>
                       </View>
                     </View>
-                    <View style={styles.categoryProgressBar}>
-                      <View style={[styles.categoryProgressFill, { width: '0%' as any }]} />
-                    </View>
+                  <View style={styles.categoryProgressBar}>
+                    <View style={[styles.categoryProgressFill, {
+                      width: `${Math.min((cat.spent / monthlyAmount) * 100, 100)}%` as any,
+                      backgroundColor: cat.spent >= monthlyAmount ? Colors.danger : cat.spent >= monthlyAmount * 0.8 ? Colors.warning : Colors.success
+                    }]} />
+                  </View>
+                  <View style={styles.categorySpentRow}>
                     <Text style={styles.categoryRemaining}>
-                      ${monthlyAmount.toLocaleString('en-CA', { maximumFractionDigits: 0 })} remaining
+                      ${(monthlyAmount - cat.spent).toLocaleString('en-CA', { maximumFractionDigits: 0 })} remaining
                     </Text>
+                    <Text style={styles.categorySpentAmount}>
+                      ${cat.spent.toLocaleString('en-CA', { maximumFractionDigits: 0 })} spent
+                    </Text>
+                  </View>
                   </TouchableOpacity>
                 )
               })}
@@ -208,9 +251,9 @@ export default function DashboardScreen() {
             <Text style={styles.actionIcon}>➕</Text>
             <Text style={styles.actionLabel}>Add transaction</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionBtn}>
-            <Text style={styles.actionIcon}>📊</Text>
-            <Text style={styles.actionLabel}>View reports</Text>
+          <TouchableOpacity style={styles.actionBtn} onPress={() => router.push('/transactions')}>
+            <Text style={styles.actionIcon}>📋</Text>
+            <Text style={styles.actionLabel}>Transactions</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.actionBtn}>
             <Text style={styles.actionIcon}>🏦</Text>
@@ -471,6 +514,46 @@ const styles = StyleSheet.create({
   },
   budgetSummarySubtext: {
     fontSize: 12,
+    color: Colors.textSecondary,
+  },
+  categorySpentRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  categorySpentAmount: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+  },
+  spendingCard: {
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 16,
+    padding: 20,
+    gap: 10,
+  },
+  spendingHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  spendingAmount: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+  },
+  progressBar: {
+    height: 8,
+    backgroundColor: Colors.border,
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  spendingSubtext: {
+    fontSize: 13,
     color: Colors.textSecondary,
   },
 })

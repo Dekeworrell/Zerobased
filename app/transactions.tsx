@@ -1,0 +1,409 @@
+import { router } from 'expo-router'
+import { useEffect, useState } from 'react'
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { Colors } from '../constants/colors'
+import { supabase } from '../lib/supabase'
+
+type Transaction = {
+  id: string
+  label: string
+  amount: number
+  date: string
+  type: string
+  is_unexpected: boolean
+  category: {
+    label: string
+    icon: string
+  } | null
+}
+
+export default function TransactionsScreen() {
+  const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [filtered, setFiltered] = useState<Transaction[]>([])
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
+  const [filter, setFilter] = useState<'all' | 'expense' | 'income' | 'unexpected'>('all')
+
+  useEffect(() => {
+    loadTransactions()
+  }, [])
+
+  useEffect(() => {
+    applyFilter()
+  }, [transactions, search, filter])
+
+  async function loadTransactions() {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    const { data } = await supabase
+      .from('transactions')
+      .select(`
+        id,
+        label,
+        amount,
+        date,
+        type,
+        is_unexpected,
+        category:budget_categories(label, icon)
+      `)
+      .eq('user_id', user.id)
+      .order('date', { ascending: false })
+
+    if (data) setTransactions(data as any)
+    setLoading(false)
+  }
+
+  function applyFilter() {
+    let result = [...transactions]
+
+    if (search) {
+      result = result.filter(t =>
+        t.label.toLowerCase().includes(search.toLowerCase()) ||
+        t.category?.label.toLowerCase().includes(search.toLowerCase())
+      )
+    }
+
+    if (filter === 'expense') result = result.filter(t => t.type === 'expense' && !t.is_unexpected)
+    if (filter === 'income') result = result.filter(t => t.type === 'income')
+    if (filter === 'unexpected') result = result.filter(t => t.is_unexpected)
+
+    setFiltered(result)
+  }
+
+  function groupByDate(transactions: Transaction[]) {
+    const groups: { [key: string]: Transaction[] } = {}
+    transactions.forEach(t => {
+      if (!groups[t.date]) groups[t.date] = []
+      groups[t.date].push(t)
+    })
+    return groups
+  }
+
+  function formatDate(dateStr: string) {
+    const date = new Date(dateStr + 'T00:00:00')
+    return date.toLocaleDateString('en-CA', { weekday: 'short', month: 'short', day: 'numeric' })
+  }
+
+  function getDailyTotal(transactions: Transaction[]) {
+    return transactions.reduce((sum, t) => {
+      return t.type === 'income' ? sum + t.amount : sum - t.amount
+    }, 0)
+  }
+
+  const totalExpenses = transactions
+    .filter(t => t.type === 'expense')
+    .reduce((sum, t) => sum + t.amount, 0)
+
+  const totalIncome = transactions
+    .filter(t => t.type === 'income')
+    .reduce((sum, t) => sum + t.amount, 0)
+
+  const unexpectedTotal = transactions
+    .filter(t => t.is_unexpected)
+    .reduce((sum, t) => sum + t.amount, 0)
+
+  const groups = groupByDate(filtered)
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    )
+  }
+
+  return (
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <Text style={styles.backText}>← Back</Text>
+      </TouchableOpacity>
+
+      <View style={styles.headerRow}>
+        <Text style={styles.title}>Transactions</Text>
+        <TouchableOpacity
+          style={styles.addBtn}
+          onPress={() => router.push('/add-transaction')}
+        >
+          <Text style={styles.addBtnText}>+ Add</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.summaryRow}>
+        <View style={styles.summaryCard}>
+          <Text style={styles.summaryLabel}>Spent</Text>
+          <Text style={[styles.summaryValue, { color: Colors.danger }]}>
+            -${totalExpenses.toLocaleString('en-CA', { maximumFractionDigits: 0 })}
+          </Text>
+        </View>
+        <View style={styles.summaryCard}>
+          <Text style={styles.summaryLabel}>Income</Text>
+          <Text style={[styles.summaryValue, { color: Colors.success }]}>
+            +${totalIncome.toLocaleString('en-CA', { maximumFractionDigits: 0 })}
+          </Text>
+        </View>
+        <View style={styles.summaryCard}>
+          <Text style={styles.summaryLabel}>Unexpected</Text>
+          <Text style={[styles.summaryValue, { color: Colors.warning }]}>
+            -${unexpectedTotal.toLocaleString('en-CA', { maximumFractionDigits: 0 })}
+          </Text>
+        </View>
+      </View>
+
+      <TextInput
+        style={styles.searchInput}
+        placeholder="Search transactions..."
+        placeholderTextColor={Colors.textSecondary}
+        value={search}
+        onChangeText={setSearch}
+      />
+
+      <View style={styles.filterRow}>
+        {(['all', 'expense', 'income', 'unexpected'] as const).map(f => (
+          <TouchableOpacity
+            key={f}
+            style={[styles.filterChip, filter === f && styles.filterChipActive]}
+            onPress={() => setFilter(f)}
+          >
+            <Text style={[styles.filterChipText, filter === f && styles.filterChipTextActive]}>
+              {f.charAt(0).toUpperCase() + f.slice(1)}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {Object.keys(groups).length === 0 && (
+        <View style={styles.emptyCard}>
+          <Text style={styles.emptyIcon}>📋</Text>
+          <Text style={styles.emptyTitle}>No transactions yet</Text>
+          <Text style={styles.emptySubtitle}>Tap + Add to log your first transaction</Text>
+        </View>
+      )}
+
+      {Object.entries(groups).map(([date, dayTransactions]) => (
+        <View key={date}>
+          <View style={styles.dateHeader}>
+            <Text style={styles.dateLabel}>{formatDate(date)}</Text>
+            <Text style={[
+              styles.dateDailyTotal,
+              { color: getDailyTotal(dayTransactions) >= 0 ? Colors.success : Colors.danger }
+            ]}>
+              {getDailyTotal(dayTransactions) >= 0 ? '+' : ''}
+              ${getDailyTotal(dayTransactions).toLocaleString('en-CA', { maximumFractionDigits: 0 })}
+            </Text>
+          </View>
+
+          <View style={styles.transactionGroup}>
+            {dayTransactions.map(transaction => (
+              <View key={transaction.id} style={styles.transactionRow}>
+                <View style={styles.transactionIcon}>
+                  <Text style={styles.transactionIconText}>
+                    {transaction.is_unexpected ? '⚠️' : transaction.category?.icon || '💳'}
+                  </Text>
+                </View>
+                <View style={styles.transactionInfo}>
+                  <Text style={styles.transactionLabel}>{transaction.label}</Text>
+                  <Text style={styles.transactionCategory}>
+                    {transaction.is_unexpected
+                      ? 'Unexpected expense'
+                      : transaction.category?.label || 'Uncategorized'}
+                  </Text>
+                </View>
+                <Text style={[
+                  styles.transactionAmount,
+                  { color: transaction.type === 'income' ? Colors.success : Colors.danger }
+                ]}>
+                  {transaction.type === 'income' ? '+' : '-'}
+                  ${transaction.amount.toLocaleString('en-CA', { maximumFractionDigits: 2 })}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      ))}
+    </ScrollView>
+  )
+}
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: Colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  content: {
+    paddingHorizontal: 24,
+    paddingVertical: 60,
+    maxWidth: 600,
+    alignSelf: 'center',
+    width: '100%',
+    gap: 16,
+  },
+  backButton: {
+    marginBottom: 8,
+  },
+  backText: {
+    color: Colors.primary,
+    fontSize: 16,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: Colors.text,
+  },
+  addBtn: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  addBtnText: {
+    color: Colors.text,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  summaryCard: {
+    flex: 1,
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 12,
+    padding: 12,
+    alignItems: 'center',
+  },
+  summaryLabel: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginBottom: 4,
+  },
+  summaryValue: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  searchInput: {
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: Colors.text,
+  },
+  filterRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  filterChip: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+  },
+  filterChipActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  filterChipText: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+  },
+  filterChipTextActive: {
+    color: Colors.text,
+    fontWeight: '600',
+  },
+  emptyCard: {
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 16,
+    padding: 32,
+    alignItems: 'center',
+    gap: 8,
+  },
+  emptyIcon: {
+    fontSize: 32,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+  },
+  dateHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  dateLabel: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    fontWeight: '500',
+  },
+  dateDailyTotal: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  transactionGroup: {
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  transactionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+    gap: 12,
+  },
+  transactionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  transactionIconText: {
+    fontSize: 18,
+  },
+  transactionInfo: {
+    flex: 1,
+  },
+  transactionLabel: {
+    fontSize: 15,
+    color: Colors.text,
+    fontWeight: '500',
+  },
+  transactionCategory: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
+  transactionAmount: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+})

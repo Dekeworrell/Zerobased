@@ -16,6 +16,7 @@ export default function RootLayout() {
       <Stack.Screen name="dashboard" />
       <Stack.Screen name="budget" />
       <Stack.Screen name="add-transaction" />
+      <Stack.Screen name="transactions" />
     </Stack>
   )
 }
