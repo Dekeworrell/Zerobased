@@ -1,6 +1,7 @@
 import { router } from 'expo-router'
 import { useState } from 'react'
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import CurrencyInput from '../../components/CurrencyInput'
 import { Colors } from '../../constants/colors'
 import { setAccounts as saveAccountsToStore } from '../../lib/store'
 
@@ -76,13 +77,11 @@ export default function AccountsScreen() {
                 />
             </View>
             <View style={styles.accountRight}>
-              <TextInput
+              <CurrencyInput
                 style={styles.balanceInput}
                 placeholder="$0.00"
-                placeholderTextColor={Colors.textSecondary}
                 value={account.balance}
                 onChangeText={(val) => updateBalance(index, val)}
-                keyboardType="decimal-pad"
               />
               {accounts.length > 1 && (
                 <TouchableOpacity onPress={() => removeAccount(index)}>

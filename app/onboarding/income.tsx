@@ -1,6 +1,7 @@
 import { router } from 'expo-router'
 import { useState } from 'react'
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import CurrencyInput from '../../components/CurrencyInput'
 import { Colors } from '../../constants/colors'
 import { setIncomeSources } from '../../lib/store'
 
@@ -77,13 +78,11 @@ export default function IncomeScreen() {
             </View>
 
             <Text style={styles.fieldLabel}>Amount (after tax)</Text>
-            <TextInput
+            <CurrencyInput
               style={styles.input}
               placeholder="$0.00"
-              placeholderTextColor={Colors.textSecondary}
               value={source.amount}
               onChangeText={(val) => updateSource(index, 'amount', val)}
-              keyboardType="decimal-pad"
             />
 
             <Text style={styles.fieldLabel}>Pay frequency</Text>

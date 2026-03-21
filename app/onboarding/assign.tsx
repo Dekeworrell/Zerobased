@@ -1,6 +1,7 @@
 import { router } from 'expo-router'
 import { useState } from 'react'
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import CurrencyInput from '../../components/CurrencyInput'
 import { Colors } from '../../constants/colors'
 import { clearOnboardingData, getOnboardingData, toMonthly } from '../../lib/store'
 import { supabase } from '../../lib/supabase'
@@ -150,12 +151,11 @@ export default function AssignScreen() {
                   <Text style={[styles.freqChipText, expense.frequency === 'biweekly' && styles.freqChipTextActive]}>BiW</Text>
                 </TouchableOpacity>
               </View>
-              <TextInput
+              <CurrencyInput
                 style={styles.amountInput}
+                placeholder="$0.00"
                 value={expense.amount}
                 onChangeText={(val) => updateAmount(expense.id, val)}
-                keyboardType="decimal-pad"
-                placeholderTextColor={Colors.textSecondary}
               />
               <Text style={styles.expenseMonthly}>
                 ${toMonthly(expense.amount, expense.frequency).toFixed(0)}/mo

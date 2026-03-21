@@ -1,6 +1,7 @@
 import { router } from 'expo-router'
 import { useState } from 'react'
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import CurrencyInput from '../../components/CurrencyInput'
 import { Colors } from '../../constants/colors'
 import { setExpenses as saveExpensesToStore } from '../../lib/store'
 
@@ -114,14 +115,13 @@ export default function ExpensesScreen() {
                   </Text>
                 </TouchableOpacity>
               </View>
-              <TextInput
+              <CurrencyInput
                 style={styles.amountInput}
                 placeholder="$0.00"
-                placeholderTextColor={Colors.textSecondary}
                 value={expense.amount}
                 onChangeText={(val) => updateAmount(expense.id, val)}
-                keyboardType="decimal-pad"
               />
+
               <TouchableOpacity onPress={() => removeExpense(expense.id)}>
                 <Text style={styles.removeBtn}>✕</Text>
               </TouchableOpacity>
