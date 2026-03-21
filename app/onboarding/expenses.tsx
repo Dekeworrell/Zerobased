@@ -6,33 +6,38 @@ import { Colors } from '../../constants/colors'
 import { setExpenses as saveExpensesToStore } from '../../lib/store'
 
 const EXPENSE_CATEGORIES = [
-  { id: 'groceries', label: 'Groceries', icon: '🛒' },
-  { id: 'transport', label: 'Transport', icon: '🚗' },
-  { id: 'utilities', label: 'Utilities', icon: '💡' },
-  { id: 'internet', label: 'Internet', icon: '📶' },
-  { id: 'phone', label: 'Phone', icon: '📱' },
-  { id: 'home_insurance', label: 'Home insurance', icon: '🏡' },
-  { id: 'fuel', label: 'Fuel', icon: '⛽' },
-  { id: 'auto_insurance', label: 'Auto insurance', icon: '🚘' },
-  { id: 'vehicle_maintenance', label: 'Vehicle maintenance', icon: '🔧' },
-  { id: 'property_tax', label: 'Property tax', icon: '🏛️' },
-  { id: 'water_sewer', label: 'Water & sewer', icon: '💧' },
-  { id: 'car_loan', label: 'Car loan', icon: '🔑' },
-  { id: 'mortgage', label: 'Mortgage', icon: '🏦' },
-  { id: 'dining', label: 'Dining out', icon: '🍽️' },
-  { id: 'subscriptions', label: 'Subscriptions', icon: '📺' },
-  { id: 'health', label: 'Health', icon: '💊' },
-  { id: 'fitness', label: 'Fitness', icon: '💪' },
-  { id: 'clothing', label: 'Clothing', icon: '👕' },
-  { id: 'entertainment', label: 'Entertainment', icon: '🎬' },
-  { id: 'savings', label: 'Savings', icon: '💰' },
-  { id: 'investments', label: 'Investments', icon: '📈' },
-  { id: 'education', label: 'Education', icon: '📚' },
-  { id: 'childcare', label: 'Childcare', icon: '👶' },
-  { id: 'pets', label: 'Pets', icon: '🐾' },
-  { id: 'other', label: 'Other', icon: '➕' },
-  { id: 'cable_tv', label: 'Cable TV', icon: '📡' },
-  { id: 'life_insurance', label: 'Life insurance', icon: '🛡️' },
+  { id: 'groceries', label: 'Groceries', icon: '🛒', type: 'variable' },
+  { id: 'transport', label: 'Transport', icon: '🚗', type: 'variable' },
+  { id: 'utilities', label: 'Utilities', icon: '💡', type: 'fixed' },
+  { id: 'internet', label: 'Internet', icon: '📶', type: 'fixed' },
+  { id: 'phone', label: 'Phone', icon: '📱', type: 'fixed' },
+  { id: 'home_insurance', label: 'Home insurance', icon: '🏡', type: 'fixed' },
+  { id: 'fuel', label: 'Fuel', icon: '⛽', type: 'variable' },
+  { id: 'auto_insurance', label: 'Auto insurance', icon: '🚘', type: 'fixed' },
+  { id: 'vehicle_maintenance', label: 'Vehicle maintenance', icon: '🔧', type: 'variable' },
+  { id: 'property_tax', label: 'Property tax', icon: '🏛️', type: 'fixed' },
+  { id: 'water_sewer', label: 'Water & sewer', icon: '💧', type: 'fixed' },
+  { id: 'car_loan', label: 'Car loan', icon: '🔑', type: 'fixed' },
+  { id: 'mortgage', label: 'Mortgage', icon: '🏦', type: 'fixed' },
+  { id: 'dining', label: 'Dining out', icon: '🍽️', type: 'variable' },
+  { id: 'subscriptions', label: 'Subscriptions', icon: '📺', type: 'fixed' },
+  { id: 'health', label: 'Health', icon: '💊', type: 'variable' },
+  { id: 'fitness', label: 'Fitness', icon: '💪', type: 'fixed' },
+  { id: 'clothing', label: 'Clothing', icon: '👕', type: 'variable' },
+  { id: 'entertainment', label: 'Entertainment', icon: '🎬', type: 'variable' },
+  { id: 'savings', label: 'Savings', icon: '💰', type: 'priority' },
+  { id: 'investments', label: 'Investments', icon: '📈', type: 'priority' },
+  { id: 'education', label: 'Education', icon: '📚', type: 'variable' },
+  { id: 'childcare', label: 'Childcare', icon: '👶', type: 'fixed' },
+  { id: 'pets', label: 'Pets', icon: '🐾', type: 'variable' },
+  { id: 'cable_tv', label: 'Cable TV', icon: '📡', type: 'fixed' },
+  { id: 'life_insurance', label: 'Life insurance', icon: '🛡️', type: 'fixed' },
+  { id: 'rrsp', label: 'RRSP', icon: '📈', type: 'priority' },
+  { id: 'tfsa', label: 'TFSA', icon: '🛡️', type: 'priority' },
+  { id: 'fhsa', label: 'FHSA', icon: '🏠', type: 'priority' },
+  { id: 'mortgage_extra', label: 'Mortgage overpayment', icon: '🏦', type: 'priority' },
+  { id: 'emergency_fund', label: 'Emergency fund', icon: '🆘', type: 'priority' },
+  { id: 'other', label: 'Other', icon: '➕', type: 'variable' },
 ]
 
 type Expense = {
@@ -41,18 +46,26 @@ type Expense = {
   icon: string
   amount: string
   frequency: 'monthly' | 'biweekly'
+  category_type: 'priority' | 'fixed' | 'variable'
 }
 
 export default function ExpensesScreen() {
   const [expenses, setExpenses] = useState<Expense[]>([
-    { id: 'mortgage', label: 'Mortgage', icon: '🏦', amount: '', frequency: 'monthly' },
-    { id: 'groceries', label: 'Groceries', icon: '🛒', amount: '', frequency: 'monthly' },
-    { id: 'fuel', label: 'Fuel', icon: '⛽', amount: '', frequency: 'biweekly' },
+    { id: 'mortgage', label: 'Mortgage', icon: '🏦', amount: '', frequency: 'monthly', category_type: 'fixed' },
+    { id: 'groceries', label: 'Groceries', icon: '🛒', amount: '', frequency: 'monthly', category_type: 'variable' },
+    { id: 'fuel', label: 'Fuel', icon: '⛽', amount: '', frequency: 'biweekly', category_type: 'variable' },
   ])
 
   function addExpense(category: typeof EXPENSE_CATEGORIES[0]) {
     if (expenses.find(e => e.id === category.id)) return
-    setExpenses([...expenses, { id: category.id, label: category.label, icon: category.icon, amount: '', frequency: 'monthly' }])
+    setExpenses([...expenses, { 
+      id: category.id, 
+      label: category.label, 
+      icon: category.icon, 
+      amount: '', 
+      frequency: 'monthly',
+      category_type: category.type as 'priority' | 'fixed' | 'variable'
+    }])
   }
 
   function removeExpense(id: string) {
