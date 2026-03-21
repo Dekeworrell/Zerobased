@@ -91,8 +91,8 @@ export function clearOnboardingData() {
 
 export function toMonthly(amount: string | number, frequency: string): number {
   const val = typeof amount === 'number' ? amount : parseFloat(amount) || 0
-  if (frequency === 'biweekly') return (val * 26) / 12
-  if (frequency === 'weekly') return (val * 52) / 12
+  if (frequency === 'biweekly') return val * 2
+  if (frequency === 'weekly') return val * 4
   if (frequency === 'semimonthly') return val * 2
   return val
 }

@@ -115,7 +115,12 @@ export default function DashboardScreen() {
 
       {categories.length > 0 && (
         <>
-          <Text style={styles.sectionTitle}>Budget categories</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Budget categories</Text>
+            <TouchableOpacity onPress={() => router.push('/budget')}>
+                <Text style={styles.editLink}>Edit budget</Text>
+            </TouchableOpacity>
+          </View>
           <View style={styles.categoryList}>
             {categories.map((cat) => {
               const monthlyAmount = toMonthly(cat.budgeted_amount.toString(), cat.frequency)
@@ -368,5 +373,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.textSecondary,
     textAlign: 'center',
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  editLink: {
+    fontSize: 14,
+    color: Colors.primary,
+    fontWeight: '500',
   },
 })

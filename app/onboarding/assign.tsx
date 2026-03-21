@@ -57,6 +57,9 @@ export default function AssignScreen() {
         id: user.id,
         tracking_method: onboarding.trackingMethod,
       })
+      await supabase.from('budget_categories').delete().eq('user_id', user.id)
+      await supabase.from('income_sources').delete().eq('user_id', user.id)
+      await supabase.from('accounts').delete().eq('user_id', user.id)
 
       if (onboarding.accounts.length > 0) {
         await supabase.from('accounts').insert(
