@@ -1,45 +1,22 @@
 import { router } from 'expo-router'
 import { useState } from 'react'
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import { Colors } from '../../constants/colors'
-
-type Expense = {
-  id: string
-  label: string
-  icon: string
-  amount: string
-  frequency: 'monthly' | 'biweekly'
-}
-
-type IncomeSource = {
-  label: string
-  amount: string
-  frequency: string
-}
-
-function toMonthly(amount: string, frequency: string): number {
-  const val = parseFloat(amount) || 0
-  if (frequency === 'biweekly') return (val * 26) / 12
-  if (frequency === 'weekly') return (val * 52) / 12
-  if (frequency === 'semimonthly') return val * 2
-  return val
-}
-
-const DEMO_INCOME: IncomeSource[] = [
-  { label: 'Primary income', amount: '4400', frequency: 'biweekly' },
-]
-
-const DEMO_EXPENSES: Expense[] = [
-  { id: 'mortgage', label: 'Mortgage', icon: '🏦', amount: '1200', frequency: 'biweekly' },
-  { id: 'groceries', label: 'Groceries', icon: '🛒', amount: '600', frequency: 'biweekly' },
-  { id: 'fuel', label: 'Fuel', icon: '⛽', amount: '1000', frequency: 'monthly' },
-]
+import { clearOnboardingData, getOnboardingData, toMonthly } from '../../lib/store'
+import { supabase } from '../../lib/supabase'
 
 export default function AssignScreen() {
-  const [expenses, setExpenses] = useState<Expense[]>(DEMO_EXPENSES)
+  const data = getOnboardingData()
+  const [expenses, setExpenses] = useState(data.expenses)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
 
-  const totalMonthlyIncome = DEMO_INCOME.reduce((sum, s) => sum + toMonthly(s.amount, s.frequency), 0)
-  const totalMonthlyExpenses = expenses.reduce((sum, e) => sum + toMonthly(e.amount, e.frequency), 0)
+  const totalMonthlyIncome = data.incomeSources.reduce(
+    (sum, s) => sum + toMonthly(s.amount, s.frequency), 0
+  )
+  const totalMonthlyExpenses = expenses.reduce(
+    (sum, e) => sum + toMonthly(e.amount, e.frequency), 0
+  )
   const remaining = totalMonthlyIncome - totalMonthlyExpenses
   const isZero = Math.abs(remaining) < 0.01
   const isOver = remaining < 0
@@ -64,11 +41,73 @@ export default function AssignScreen() {
     setExpenses(expenses.map(e => e.id === id ? { ...e, frequency } : e))
   }
 
+  async function handleFinish() {
+    setSaving(true)
+    setError('')
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      console.log('Accounts to save:', JSON.stringify(getOnboardingData().accounts))
+      if (!user) throw new Error('Not logged in')
+
+      const onboarding = getOnboardingData()
+
+      await supabase.from('profiles').upsert({
+        id: user.id,
+        tracking_method: onboarding.trackingMethod,
+      })
+
+      if (onboarding.accounts.length > 0) {
+        await supabase.from('accounts').insert(
+          onboarding.accounts.map(a => ({
+            user_id: user.id,
+            label: a.label,
+            type: a.type,
+            balance: parseFloat(a.balance) || 0,
+          }))
+        )
+      }
+
+      if (onboarding.incomeSources.length > 0) {
+        await supabase.from('income_sources').insert(
+          onboarding.incomeSources.map(s => ({
+            user_id: user.id,
+            label: s.label,
+            amount: parseFloat(s.amount) || 0,
+            frequency: s.frequency,
+            type: s.type,
+          }))
+        )
+      }
+
+      if (expenses.length > 0) {
+        await supabase.from('budget_categories').insert(
+          expenses.map(e => ({
+            user_id: user.id,
+            label: e.label,
+            icon: e.icon,
+            budgeted_amount: parseFloat(e.amount) || 0,
+            frequency: e.frequency,
+          }))
+        )
+      }
+
+      clearOnboardingData()
+      router.replace('/dashboard')
+
+    } catch (err: any) {
+      setError(err.message || 'Something went wrong')
+    }
+
+    setSaving(false)
+  }
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
         <Text style={styles.backText}>← Back</Text>
       </TouchableOpacity>
+
       <Text style={styles.step}>Step 5 of 5</Text>
       <Text style={styles.title}>Assign every dollar</Text>
       <Text style={styles.subtitle}>Zero-based budgeting means every dollar has a job</Text>
@@ -134,6 +173,8 @@ export default function AssignScreen() {
         </View>
       </View>
 
+      {error ? <Text style={styles.error}>{error}</Text> : null}
+
       <View style={styles.infoBox}>
         <Text style={styles.infoText}>
           💡 All amounts are converted to monthly. Bi-weekly amounts use 26 pay periods per year.
@@ -141,13 +182,16 @@ export default function AssignScreen() {
       </View>
 
       <TouchableOpacity
-        style={[styles.primaryButton, isOver && styles.disabled]}
-        onPress={() => router.replace('/dashboard')}
-        disabled={isOver}
+        style={[styles.primaryButton, (isOver || saving) && styles.disabled]}
+        onPress={handleFinish}
+        disabled={isOver || saving}
       >
-        <Text style={styles.primaryButtonText}>
-          {isZero ? '🎉 Start budgeting!' : 'Continue to dashboard'}
-        </Text>
+        {saving
+          ? <ActivityIndicator color={Colors.text} />
+          : <Text style={styles.primaryButtonText}>
+              {isZero ? '🎉 Start budgeting!' : 'Continue to dashboard'}
+            </Text>
+        }
       </TouchableOpacity>
     </ScrollView>
   )
@@ -165,7 +209,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     width: '100%',
   },
-backButton: {
+  backButton: {
     marginBottom: 24,
   },
   backText: {
@@ -178,7 +222,6 @@ backButton: {
     fontWeight: '600',
     marginBottom: 12,
   },
-  
   title: {
     fontSize: 28,
     fontWeight: 'bold',
@@ -304,6 +347,12 @@ backButton: {
     color: Colors.textSecondary,
     minWidth: 55,
     textAlign: 'right',
+  },
+  error: {
+    color: Colors.danger,
+    fontSize: 14,
+    marginBottom: 16,
+    textAlign: 'center',
   },
   infoBox: {
     backgroundColor: Colors.card,

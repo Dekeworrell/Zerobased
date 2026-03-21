@@ -2,6 +2,7 @@ import { router } from 'expo-router'
 import { useState } from 'react'
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import { Colors } from '../../constants/colors'
+import { setExpenses as saveExpensesToStore } from '../../lib/store'
 
 const EXPENSE_CATEGORIES = [
   { id: 'groceries', label: 'Groceries', icon: '🛒' },
@@ -68,6 +69,7 @@ export default function ExpensesScreen() {
   }
 
   function handleContinue() {
+    saveExpensesToStore(expenses)
     router.push('/onboarding/assign')
   }
 
@@ -174,7 +176,7 @@ backButton: {
     fontWeight: '600',
     marginBottom: 12,
   },
-  
+
   title: {
     fontSize: 28,
     fontWeight: 'bold',

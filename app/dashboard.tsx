@@ -1,34 +1,88 @@
 import { router } from 'expo-router'
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { useEffect, useState } from 'react'
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { Colors } from '../constants/colors'
-
-const DEMO_DATA = {
-  name: 'Deke',
-  monthlyIncome: 9533.33,
-  totalBudgeted: 4900.00,
-  totalSpent: 2340.00,
-  netWorth: 142500.00,
-  netWorthChange: 1250.00,
-  categories: [
-    { label: 'Mortgage', icon: '🏦', budgeted: 2600, spent: 2600, color: Colors.success },
-    { label: 'Groceries', icon: '🛒', budgeted: 1300, spent: 843, color: Colors.success },
-    { label: 'Fuel', icon: '⛽', budgeted: 1000, spent: 620, color: Colors.warning },
-    { label: 'Utilities', icon: '💡', budgeted: 150, spent: 0, color: Colors.textSecondary },
-    { label: 'Internet', icon: '📶', budgeted: 80, spent: 80, color: Colors.success },
-    { label: 'Phone', icon: '📱', budgeted: 60, spent: 60, color: Colors.success },
-  ]
-}
+import { toMonthly } from '../lib/store'
+import { supabase } from '../lib/supabase'
 
 export default function DashboardScreen() {
-  const remaining = DEMO_DATA.monthlyIncome - DEMO_DATA.totalBudgeted
-  const spentPercent = Math.min((DEMO_DATA.totalSpent / DEMO_DATA.totalBudgeted) * 100, 100)
+  const [loading, setLoading] = useState(true)
+  const [name, setName] = useState('')
+  const [monthlyIncome, setMonthlyIncome] = useState(0)
+  const [categories, setCategories] = useState<any[]>([])
+  const [accounts, setAccounts] = useState<any[]>([])
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    loadDashboard()
+  }, [])
+
+  async function loadDashboard() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        router.replace('/')
+        return
+      }
+
+      setName(user.email?.split('@')[0] || 'there')
+
+      const { data: income } = await supabase
+        .from('income_sources')
+        .select('*')
+        .eq('user_id', user.id)
+
+      if (income) {
+        const total = income.reduce((sum: number, s: any) => sum + toMonthly(s.amount.toString(), s.frequency), 0)
+        setMonthlyIncome(total)
+      }
+
+      const { data: cats } = await supabase
+        .from('budget_categories')
+        .select('*')
+        .eq('user_id', user.id)
+
+      if (cats) setCategories(cats)
+
+      const { data: accs } = await supabase
+        .from('accounts')
+        .select('*')
+        .eq('user_id', user.id)
+
+      if (accs) setAccounts(accs)
+
+    } catch (err: any) {
+      setError(err.message)
+    }
+    setLoading(false)
+  }
+
+  const totalBudgeted = categories.reduce((sum, c) => sum + toMonthly(c.budgeted_amount.toString(), c.frequency), 0)
+  const unassigned = monthlyIncome - totalBudgeted
+  const netWorth = accounts.reduce((sum, a) => sum + (parseFloat(a.balance) || 0), 0)
+
+  function getHour() {
+    const h = new Date().getHours()
+    if (h < 12) return 'Good morning'
+    if (h < 17) return 'Good afternoon'
+    return 'Good evening'
+  }
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+        <Text style={styles.loadingText}>Loading your budget...</Text>
+      </View>
+    )
+  }
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
 
       <View style={styles.header}>
         <View>
-          <Text style={styles.greeting}>Good morning, {DEMO_DATA.name} 👋</Text>
+          <Text style={styles.greeting}>{getHour()}, {name} 👋</Text>
           <Text style={styles.subGreeting}>Here's your budget this month</Text>
         </View>
         <TouchableOpacity onPress={() => router.push('/settings')} style={styles.settingsBtn}>
@@ -38,68 +92,69 @@ export default function DashboardScreen() {
 
       <View style={styles.netWorthCard}>
         <Text style={styles.netWorthLabel}>Net worth</Text>
-        <Text style={styles.netWorthAmount}>${DEMO_DATA.netWorth.toLocaleString()}</Text>
-        <Text style={styles.netWorthChange}>
-          ↑ ${DEMO_DATA.netWorthChange.toLocaleString()} this month
+        <Text style={styles.netWorthAmount}>
+          ${netWorth.toLocaleString('en-CA', { maximumFractionDigits: 0 })}
         </Text>
+        <Text style={styles.netWorthSub}>Based on your account balances</Text>
       </View>
 
       <View style={styles.row}>
         <View style={styles.statCard}>
           <Text style={styles.statLabel}>Monthly income</Text>
-          <Text style={styles.statValue}>${DEMO_DATA.monthlyIncome.toLocaleString('en-CA', { maximumFractionDigits: 0 })}</Text>
+          <Text style={styles.statValue}>
+            ${monthlyIncome.toLocaleString('en-CA', { maximumFractionDigits: 0 })}
+          </Text>
         </View>
         <View style={styles.statCard}>
           <Text style={styles.statLabel}>Unassigned</Text>
-          <Text style={[styles.statValue, { color: remaining > 0 ? Colors.warning : Colors.success }]}>
-            ${remaining.toLocaleString('en-CA', { maximumFractionDigits: 0 })}
+          <Text style={[styles.statValue, { color: unassigned > 0 ? Colors.warning : Colors.success }]}>
+            ${Math.abs(unassigned).toLocaleString('en-CA', { maximumFractionDigits: 0 })}
           </Text>
         </View>
       </View>
 
-      <View style={styles.spendingCard}>
-        <View style={styles.spendingHeader}>
-          <Text style={styles.sectionTitle}>Monthly spending</Text>
-          <Text style={styles.spendingAmount}>
-            ${DEMO_DATA.totalSpent.toLocaleString()} / ${DEMO_DATA.totalBudgeted.toLocaleString()}
-          </Text>
-        </View>
-        <View style={styles.progressBar}>
-          <View style={[styles.progressFill, { width: `${spentPercent}%` as any }]} />
-        </View>
-        <Text style={styles.spendingSubtext}>{spentPercent.toFixed(0)}% of budget used</Text>
-      </View>
+      {categories.length > 0 && (
+        <>
+          <Text style={styles.sectionTitle}>Budget categories</Text>
+          <View style={styles.categoryList}>
+            {categories.map((cat) => {
+              const monthlyAmount = toMonthly(cat.budgeted_amount.toString(), cat.frequency)
+              return (
+                <TouchableOpacity key={cat.id} style={styles.categoryCard}>
+                  <View style={styles.categoryHeader}>
+                    <View style={styles.categoryLeft}>
+                      <Text style={styles.categoryIcon}>{cat.icon}</Text>
+                      <Text style={styles.categoryLabel}>{cat.label}</Text>
+                    </View>
+                    <View style={styles.categoryRight}>
+                      <Text style={styles.categoryBudgeted}>
+                        ${monthlyAmount.toLocaleString('en-CA', { maximumFractionDigits: 0 })}/mo
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.categoryProgressBar}>
+                    <View style={[styles.categoryProgressFill, { width: '0%' as any }]} />
+                  </View>
+                  <Text style={styles.categoryRemaining}>
+                    ${monthlyAmount.toLocaleString('en-CA', { maximumFractionDigits: 0 })} remaining
+                  </Text>
+                </TouchableOpacity>
+              )
+            })}
+          </View>
+        </>
+      )}
 
-      <Text style={styles.sectionTitle}>Budget categories</Text>
-      <View style={styles.categoryList}>
-        {DEMO_DATA.categories.map((cat, index) => {
-          const catPercent = Math.min((cat.spent / cat.budgeted) * 100, 100)
-          const catRemaining = cat.budgeted - cat.spent
-          return (
-            <TouchableOpacity key={index} style={styles.categoryCard}>
-              <View style={styles.categoryHeader}>
-                <View style={styles.categoryLeft}>
-                  <Text style={styles.categoryIcon}>{cat.icon}</Text>
-                  <Text style={styles.categoryLabel}>{cat.label}</Text>
-                </View>
-                <View style={styles.categoryRight}>
-                  <Text style={styles.categorySpent}>${cat.spent.toLocaleString()}</Text>
-                  <Text style={styles.categoryBudgeted}> / ${cat.budgeted.toLocaleString()}</Text>
-                </View>
-              </View>
-              <View style={styles.categoryProgressBar}>
-                <View style={[
-                  styles.categoryProgressFill,
-                  { width: `${catPercent}%` as any, backgroundColor: cat.color }
-                ]} />
-              </View>
-              <Text style={styles.categoryRemaining}>
-                ${catRemaining.toLocaleString()} remaining
-              </Text>
-            </TouchableOpacity>
-          )
-        })}
-      </View>
+      {categories.length === 0 && (
+        <TouchableOpacity
+          style={styles.emptyCard}
+          onPress={() => router.push('/onboarding/tracking-method')}
+        >
+          <Text style={styles.emptyIcon}>📋</Text>
+          <Text style={styles.emptyTitle}>No budget set up yet</Text>
+          <Text style={styles.emptySubtitle}>Tap to complete your budget setup</Text>
+        </TouchableOpacity>
+      )}
 
       <View style={styles.quickActions}>
         <Text style={styles.sectionTitle}>Quick actions</Text>
@@ -124,6 +179,17 @@ export default function DashboardScreen() {
 }
 
 const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: Colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 16,
+  },
+  loadingText: {
+    color: Colors.textSecondary,
+    fontSize: 16,
+  },
   container: {
     flex: 1,
     backgroundColor: Colors.background,
@@ -174,9 +240,9 @@ const styles = StyleSheet.create({
     color: Colors.text,
     marginBottom: 8,
   },
-  netWorthChange: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.8)',
+  netWorthSub: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.7)',
   },
   row: {
     flexDirection: 'row',
@@ -199,38 +265,6 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: 'bold',
     color: Colors.text,
-  },
-  spendingCard: {
-    backgroundColor: Colors.card,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: 16,
-    padding: 20,
-    gap: 10,
-  },
-  spendingHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  spendingAmount: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-  },
-  progressBar: {
-    height: 8,
-    backgroundColor: Colors.border,
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: Colors.primary,
-    borderRadius: 4,
-  },
-  spendingSubtext: {
-    fontSize: 13,
-    color: Colors.textSecondary,
   },
   sectionTitle: {
     fontSize: 18,
@@ -270,11 +304,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  categorySpent: {
-    fontSize: 15,
-    color: Colors.text,
-    fontWeight: '600',
-  },
   categoryBudgeted: {
     fontSize: 14,
     color: Colors.textSecondary,
@@ -287,10 +316,32 @@ const styles = StyleSheet.create({
   },
   categoryProgressFill: {
     height: '100%',
+    backgroundColor: Colors.success,
     borderRadius: 3,
   },
   categoryRemaining: {
     fontSize: 12,
+    color: Colors.textSecondary,
+  },
+  emptyCard: {
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 16,
+    padding: 32,
+    alignItems: 'center',
+    gap: 8,
+  },
+  emptyIcon: {
+    fontSize: 32,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text,
+  },
+  emptySubtitle: {
+    fontSize: 14,
     color: Colors.textSecondary,
   },
   quickActions: {

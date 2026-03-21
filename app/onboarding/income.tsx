@@ -2,6 +2,7 @@ import { router } from 'expo-router'
 import { useState } from 'react'
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import { Colors } from '../../constants/colors'
+import { setIncomeSources } from '../../lib/store'
 
 const PAY_FREQUENCIES = [
   { id: 'weekly', label: 'Weekly' },
@@ -45,6 +46,7 @@ export default function IncomeScreen() {
   }
 
   function handleContinue() {
+    setIncomeSources(sources)
     router.push('/onboarding/expenses')
   }
 
@@ -153,7 +155,7 @@ backButton: {
     fontWeight: '600',
     marginBottom: 12,
   },
-  
+
   title: {
     fontSize: 28,
     fontWeight: 'bold',

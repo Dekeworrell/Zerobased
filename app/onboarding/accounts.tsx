@@ -2,6 +2,7 @@ import { router } from 'expo-router'
 import { useState } from 'react'
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import { Colors } from '../../constants/colors'
+import { setAccounts as saveAccountsToStore } from '../../lib/store'
 
 
 const ACCOUNT_TYPES = [
@@ -41,6 +42,8 @@ export default function AccountsScreen() {
   }
 
   function handleContinue() {
+    console.log('Saving accounts:', JSON.stringify(accounts))
+    saveAccountsToStore(accounts)
     router.push('/onboarding/income')
   }
 
@@ -131,7 +134,7 @@ backButton: {
     color: Colors.primary,
     fontSize: 16,
   },
-  
+
   step: {
     fontSize: 14,
     color: Colors.primary,
