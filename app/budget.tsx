@@ -154,7 +154,6 @@ export default function BudgetScreen() {
         )
       }
 
-      const allIds = existingCats.map(c => c.id)
       const { data: dbCats } = await supabase
         .from('budget_categories')
         .select('id')
@@ -162,7 +161,7 @@ export default function BudgetScreen() {
 
       if (dbCats) {
         const toDelete = dbCats
-          .filter((d: any) => !categories.find(c => c.id === d.id))
+          .filter((d: any) => !categories.find(c => c.id === d.id || c.isNew))
           .map((d: any) => d.id)
 
         if (toDelete.length > 0) {
@@ -212,10 +211,15 @@ export default function BudgetScreen() {
         <Text style={[styles.statusAmount, {
           color: remaining < 0 ? Colors.danger : remaining === 0 ? Colors.success : '#4FC3F7'
         }]}>
-          ${Math.abs(remaining).toLocaleString('en-CA', { maximumFractionDigits: 0 })}
+          ${Math.abs(remaining).toLocaleString('en-CA', { maximumFractionDigits: 0 })}/mo
+        </Text>
+        <Text style={[styles.statusBiweekly, {
+          color: remaining < 0 ? Colors.danger : remaining === 0 ? Colors.success : '#4FC3F7'
+        }]}>
+          ${Math.abs(remaining / 2).toLocaleString('en-CA', { maximumFractionDigits: 0 })} per paycheque
         </Text>
         <Text style={styles.statusIncome}>
-          Monthly income: ${monthlyIncome.toLocaleString('en-CA', { maximumFractionDigits: 0 })}
+          Monthly income: ${monthlyIncome.toLocaleString('en-CA', { maximumFractionDigits: 0 })} · Per paycheque: ${(monthlyIncome / 2).toLocaleString('en-CA', { maximumFractionDigits: 0 })}
         </Text>
       </View>
 
@@ -472,5 +476,11 @@ const styles = StyleSheet.create({
     color: Colors.text,
     fontSize: 16,
     fontWeight: '600',
+  },
+
+  statusBiweekly: {
+    fontSize: 18,
+    fontWeight: '500',
+    marginBottom: 4,
   },
 })
