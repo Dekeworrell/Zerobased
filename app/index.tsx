@@ -1,8 +1,21 @@
 import { router } from 'expo-router'
+import { useEffect } from 'react'
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { Colors } from '../constants/colors'
+import { supabase } from '../lib/supabase'
 
 export default function WelcomeScreen() {
+  useEffect(() => {
+    checkSession()
+  }, [])
+
+  async function checkSession() {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session) {
+      router.replace('/dashboard')
+    }
+  }
+
   return (
     <View style={styles.container}>
       <View style={styles.hero}>
@@ -32,7 +45,7 @@ const styles = StyleSheet.create({
   hero: {
     flex: 1,
     justifyContent: 'center',
-    paddingLeft: '45%' as any,
+    alignItems: 'center',
   },
   logo: {
     fontSize: 42,
@@ -44,6 +57,7 @@ const styles = StyleSheet.create({
     fontSize: 28,
     color: Colors.text,
     lineHeight: 38,
+    textAlign: 'center',
   },
   buttons: {
     gap: 12,

@@ -68,6 +68,29 @@ export default function SettingsScreen() {
     router.replace('/')
   }
 
+  async function handleDeleteAccount() {
+    const confirmed = window.confirm(
+      'Are you sure you want to delete your account? This will permanently delete all your data and cannot be undone.'
+    )
+    if (!confirmed) return
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      await supabase.from('transactions').delete().eq('user_id', user.id)
+      await supabase.from('budget_categories').delete().eq('user_id', user.id)
+      await supabase.from('income_sources').delete().eq('user_id', user.id)
+      await supabase.from('accounts').delete().eq('user_id', user.id)
+      await supabase.from('profiles').delete().eq('id', user.id)
+      await supabase.auth.signOut()
+      router.replace('/')
+
+    } catch (err: any) {
+      setError(err.message)
+    }
+  }
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -228,6 +251,10 @@ export default function SettingsScreen() {
 
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
         <Text style={styles.logoutButtonText}>Log out</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteAccount}>
+        <Text style={styles.deleteButtonText}>Delete account</Text>
       </TouchableOpacity>
 
     </ScrollView>
@@ -428,5 +455,17 @@ const styles = StyleSheet.create({
     color: Colors.danger,
     fontSize: 16,
     fontWeight: '600',
+  },
+  deleteButton: {
+    borderWidth: 1,
+    borderColor: Colors.danger,
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
+    opacity: 0.6,
+  },
+  deleteButtonText: {
+    color: Colors.danger,
+    fontSize: 16,
   },
 })
