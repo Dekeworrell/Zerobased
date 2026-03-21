@@ -32,7 +32,7 @@ const styles = StyleSheet.create({
   hero: {
     flex: 1,
     justifyContent: 'center',
-    paddingLeft: '10%' as any,
+    paddingLeft: '45%' as any,
   },
   logo: {
     fontSize: 42,
