@@ -255,7 +255,7 @@ export default function DashboardScreen() {
             <Text style={styles.actionIcon}>📋</Text>
             <Text style={styles.actionLabel}>Transactions</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionBtn}>
+          <TouchableOpacity style={styles.actionBtn} onPress={() => router.push('/accounts')}>
             <Text style={styles.actionIcon}>🏦</Text>
             <Text style={styles.actionLabel}>Accounts</Text>
           </TouchableOpacity>
@@ -555,5 +555,10 @@ const styles = StyleSheet.create({
   spendingSubtext: {
     fontSize: 13,
     color: Colors.textSecondary,
+  },
+  budgetSummaryFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
 })
