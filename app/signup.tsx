@@ -86,17 +86,21 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
-  inner: {
+
+ inner: {
     flex: 1,
     paddingHorizontal: 32,
     paddingVertical: 60,
     justifyContent: 'center',
+    maxWidth: 400,
+    alignSelf: 'center',
+    width: '100%',
   },
-  backButton: {
-    position: 'absolute',
-    top: 60,
-    left: 32,
+
+ backButton: {
+    marginBottom: 32,
   },
+
   backText: {
     color: Colors.primary,
     fontSize: 16,

@@ -50,6 +50,9 @@ export default function IncomeScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <Text style={styles.backText}>← Back</Text>
+      </TouchableOpacity>
       <Text style={styles.step}>Step 3 of 5</Text>
       <Text style={styles.title}>Your income</Text>
       <Text style={styles.subtitle}>Add all sources of income you receive</Text>
@@ -137,12 +140,20 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     width: '100%',
   },
+backButton: {
+    marginBottom: 24,
+  },
+  backText: {
+    color: Colors.primary,
+    fontSize: 16,
+  },
   step: {
     fontSize: 14,
     color: Colors.primary,
     fontWeight: '600',
     marginBottom: 12,
   },
+  
   title: {
     fontSize: 28,
     fontWeight: 'bold',

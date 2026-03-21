@@ -14,6 +14,9 @@ export default function TrackingMethodScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.inner}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <Text style={styles.backText}>← Back</Text>
+        </TouchableOpacity>
         <Text style={styles.step}>Step 1 of 5</Text>
         <Text style={styles.title}>How would you like to track your money?</Text>
         <Text style={styles.subtitle}>You can change this anytime in settings</Text>
@@ -78,9 +81,18 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     marginBottom: 40,
   },
+ backButton: {
+    marginBottom: 24,
+    
+  },
+  backText: {
+    color: Colors.primary,
+    fontSize: 16,
+  },
   options: {
     gap: 16,
   },
+
   optionCard: {
     backgroundColor: Colors.card,
     borderWidth: 1,
