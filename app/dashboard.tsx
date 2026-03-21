@@ -255,9 +255,15 @@ export default function DashboardScreen() {
             <Text style={styles.actionIcon}>📋</Text>
             <Text style={styles.actionLabel}>Transactions</Text>
           </TouchableOpacity>
+        </View>
+        <View style={styles.actionRow}>
           <TouchableOpacity style={styles.actionBtn} onPress={() => router.push('/accounts')}>
             <Text style={styles.actionIcon}>🏦</Text>
             <Text style={styles.actionLabel}>Accounts</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionBtn} onPress={() => router.push('/reports')}>
+            <Text style={styles.actionIcon}>📊</Text>
+            <Text style={styles.actionLabel}>Reports</Text>
           </TouchableOpacity>
         </View>
       </View>
