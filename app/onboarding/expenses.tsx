@@ -31,6 +31,8 @@ const EXPENSE_CATEGORIES = [
   { id: 'childcare', label: 'Childcare', icon: '👶' },
   { id: 'pets', label: 'Pets', icon: '🐾' },
   { id: 'other', label: 'Other', icon: '➕' },
+  { id: 'cable_tv', label: 'Cable TV', icon: '📡' },
+  { id: 'life_insurance', label: 'Life insurance', icon: '🛡️' },
 ]
 
 type Expense = {

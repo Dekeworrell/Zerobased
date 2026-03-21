@@ -7,6 +7,7 @@ import { supabase } from '../lib/supabase'
 
 export default function DashboardScreen() {
   const [loading, setLoading] = useState(true)
+  const [categoriesExpanded, setCategoriesExpanded] = useState(false)
   const [name, setName] = useState('')
   const [monthlyIncome, setMonthlyIncome] = useState(0)
   const [categories, setCategories] = useState<any[]>([])
@@ -104,11 +105,17 @@ export default function DashboardScreen() {
           <Text style={styles.statValue}>
             ${monthlyIncome.toLocaleString('en-CA', { maximumFractionDigits: 0 })}
           </Text>
+          <Text style={styles.statBiweekly}>
+            ${(monthlyIncome / 2).toLocaleString('en-CA', { maximumFractionDigits: 0 })} per paycheque
+          </Text>
         </View>
         <View style={styles.statCard}>
           <Text style={styles.statLabel}>Unassigned</Text>
           <Text style={[styles.statValue, { color: unassigned > 0 ? Colors.warning : Colors.success }]}>
             ${Math.abs(unassigned).toLocaleString('en-CA', { maximumFractionDigits: 0 })}
+          </Text>
+          <Text style={styles.statBiweekly}>
+            ${Math.abs(unassigned / 2).toLocaleString('en-CA', { maximumFractionDigits: 0 })} per paycheque
           </Text>
         </View>
       </View>
@@ -118,35 +125,68 @@ export default function DashboardScreen() {
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Budget categories</Text>
             <TouchableOpacity onPress={() => router.push('/budget')}>
-                <Text style={styles.editLink}>Edit budget</Text>
+              <Text style={styles.editLink}>Edit budget</Text>
             </TouchableOpacity>
           </View>
-          <View style={styles.categoryList}>
-            {categories.map((cat) => {
-              const monthlyAmount = toMonthly(cat.budgeted_amount.toString(), cat.frequency)
-              return (
-                <TouchableOpacity key={cat.id} style={styles.categoryCard}>
-                  <View style={styles.categoryHeader}>
-                    <View style={styles.categoryLeft}>
-                      <Text style={styles.categoryIcon}>{cat.icon}</Text>
-                      <Text style={styles.categoryLabel}>{cat.label}</Text>
+
+          <TouchableOpacity
+            style={styles.budgetSummaryCard}
+            onPress={() => setCategoriesExpanded(!categoriesExpanded)}
+          >
+            <View style={styles.budgetSummaryRow}>
+              <View style={styles.budgetSummaryLeft}>
+                <Text style={styles.budgetSummaryIcons}>
+                  {categories.slice(0, 4).map(c => c.icon).join(' ')}
+                </Text>
+                <Text style={styles.budgetSummaryText}>
+                  {categories.length} categories
+                </Text>
+              </View>
+              <View style={styles.budgetSummaryRight}>
+                <Text style={styles.budgetSummaryAmount}>
+                  ${totalBudgeted.toLocaleString('en-CA', { maximumFractionDigits: 0 })}/mo
+                </Text>
+                <Text style={styles.budgetSummaryChevron}>
+                  {categoriesExpanded ? '▲' : '▼'}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.progressBar}>
+              <View style={[styles.progressFill, { width: '0%' as any }]} />
+            </View>
+            <Text style={styles.budgetSummarySubtext}>
+              Tap to {categoriesExpanded ? 'collapse' : 'expand'} categories
+            </Text>
+          </TouchableOpacity>
+
+          {categoriesExpanded && (
+            <View style={styles.categoryList}>
+              {categories.map((cat) => {
+                const monthlyAmount = toMonthly(cat.budgeted_amount.toString(), cat.frequency)
+                return (
+                  <TouchableOpacity key={cat.id} style={styles.categoryCard}>
+                    <View style={styles.categoryHeader}>
+                      <View style={styles.categoryLeft}>
+                        <Text style={styles.categoryIcon}>{cat.icon}</Text>
+                        <Text style={styles.categoryLabel}>{cat.label}</Text>
+                      </View>
+                      <View style={styles.categoryRight}>
+                        <Text style={styles.categoryBudgeted}>
+                          ${monthlyAmount.toLocaleString('en-CA', { maximumFractionDigits: 0 })}/mo
+                        </Text>
+                      </View>
                     </View>
-                    <View style={styles.categoryRight}>
-                      <Text style={styles.categoryBudgeted}>
-                        ${monthlyAmount.toLocaleString('en-CA', { maximumFractionDigits: 0 })}/mo
-                      </Text>
+                    <View style={styles.categoryProgressBar}>
+                      <View style={[styles.categoryProgressFill, { width: '0%' as any }]} />
                     </View>
-                  </View>
-                  <View style={styles.categoryProgressBar}>
-                    <View style={[styles.categoryProgressFill, { width: '0%' as any }]} />
-                  </View>
-                  <Text style={styles.categoryRemaining}>
-                    ${monthlyAmount.toLocaleString('en-CA', { maximumFractionDigits: 0 })} remaining
-                  </Text>
-                </TouchableOpacity>
-              )
-            })}
-          </View>
+                    <Text style={styles.categoryRemaining}>
+                      ${monthlyAmount.toLocaleString('en-CA', { maximumFractionDigits: 0 })} remaining
+                    </Text>
+                  </TouchableOpacity>
+                )
+              })}
+            </View>
+          )}
         </>
       )}
 
@@ -271,6 +311,11 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: Colors.text,
   },
+  statBiweekly: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginTop: 4,
+  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
@@ -383,5 +428,49 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.primary,
     fontWeight: '500',
+  },
+  budgetSummaryCard: {
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 16,
+    padding: 16,
+    gap: 10,
+  },
+  budgetSummaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  budgetSummaryLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  budgetSummaryIcons: {
+    fontSize: 16,
+  },
+  budgetSummaryText: {
+    fontSize: 15,
+    color: Colors.text,
+    fontWeight: '500',
+  },
+  budgetSummaryRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  budgetSummaryAmount: {
+    fontSize: 15,
+    color: Colors.text,
+    fontWeight: '600',
+  },
+  budgetSummaryChevron: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+  },
+  budgetSummarySubtext: {
+    fontSize: 12,
+    color: Colors.textSecondary,
   },
 })

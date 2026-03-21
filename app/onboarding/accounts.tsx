@@ -15,6 +15,10 @@ const ACCOUNT_TYPES = [
   { id: 'credit', label: 'Credit Card', icon: '💰' },
   { id: 'loan', label: 'Loan', icon: '📋' },
   { id: 'other', label: 'Other', icon: '➕' },
+  { id: 'resp', label: 'RESP', icon: '🎓' },
+  { id: 'mortgage', label: 'Mortgage', icon: '🏠' },
+  { id: 'heloc', label: 'HELOC', icon: '🏦' },
+  { id: 'loc', label: 'Line of credit', icon: '💳' },
 ]
 
 type Account = {
