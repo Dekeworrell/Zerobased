@@ -13,11 +13,13 @@ export default function SignUpScreen() {
   async function handleSignUp() {
     setLoading(true)
     setError('')
-    const { error } = await supabase.auth.signUp({ email, password })
+  const { data, error } = await supabase.auth.signUp({ email, password })
     if (error) {
       setError(error.message)
+    } else if (data.session) {
+      router.replace('/onboarding/tracking-method')
     } else {
-      router.push('/onboarding/tracking-method')
+      setError('Please check your email to confirm your account.')
     }
     setLoading(false)
   }

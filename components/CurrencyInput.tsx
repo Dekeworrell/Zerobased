@@ -31,6 +31,8 @@ export default function CurrencyInput({ value, onChangeText, style, ...props }: 
       keyboardType="decimal-pad"
       placeholderTextColor={Colors.textSecondary}
       style={[styles.input, style]}
+      // @ts-ignore
+      tabIndex={props.tabIndex}
     />
   )
 }

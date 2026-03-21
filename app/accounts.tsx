@@ -166,9 +166,10 @@ export default function AccountsScreen() {
                 <View style={styles.accountRight}>
                   <CurrencyInput
                     style={styles.balanceInput}
-                    value={account.balance.toString()}
-                    onChangeText={(val) => updateBalance(account.id, val)}
-                    placeholder="$0"
+                    placeholder="$0.00"
+                    value={account.balance}
+                    onChangeText={(val) => updateBalance(index, val)}
+                    tabIndex={index + 1}
                   />
                   <TouchableOpacity onPress={() => deleteAccount(account.id)}>
                     <Text style={styles.deleteBtn}>✕</Text>

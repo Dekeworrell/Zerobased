@@ -130,12 +130,13 @@ export default function ExpensesScreen() {
                   </Text>
                 </TouchableOpacity>
               </View>
-              <CurrencyInput
-                style={styles.amountInput}
-                placeholder="$0.00"
-                value={expense.amount}
-                onChangeText={(val) => updateAmount(expense.id, val)}
-              />
+                <CurrencyInput
+                  style={styles.amountInput}
+                  placeholder="$0.00"
+                  value={expense.amount}
+                  onChangeText={(val) => updateAmount(expense.id, val)}
+                  tabIndex={expenses.indexOf(expense) + 1}
+                />
 
               <TouchableOpacity onPress={() => removeExpense(expense.id)}>
                 <Text style={styles.removeBtn}>✕</Text>

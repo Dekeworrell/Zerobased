@@ -86,6 +86,7 @@ export default function AccountsScreen() {
                 placeholder="$0.00"
                 value={account.balance}
                 onChangeText={(val) => updateBalance(index, val)}
+                tabIndex={index + 1}
               />
               {accounts.length > 1 && (
                 <TouchableOpacity onPress={() => removeAccount(index)}>
