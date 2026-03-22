@@ -50,6 +50,7 @@ type LocalExpense = {
 }
 
 export default function ExpensesScreen() {
+  const [masterFrequency, setMasterFrequency] = useState<'monthly' | 'biweekly'>('monthly')
   const [expenses, setExpenses] = useState<LocalExpense[]>(() => {
     const saved = getOnboardingData().expenses
     return saved.length > 0 ? saved as LocalExpense[] : [
@@ -86,6 +87,10 @@ export default function ExpensesScreen() {
   function updateFrequency(id: string, frequency: 'monthly' | 'biweekly') {
     setExpenses(expenses.map(e => e.id === id ? { ...e, frequency } : e))
   }
+  function applyMasterFrequency(frequency: 'monthly' | 'biweekly') {
+    setMasterFrequency(frequency)
+    setExpenses(expenses.map(e => ({ ...e, frequency })))
+  }
 
   function handleContinue() {
     saveExpensesToStore(expenses)
@@ -100,7 +105,21 @@ export default function ExpensesScreen() {
       <Text style={styles.step}>Step 4 of 5</Text>
       <Text style={styles.title}>Your expenses</Text>
       <Text style={styles.subtitle}>Add your monthly bills and spending categories</Text>
-
+      <View style={styles.masterToggle}>
+        <Text style={styles.masterToggleLabel}>Set all to:</Text>
+        <TouchableOpacity
+          style={[styles.masterBtn, masterFrequency === 'monthly' && styles.masterBtnActive]}
+          onPress={() => applyMasterFrequency('monthly')}
+        >
+          <Text style={[styles.masterBtnText, masterFrequency === 'monthly' && styles.masterBtnTextActive]}>Monthly</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.masterBtn, masterFrequency === 'biweekly' && styles.masterBtnActive]}
+          onPress={() => applyMasterFrequency('biweekly')}
+        >
+          <Text style={[styles.masterBtnText, masterFrequency === 'biweekly' && styles.masterBtnTextActive]}>Bi-weekly</Text>
+        </TouchableOpacity>
+      </View>
       <View style={styles.expenseList}>
         {expenses.map((expense) => (
           <View key={expense.id} style={styles.expenseRow}>
@@ -321,6 +340,35 @@ backButton: {
   primaryButtonText: {
     color: Colors.text,
     fontSize: 16,
+    fontWeight: '600',
+  },
+  masterToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  masterToggleLabel: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+  },
+  masterBtn: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+  },
+  masterBtnActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  masterBtnText: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+  },
+  masterBtnTextActive: {
+    color: Colors.text,
     fontWeight: '600',
   },
 })
