@@ -155,7 +155,7 @@ export default function AccountsScreen() {
         <>
           <Text style={styles.sectionTitle}>Assets</Text>
           <View style={styles.accountList}>
-            {assets.map(account => (
+            {assets.map((account, index) => (
               <View key={account.id} style={styles.accountRow}>
                 <View style={styles.accountLeft}>
                   <Text style={styles.accountIcon}>
@@ -166,10 +166,9 @@ export default function AccountsScreen() {
                 <View style={styles.accountRight}>
                   <CurrencyInput
                     style={styles.balanceInput}
-                    placeholder="$0.00"
-                    value={account.balance}
-                    onChangeText={(val) => updateBalance(index, val)}
-                    tabIndex={index + 1}
+                    value={account.balance.toString()}
+                    onChangeText={(val) => updateBalance(account.id, val)}
+                    placeholder="$0"
                   />
                   <TouchableOpacity onPress={() => deleteAccount(account.id)}>
                     <Text style={styles.deleteBtn}>✕</Text>
@@ -185,7 +184,7 @@ export default function AccountsScreen() {
         <>
           <Text style={styles.sectionTitle}>Liabilities</Text>
           <View style={styles.accountList}>
-            {liabilities.map(account => (
+            {liabilities.map((account, index) => (
               <View key={account.id} style={styles.accountRow}>
                 <View style={styles.accountLeft}>
                   <Text style={styles.accountIcon}>
