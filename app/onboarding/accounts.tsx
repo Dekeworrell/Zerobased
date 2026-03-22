@@ -24,17 +24,18 @@ const ACCOUNT_TYPES = [
 type Account = {
   type: string
   label: string
+  icon: string
   balance: string
 }
 
 export default function AccountsScreen() {
   const [accounts, setAccounts] = useState<Account[]>(() => {
     const saved = getOnboardingData().accounts
-    return saved.length > 0 ? saved : [{ type: 'chequing', label: 'Chequing', balance: '' }]
+    return saved.length > 0 ? saved : [{ type: 'chequing', label: 'Chequing', icon: '💳', balance: '' }]
   })
 
   function addAccount(type: string, label: string) {
-    setAccounts([...accounts, { type, label, balance: '' }])
+    setAccounts([...accounts, { type, label, icon: '', balance: '' }])
   }
 
   function removeAccount(index: number) {
@@ -87,6 +88,7 @@ export default function AccountsScreen() {
                 placeholder="$0.00"
                 value={account.balance}
                 onChangeText={(val) => updateBalance(index, val)}
+                // @ts-ignore
                 tabIndex={index + 1}
               />
               {accounts.length > 1 && (

@@ -7,9 +7,9 @@ export default function TrackingMethodScreen() {
 function handleChoice(method: 'bank' | 'manual') {
     setTrackingMethod(method)
     if (method === 'bank') {
-      router.push('/onboarding/accounts')
+      router.push('/onboarding/accounts-everyday')
     } else {
-      router.push('/onboarding/accounts')
+      router.push('/onboarding/accounts-everyday')
     }
   }
 
