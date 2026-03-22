@@ -83,7 +83,6 @@ export default function SettingsScreen() {
       await supabase.from('income_sources').delete().eq('user_id', user.id)
       await supabase.from('accounts').delete().eq('user_id', user.id)
       await supabase.from('profiles').delete().eq('id', user.id)
-      const { error } = await supabase.functions.invoke('delete-user')
       await supabase.auth.signOut()
       router.replace('/')
 
