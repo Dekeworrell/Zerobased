@@ -1,6 +1,6 @@
 import { router } from 'expo-router'
 import { useEffect, useState } from 'react'
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import CurrencyInput from '../components/CurrencyInput'
 import { Colors } from '../constants/colors'
 import { toMonthly } from '../lib/store'
@@ -239,10 +239,13 @@ export default function BudgetScreen() {
           <View key={cat.id} style={styles.categoryRow}>
             <View style={styles.categoryLeft}>
               <Text style={styles.categoryIcon}>{cat.icon}</Text>
-              <Text
-                style={styles.categoryLabel}
-                onPress={() => {}}
-              >{cat.label}</Text>
+              <TextInput
+                  style={styles.categoryLabel}
+                  value={cat.label}
+                  onChangeText={(val) => updateLabel(cat.id, val)}
+                  placeholderTextColor={Colors.textSecondary}
+                  selectTextOnFocus
+                />
             </View>
             <View style={styles.categoryRight}>
               <View style={styles.freqToggle}>
