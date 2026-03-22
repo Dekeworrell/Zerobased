@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import CurrencyInput from '../../components/CurrencyInput'
 import { Colors } from '../../constants/colors'
-import { setExpenses as saveExpensesToStore } from '../../lib/store'
+import { getOnboardingData, setExpenses as saveExpensesToStore } from '../../lib/store'
 
 const EXPENSE_CATEGORIES = [
   { id: 'groceries', label: 'Groceries', icon: '🛒', type: 'variable' },
@@ -40,7 +40,7 @@ const EXPENSE_CATEGORIES = [
   { id: 'other', label: 'Other', icon: '➕', type: 'variable' },
 ]
 
-type Expense = {
+type LocalExpense = {
   id: string
   label: string
   icon: string
@@ -50,11 +50,14 @@ type Expense = {
 }
 
 export default function ExpensesScreen() {
-  const [expenses, setExpenses] = useState<Expense[]>([
-    { id: 'mortgage', label: 'Mortgage', icon: '🏦', amount: '', frequency: 'monthly', category_type: 'fixed' },
-    { id: 'groceries', label: 'Groceries', icon: '🛒', amount: '', frequency: 'monthly', category_type: 'variable' },
-    { id: 'fuel', label: 'Fuel', icon: '⛽', amount: '', frequency: 'biweekly', category_type: 'variable' },
-  ])
+  const [expenses, setExpenses] = useState<LocalExpense[]>(() => {
+    const saved = getOnboardingData().expenses
+    return saved.length > 0 ? saved as LocalExpense[] : [
+      { id: 'mortgage', label: 'Mortgage', icon: '🏦', amount: '', frequency: 'monthly', category_type: 'fixed' },
+      { id: 'groceries', label: 'Groceries', icon: '🛒', amount: '', frequency: 'monthly', category_type: 'variable' },
+      { id: 'fuel', label: 'Fuel', icon: '⛽', amount: '', frequency: 'biweekly', category_type: 'variable' },
+    ]
+  })
 
   function addExpense(category: typeof EXPENSE_CATEGORIES[0]) {
     if (expenses.find(e => e.id === category.id)) return

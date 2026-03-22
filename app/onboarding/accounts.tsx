@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import CurrencyInput from '../../components/CurrencyInput'
 import { Colors } from '../../constants/colors'
-import { setAccounts as saveAccountsToStore } from '../../lib/store'
+import { getOnboardingData, setAccounts as saveAccountsToStore } from '../../lib/store'
 
 
 const ACCOUNT_TYPES = [
@@ -28,9 +28,10 @@ type Account = {
 }
 
 export default function AccountsScreen() {
-  const [accounts, setAccounts] = useState<Account[]>([
-    { type: 'chequing', label: 'Chequing', balance: '' }
-  ])
+  const [accounts, setAccounts] = useState<Account[]>(() => {
+    const saved = getOnboardingData().accounts
+    return saved.length > 0 ? saved : [{ type: 'chequing', label: 'Chequing', balance: '' }]
+  })
 
   function addAccount(type: string, label: string) {
     setAccounts([...accounts, { type, label, balance: '' }])

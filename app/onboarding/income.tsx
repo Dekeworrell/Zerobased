@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import CurrencyInput from '../../components/CurrencyInput'
 import { Colors } from '../../constants/colors'
-import { setIncomeSources } from '../../lib/store'
+import { getOnboardingData, setIncomeSources } from '../../lib/store'
 
 const PAY_FREQUENCIES = [
   { id: 'weekly', label: 'Weekly' },
@@ -28,9 +28,10 @@ type IncomeSource = {
 }
 
 export default function IncomeScreen() {
-  const [sources, setSources] = useState<IncomeSource[]>([
-    { label: 'Primary income', amount: '', frequency: 'biweekly', type: 'employment' }
-  ])
+  const [sources, setSources] = useState<IncomeSource[]>(() => {
+    const saved = getOnboardingData().incomeSources
+    return saved.length > 0 ? saved : [{ label: 'Primary income', amount: '', frequency: 'biweekly', type: 'employment' }]
+  })
 
   function updateSource(index: number, field: keyof IncomeSource, value: string) {
     const updated = [...sources]
