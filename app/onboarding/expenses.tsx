@@ -135,7 +135,8 @@ export default function ExpensesScreen() {
                   placeholder="$0.00"
                   value={expense.amount}
                   onChangeText={(val) => updateAmount(expense.id, val)}
-                  tabIndex={expenses.indexOf(expense) + 1}
+                  // @ts-ignore
+                tabIndex={expenses.indexOf(expense) + 1}
                 />
 
               <TouchableOpacity onPress={() => removeExpense(expense.id)}>

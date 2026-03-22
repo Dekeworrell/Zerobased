@@ -1,11 +1,13 @@
 import { router } from 'expo-router'
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { Colors } from '../../constants/colors'
+import { setTrackingMethod } from '../../lib/store'
 
 export default function TrackingMethodScreen() {
-  function handleChoice(method: 'bank' | 'manual') {
+function handleChoice(method: 'bank' | 'manual') {
+    setTrackingMethod(method)
     if (method === 'bank') {
-      router.push('/onboarding/connect-bank')
+      router.push('/onboarding/accounts')
     } else {
       router.push('/onboarding/accounts')
     }
@@ -83,7 +85,7 @@ const styles = StyleSheet.create({
   },
  backButton: {
     marginBottom: 24,
-    
+
   },
   backText: {
     color: Colors.primary,

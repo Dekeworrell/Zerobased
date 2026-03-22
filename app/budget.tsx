@@ -47,6 +47,7 @@ type Category = {
   icon: string
   budgeted_amount: string
   frequency: 'monthly' | 'biweekly'
+  category_type: 'priority' | 'fixed' | 'variable'
   isNew?: boolean
 }
 
@@ -83,13 +84,14 @@ export default function BudgetScreen() {
         .select('*')
         .eq('user_id', user.id)
 
-      if (cats) {
+   if (cats) {
         setCategories(cats.map((c: any) => ({
           id: c.id,
           label: c.label,
           icon: c.icon,
           budgeted_amount: c.budgeted_amount.toString(),
           frequency: c.frequency || 'monthly',
+          category_type: c.category_type || 'variable',
         })))
       }
     } catch (err: any) {
@@ -106,6 +108,7 @@ export default function BudgetScreen() {
       icon: cat.icon,
       budgeted_amount: '',
       frequency: 'monthly',
+      category_type: cat.type as 'priority' | 'fixed' | 'variable' || 'variable',
       isNew: true,
     }])
   }
@@ -192,7 +195,7 @@ export default function BudgetScreen() {
 
   const totalBudgeted = categories.reduce((sum, c) =>
     sum + toMonthly(c.budgeted_amount, c.frequency), 0)
-  const remaining = monthlyIncome - totalBudgeted
+  const remaining = Math.round((monthlyIncome - totalBudgeted) * 100) / 100
 
   if (loading) {
     return (
@@ -212,18 +215,19 @@ export default function BudgetScreen() {
       <Text style={styles.subtitle}>Adjust your monthly budget categories</Text>
 
       <View style={[styles.statusCard, {
-        borderColor: remaining < 0 ? Colors.danger : remaining === 0 ? Colors.success : '#4FC3F7'
+        borderColor: remaining < 0 ? Colors.danger : Math.abs(remaining) < 0.5 ? Colors.success : '#4FC3F7',
+        backgroundColor: Math.abs(remaining) < 0.5 ? Colors.success + '22' : remaining < 0 ? Colors.danger + '22' : Colors.card,
       }]}>
         <Text style={styles.statusLabel}>Remaining to assign</Text>
         <Text style={[styles.statusAmount, {
           color: remaining < 0 ? Colors.danger : remaining === 0 ? Colors.success : '#4FC3F7'
         }]}>
-          ${Math.abs(remaining).toLocaleString('en-CA', { maximumFractionDigits: 0 })}/mo
+          {Math.abs(remaining) < 0.5 ? '🎉 $0' : '$' + Math.abs(remaining).toLocaleString('en-CA', { maximumFractionDigits: 0 })}
         </Text>
         <Text style={[styles.statusBiweekly, {
           color: remaining < 0 ? Colors.danger : remaining === 0 ? Colors.success : '#4FC3F7'
         }]}>
-          ${Math.abs(remaining / 2).toLocaleString('en-CA', { maximumFractionDigits: 0 })} per paycheque
+          {Math.abs(remaining) < 0.5 ? 'Every dollar assigned!' : (remaining < 0 ? 'Over budget by $' : '$') + Math.abs(remaining / 2).toLocaleString('en-CA', { maximumFractionDigits: 0 }) + ' per paycheque'}
         </Text>
         <Text style={styles.statusIncome}>
           Monthly income: ${monthlyIncome.toLocaleString('en-CA', { maximumFractionDigits: 0 })} · Per paycheque: ${(monthlyIncome / 2).toLocaleString('en-CA', { maximumFractionDigits: 0 })}

@@ -178,13 +178,16 @@ export default function AssignScreen() {
       <Text style={styles.title}>Assign every dollar</Text>
       <Text style={styles.subtitle}>Every dollar needs a job — start with fixed bills, then variable spending, then invest the rest</Text>
 
-      <View style={[styles.statusCard, { borderColor: getStatusColor() }]}>
+      <View style={[styles.statusCard, {
+        borderColor: getStatusColor(),
+        backgroundColor: isZero ? Colors.success + '22' : isOver ? Colors.danger + '22' : Colors.card,
+      }]}>
         <Text style={styles.statusLabel}>Remaining to assign</Text>
         <Text style={[styles.statusAmount, { color: getStatusColor() }]}>
-          ${Math.abs(remaining).toFixed(0)}/mo
+          {isZero ? '🎉 $0' : '$' + Math.abs(remaining).toFixed(0) + '/mo'}
         </Text>
         <Text style={[styles.statusBiweekly, { color: getStatusColor() }]}>
-          ${Math.abs(remaining / 2).toFixed(0)} per paycheque
+          {isZero ? 'Every dollar assigned!' : isOver ? 'Over budget by $' + Math.abs(remaining / 2).toFixed(0) + ' per paycheque' : '$' + Math.abs(remaining / 2).toFixed(0) + ' per paycheque'}
         </Text>
         <Text style={styles.statusIncome}>
           Income: ${totalMonthlyIncome.toFixed(0)}/mo · ${(totalMonthlyIncome / 2).toFixed(0)} per paycheque
