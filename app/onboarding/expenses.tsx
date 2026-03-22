@@ -18,18 +18,18 @@ const EXPENSE_CATEGORIES = [
   { id: 'property_tax', label: 'Property tax', icon: '🏛️', type: 'fixed' },
   { id: 'water_sewer', label: 'Water & sewer', icon: '💧', type: 'fixed' },
   { id: 'car_loan', label: 'Car loan', icon: '🔑', type: 'fixed' },
-  { id: 'mortgage', label: 'Mortgage', icon: '🏦', type: 'fixed' },
+  { id: 'loan_repayment', label: 'Loan repayment', icon: '💳', type: 'fixed', permanent: true },
+  { id: 'mortgage', label: 'Mortgage/Rent', icon: '🏠', type: 'fixed' },
   { id: 'dining', label: 'Dining out', icon: '🍽️', type: 'variable' },
   { id: 'subscriptions', label: 'Subscriptions', icon: '📺', type: 'fixed' },
   { id: 'health', label: 'Health', icon: '💊', type: 'variable' },
   { id: 'fitness', label: 'Fitness', icon: '💪', type: 'fixed' },
   { id: 'clothing', label: 'Clothing', icon: '👕', type: 'variable' },
-  { id: 'entertainment', label: 'Entertainment', icon: '🎬', type: 'variable' },
+  { id: 'entertainment', label: 'Entertainment', icon: '🎬', type: 'variable', permanent: true },
   { id: 'savings', label: 'Savings', icon: '💰', type: 'priority' },
   { id: 'investments', label: 'Investments', icon: '📈', type: 'priority' },
   { id: 'education', label: 'Education', icon: '📚', type: 'variable' },
   { id: 'childcare', label: 'Childcare', icon: '👶', type: 'fixed' },
-  { id: 'pets', label: 'Pets', icon: '🐾', type: 'variable' },
   { id: 'cable_tv', label: 'Cable TV', icon: '📡', type: 'fixed' },
   { id: 'life_insurance', label: 'Life insurance', icon: '🛡️', type: 'fixed' },
   { id: 'rrsp', label: 'RRSP', icon: '📈', type: 'priority' },
@@ -37,7 +37,8 @@ const EXPENSE_CATEGORIES = [
   { id: 'fhsa', label: 'FHSA', icon: '🏠', type: 'priority' },
   { id: 'mortgage_extra', label: 'Mortgage overpayment', icon: '🏦', type: 'priority' },
   { id: 'emergency_fund', label: 'Emergency fund', icon: '🆘', type: 'priority' },
-  { id: 'other', label: 'Other', icon: '➕', type: 'variable' },
+  { id: 'pets', label: 'Pets', icon: '🐾', type: 'variable' },
+  { id: 'other', label: 'Other', icon: '➕', type: 'variable', permanent: true },
 ]
 
 type LocalExpense = {
@@ -47,26 +48,34 @@ type LocalExpense = {
   amount: string
   frequency: 'monthly' | 'biweekly'
   category_type: 'priority' | 'fixed' | 'variable'
+  permanent?: boolean
 }
 
+const MULTI_ALLOWED = ['other', 'entertainment', 'loan_repayment']
 export default function ExpensesScreen() {
   const [masterFrequency, setMasterFrequency] = useState<'monthly' | 'biweekly'>('monthly')
   const [expenses, setExpenses] = useState<LocalExpense[]>(() => {
     const saved = getOnboardingData().expenses
     return saved.length > 0 ? saved as LocalExpense[] : [
-      { id: 'mortgage', label: 'Mortgage', icon: '🏦', amount: '', frequency: 'monthly', category_type: 'fixed' },
+      { id: 'mortgage', label: 'Mortgage/Rent', icon: '🏠', amount: '', frequency: 'monthly', category_type: 'fixed' },
+      { id: 'utilities', label: 'Utilities', icon: '💡', amount: '', frequency: 'monthly', category_type: 'fixed' },
       { id: 'groceries', label: 'Groceries', icon: '🛒', amount: '', frequency: 'monthly', category_type: 'variable' },
-      { id: 'fuel', label: 'Fuel', icon: '⛽', amount: '', frequency: 'biweekly', category_type: 'variable' },
+      { id: 'internet', label: 'Internet', icon: '📶', amount: '', frequency: 'monthly', category_type: 'fixed' },
     ]
   })
 
+  const MULTI_ALLOWED = ['other', 'entertainment', 'loan_repayment']
+
   function addExpense(category: typeof EXPENSE_CATEGORIES[0]) {
-    if (expenses.find(e => e.id === category.id)) return
-    setExpenses([...expenses, { 
-      id: category.id, 
-      label: category.label, 
-      icon: category.icon, 
-      amount: '', 
+    if (!MULTI_ALLOWED.includes(category.id) && expenses.find(e => e.id === category.id)) return
+    const newId = MULTI_ALLOWED.includes(category.id)
+      ? `${category.id}_${Date.now()}`
+      : category.id
+    setExpenses([...expenses, {
+      id: newId,
+      label: category.label,
+      icon: category.icon,
+      amount: '',
       frequency: 'monthly',
       category_type: category.type as 'priority' | 'fixed' | 'variable'
     }])
@@ -171,7 +180,7 @@ export default function ExpensesScreen() {
 
       <Text style={styles.addLabel}>Add a category</Text>
       <View style={styles.typeGrid}>
-        {EXPENSE_CATEGORIES.filter(c => !expenses.find(e => e.id === c.id)).map((category) => (
+        {EXPENSE_CATEGORIES.filter(c => MULTI_ALLOWED.includes(c.id) || !expenses.find(e => e.id === c.id)).map((category) => (
           <TouchableOpacity
             key={category.id}
             style={styles.typeChip}
@@ -370,5 +379,9 @@ backButton: {
   masterBtnTextActive: {
     color: Colors.text,
     fontWeight: '600',
+  },
+  permanentIcon: {
+    fontSize: 14,
+    opacity: 0.4,
   },
 })
