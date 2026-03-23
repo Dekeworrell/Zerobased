@@ -106,6 +106,9 @@ export default function AccountsEverydayScreen() {
                 placeholderTextColor={Colors.textSecondary}
                 selectTextOnFocus
               />
+              <TouchableOpacity onPress={() => setLocalAccounts(accounts.filter(a => a.type !== account.type))}>
+                <Text style={styles.deleteBtn}>✕</Text>
+              </TouchableOpacity>
             </View>
             <CurrencyInput
               style={styles.balanceInput}
@@ -265,5 +268,10 @@ const styles = StyleSheet.create({
   skipText: {
     color: Colors.textSecondary,
     fontSize: 14,
+  },
+  deleteBtn: {
+    color: Colors.textSecondary,
+    fontSize: 16,
+    paddingLeft: 8,
   },
 })

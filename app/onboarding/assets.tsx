@@ -93,15 +93,18 @@ export default function AssetsScreen() {
           {assets.map(asset => (
             <View key={asset.type} style={styles.accountCard}>
               <View style={styles.accountHeader}>
-                <Text style={styles.accountIcon}>{asset.icon}</Text>
-                <TextInput
-                  style={styles.accountLabel}
-                  value={asset.label}
-                  onChangeText={(val) => updateLabel(asset.type, val)}
-                  placeholderTextColor={Colors.textSecondary}
-                  selectTextOnFocus
-                />
-              </View>
+              <Text style={styles.accountIcon}>{asset.icon}</Text>
+              <TextInput
+                style={styles.accountLabel}
+                value={asset.label}
+                onChangeText={(val) => setAssets(assets.map(a => a.type === asset.type ? { ...a, label: val } : a))}
+                placeholderTextColor={Colors.textSecondary}
+                selectTextOnFocus
+              />
+              <TouchableOpacity onPress={() => setAssets(assets.filter(a => a.type !== asset.type))}>
+                <Text style={styles.deleteBtn}>✕</Text>
+              </TouchableOpacity>
+            </View>
               <CurrencyInput
                 style={styles.balanceInput}
                 placeholder="Estimated value"
@@ -261,5 +264,10 @@ const styles = StyleSheet.create({
   skipText: {
     color: Colors.textSecondary,
     fontSize: 14,
+  },
+  deleteBtn: {
+    color: Colors.textSecondary,
+    fontSize: 16,
+    paddingLeft: 8,
   },
 })

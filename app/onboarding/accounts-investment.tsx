@@ -1,6 +1,6 @@
 import { router } from 'expo-router'
 import { useEffect, useState } from 'react'
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import CurrencyInput from '../../components/CurrencyInput'
 import { Colors } from '../../constants/colors'
 import { getOnboardingData, setAccounts } from '../../lib/store'
@@ -103,9 +103,18 @@ export default function AccountsInvestmentScreen() {
           {accounts.map(account => (
             <View key={account.type} style={styles.accountCard}>
               <View style={styles.accountHeader}>
-                <Text style={styles.accountIcon}>{account.icon}</Text>
-                <Text style={styles.accountLabel}>{account.label}</Text>
-              </View>
+              <Text style={styles.accountIcon}>{account.icon}</Text>
+              <TextInput
+                style={styles.accountLabel}
+                value={account.label}
+                onChangeText={(val) => setLocalAccounts(accounts.map(a => a.type === account.type ? { ...a, label: val } : a))}
+                placeholderTextColor={Colors.textSecondary}
+                selectTextOnFocus
+              />
+              <TouchableOpacity onPress={() => setLocalAccounts(accounts.filter(a => a.type !== account.type))}>
+                <Text style={styles.deleteBtn}>✕</Text>
+              </TouchableOpacity>
+            </View>
               <CurrencyInput
                 style={styles.balanceInput}
                 placeholder="Current value"
@@ -265,5 +274,10 @@ const styles = StyleSheet.create({
   skipText: {
     color: Colors.textSecondary,
     fontSize: 14,
+  },
+  deleteBtn: {
+    color: Colors.textSecondary,
+    fontSize: 16,
+    paddingLeft: 8,
   },
 })

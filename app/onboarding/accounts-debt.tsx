@@ -31,7 +31,7 @@ export default function AccountsDebtScreen() {
     a.type.startsWith('car_loan_') ||
     a.type.startsWith('personal_loan_')
   )
-  
+
   const [accounts, setLocalAccounts] = useState<Account[]>(existing)
   
   useEffect(() => {
@@ -105,6 +105,9 @@ export default function AccountsDebtScreen() {
                 placeholderTextColor={Colors.textSecondary}
                 selectTextOnFocus
               />
+              <TouchableOpacity onPress={() => setLocalAccounts(accounts.filter(a => a.type !== account.type))}>
+                <Text style={styles.deleteBtn}>✕</Text>
+              </TouchableOpacity>
             </View>
               <CurrencyInput
                 style={styles.balanceInput}
@@ -265,5 +268,10 @@ const styles = StyleSheet.create({
   skipText: {
     color: Colors.textSecondary,
     fontSize: 14,
+  },
+  deleteBtn: {
+    color: Colors.textSecondary,
+    fontSize: 16,
+    paddingLeft: 8,
   },
 })
