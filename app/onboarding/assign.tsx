@@ -42,8 +42,8 @@ export default function AssignScreen() {
     (sum, e) => sum + toMonthly(e.amount, e.frequency), 0
   )
   const remaining = totalMonthlyIncome - totalMonthlyExpenses
-  const isZero = Math.abs(remaining) < 0.01
-  const isOver = remaining < 0
+  const isZero = Math.abs(remaining) < 0.5
+  const isOver = remaining < -0.5
 
   const priorityExpenses = expenses.filter(e => e.category_type === 'priority')
   const fixedExpenses = expenses.filter(e => e.category_type === 'fixed')

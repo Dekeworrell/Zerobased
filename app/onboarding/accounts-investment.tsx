@@ -1,5 +1,5 @@
 import { router } from 'expo-router'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import CurrencyInput from '../../components/CurrencyInput'
 import { Colors } from '../../constants/colors'
@@ -25,10 +25,26 @@ type Account = {
 
 export default function AccountsInvestmentScreen() {
   const existing = getOnboardingData().accounts.filter(a =>
-    INVESTMENT_ACCOUNTS.find(e => e.id === a.type)
+    INVESTMENT_ACCOUNTS.some(e => a.type === e.id || a.type.startsWith(e.id + '_'))
   )
 
   const [accounts, setLocalAccounts] = useState<Account[]>(existing)
+
+  useEffect(() => {
+    const existing = getOnboardingData().accounts
+    const nonInvestmentAccounts = existing.filter(a =>
+      !INVESTMENT_ACCOUNTS.some(d => a.type === d.id || a.type.startsWith(d.id + '_'))
+    )
+    setAccounts([...nonInvestmentAccounts, ...accounts])
+  }, [accounts])
+  
+  useEffect(() => {
+    const existing = getOnboardingData().accounts
+    const nonInvestmentAccounts = existing.filter(a =>
+      !INVESTMENT_ACCOUNTS.some(d => a.type === d.id || a.type.startsWith(d.id + '_'))
+    )
+    setAccounts([...nonInvestmentAccounts, ...accounts])
+  }, [accounts])
 
   function toggleAccount(type: string, label: string, icon: string, multi: boolean) {
     const exists = accounts.find(a => a.type === type)
@@ -46,7 +62,11 @@ export default function AccountsInvestmentScreen() {
 
   function handleContinue() {
     const existing = getOnboardingData().accounts
-    const otherAccounts = existing.filter(a => !INVESTMENT_ACCOUNTS.find(e => e.id === a.type))
+    const otherAccounts = existing.filter(a => {
+      const baseType = a.type.split('_')[0]
+      return !INVESTMENT_ACCOUNTS.find(e => e.id === a.type) &&
+             !INVESTMENT_ACCOUNTS.find(e => e.id === baseType)
+    })
     setAccounts([...otherAccounts, ...accounts])
     router.push('/onboarding/assets')
   }

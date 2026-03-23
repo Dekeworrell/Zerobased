@@ -1,5 +1,5 @@
 import { router } from 'expo-router'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import CurrencyInput from '../../components/CurrencyInput'
 import { Colors } from '../../constants/colors'
@@ -7,7 +7,7 @@ import { getOnboardingData, setAccounts } from '../../lib/store'
 
 const ASSET_TYPES = [
   { id: 'home', label: 'Home', icon: '🏠' },
-  { id: 'vehicle', label: 'Vehicle', icon: '🚗' },
+  { id: 'vehicle', label: 'Vehicle', icon: '🚗', multi: true },
   { id: 'cottage', label: 'Cottage/Cabin', icon: '🏡' },
   { id: 'rental', label: 'Rental property', icon: '🏢' },
   { id: 'business', label: 'Business', icon: '💼' },
@@ -23,17 +23,26 @@ type Asset = {
 
 export default function AssetsScreen() {
   const existing = getOnboardingData().accounts.filter(a =>
-    ASSET_TYPES.find(e => e.id === a.type)
+    ASSET_TYPES.some(e => a.type === e.id || a.type.startsWith(e.id + '_'))
   )
 
   const [assets, setAssets] = useState<Asset[]>(existing)
 
-  function toggleAsset(type: string, label: string, icon: string) {
+  useEffect(() => {
+    const existing = getOnboardingData().accounts
+    const nonAssets = existing.filter(a =>
+      !ASSET_TYPES.some(d => a.type === d.id || a.type.startsWith(d.id + '_'))
+    )
+    setAccounts([...nonAssets, ...assets])
+  }, [assets])
+
+  function toggleAsset(type: string, label: string, icon: string, multi?: boolean) {
     const exists = assets.find(a => a.type === type)
-    if (exists) {
+    if (exists && !multi) {
       setAssets(assets.filter(a => a.type !== type))
     } else {
-      setAssets([...assets, { type, label, icon, balance: '' }])
+      const newId = multi ? `${type}_${Date.now()}` : type
+      setAssets([...assets, { type: newId, label, icon, balance: '' }])
     }
   }
 
@@ -68,8 +77,8 @@ export default function AssetsScreen() {
         {ASSET_TYPES.map(acc => (
           <TouchableOpacity
             key={acc.id}
-            style={[styles.chip, assets.find(a => a.type === acc.id) && styles.chipActive]}
-            onPress={() => toggleAsset(acc.id, acc.label, acc.icon)}
+            style={[styles.chip, !(acc as any).multi && assets.find(a => a.type === acc.id) && styles.chipActive]}
+            onPress={() => toggleAsset(acc.id, acc.label, acc.icon, (acc as any).multi)}
           >
             <Text style={styles.chipIcon}>{acc.icon}</Text>
             <Text style={[styles.chipText, assets.find(a => a.type === acc.id) && styles.chipTextActive]}>

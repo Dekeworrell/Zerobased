@@ -1,5 +1,5 @@
 import { router } from 'expo-router'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import CurrencyInput from '../../components/CurrencyInput'
 import { Colors } from '../../constants/colors'
@@ -29,7 +29,13 @@ export default function AccountsEverydayScreen() {
       { type: 'chequing', label: 'Chequing', icon: '💳', balance: '' }
     ]
   )
-
+  useEffect(() => {
+    const existing = getOnboardingData().accounts
+    const nonEverydayAccounts = existing.filter(a =>
+      !EVERYDAY_ACCOUNTS.some(d => a.type === d.id || a.type.startsWith(d.id + '_'))
+    )
+    setAccounts([...accounts, ...nonEverydayAccounts])
+  }, [accounts])
   function toggleAccount(type: string, label: string, icon: string, multi: boolean) {
     const exists = accounts.find(a => a.type === type)
     if (exists && !multi) {
@@ -52,7 +58,11 @@ export default function AccountsEverydayScreen() {
 
   function handleContinue() {
     const existing = getOnboardingData().accounts
-    const otherAccounts = existing.filter(a => !EVERYDAY_ACCOUNTS.find(e => e.id === a.type))
+    const otherAccounts = existing.filter(a => {
+      const baseType = a.type.split('_')[0]
+      return !EVERYDAY_ACCOUNTS.find(e => e.id === a.type) &&
+             !EVERYDAY_ACCOUNTS.find(e => e.id === baseType)
+    })
     setAccounts([...accounts, ...otherAccounts])
     router.push('/onboarding/accounts-debt')
   }

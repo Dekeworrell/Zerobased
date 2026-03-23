@@ -1,5 +1,5 @@
 import { router } from 'expo-router'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import CurrencyInput from '../../components/CurrencyInput'
 import { Colors } from '../../constants/colors'
@@ -25,10 +25,22 @@ type Account = {
 
 export default function AccountsDebtScreen() {
   const existing = getOnboardingData().accounts.filter(a =>
-    DEBT_ACCOUNTS.find(e => e.id === a.type)
+    DEBT_ACCOUNTS.find(e => e.id === a.type) ||
+    a.type.startsWith('other_debt') ||
+    a.type.startsWith('credit_') ||
+    a.type.startsWith('car_loan_') ||
+    a.type.startsWith('personal_loan_')
   )
-
+  
   const [accounts, setLocalAccounts] = useState<Account[]>(existing)
+  
+  useEffect(() => {
+    const existing = getOnboardingData().accounts
+    const nonDebtAccounts = existing.filter(a => 
+      !DEBT_ACCOUNTS.some(d => a.type === d.id || a.type.startsWith(d.id + '_'))
+    )
+    setAccounts([...nonDebtAccounts, ...accounts])
+  }, [accounts])
 
   function toggleAccount(type: string, label: string, icon: string, multi: boolean) {
     const exists = accounts.find(a => a.type === type)
@@ -46,8 +58,10 @@ export default function AccountsDebtScreen() {
 
   function handleContinue() {
     const existing = getOnboardingData().accounts
-    const otherAccounts = existing.filter(a => !DEBT_ACCOUNTS.find(e => e.id === a.type))
-    setAccounts([...otherAccounts, ...accounts])
+    const nonDebtAccounts = existing.filter(a => {
+      return !DEBT_ACCOUNTS.some(d => a.type === d.id || a.type.startsWith(d.id + '_'))
+    })
+    setAccounts([...nonDebtAccounts, ...accounts])
     router.push('/onboarding/accounts-investment')
   }
 
