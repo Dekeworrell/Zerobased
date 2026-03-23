@@ -233,10 +233,10 @@ export default function AssignScreen() {
           </View>
           {fixedExpenses.map(e => renderExpenseRow(e))}
           <TouchableOpacity
-            style={styles.addCategoryBtn}
+            style={styles.addCircleBtn}
             onPress={() => setShowAddCategory(showAddCategory === 'fixed' ? null : 'fixed')}
           >
-            <Text style={styles.addCategoryBtnText}>+ Add fixed expense</Text>
+            <Text style={styles.addCircleBtnText}>+</Text>
           </TouchableOpacity>
           {showAddCategory === 'fixed' && (
             <View style={styles.addCategoryChips}>
@@ -274,6 +274,36 @@ export default function AssignScreen() {
             </Text>
           </View>
           {variableExpenses.map(e => renderExpenseRow(e))}
+          <TouchableOpacity
+            style={styles.addCircleBtn}
+            onPress={() => setShowAddCategory(showAddCategory === 'variable' ? null : 'variable')}
+          >
+            <Text style={styles.addCircleBtnText}>+</Text>
+          </TouchableOpacity>
+          {showAddCategory === 'variable' && (
+            <View style={styles.addCategoryChips}>
+              {EXPENSE_CATEGORIES.filter(c => c.category_type === 'variable' && !expenses.find(e => e.id === c.id)).map(cat => (
+                <TouchableOpacity
+                  key={cat.id}
+                  style={styles.addChip}
+                  onPress={() => {
+                    setExpenses([...expenses, {
+                      id: cat.id,
+                      label: cat.label,
+                      icon: cat.icon,
+                      amount: '',
+                      frequency: 'monthly',
+                      category_type: 'variable',
+                    }])
+                    setShowAddCategory(null)
+                  }}
+                >
+                  <Text style={styles.addChipIcon}>{cat.icon}</Text>
+                  <Text style={styles.addChipText}>{cat.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
         </View>
       )}
 
@@ -548,5 +578,44 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#4FC3F7',
     fontWeight: '500',
+  },
+  addCircleBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'flex-start',
+  },
+  addCircleBtnText: {
+    fontSize: 22,
+    color: Colors.textSecondary,
+    lineHeight: 26,
+  },
+  addCategoryChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 8,
+    gap: 8,
+  },
+  addChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.background,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  addChipIcon: {
+    fontSize: 14,
+    marginRight: 4,
+  },
+  addChipText: {
+    fontSize: 13,
+    color: Colors.textSecondary,
   },
 })
