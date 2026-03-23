@@ -15,6 +15,34 @@ const PRIORITY_ITEMS = [
   { id: 'investments', label: 'Investments', icon: '💰' },
 ]
 
+const EXPENSE_CATEGORIES = [
+  { id: 'groceries', label: 'Groceries', icon: '🛒', category_type: 'variable' },
+  { id: 'transport', label: 'Transport', icon: '🚗', category_type: 'variable' },
+  { id: 'utilities', label: 'Utilities', icon: '💡', category_type: 'fixed' },
+  { id: 'internet', label: 'Internet', icon: '📶', category_type: 'fixed' },
+  { id: 'phone', label: 'Phone', icon: '📱', category_type: 'fixed' },
+  { id: 'home_insurance', label: 'Home insurance', icon: '🏡', category_type: 'fixed' },
+  { id: 'fuel', label: 'Fuel', icon: '⛽', category_type: 'variable' },
+  { id: 'auto_insurance', label: 'Auto insurance', icon: '🚘', category_type: 'fixed' },
+  { id: 'vehicle_maintenance', label: 'Vehicle maintenance', icon: '🔧', category_type: 'variable' },
+  { id: 'property_tax', label: 'Property tax', icon: '🏛️', category_type: 'fixed' },
+  { id: 'water_sewer', label: 'Water & sewer', icon: '💧', category_type: 'fixed' },
+  { id: 'car_loan', label: 'Car loan', icon: '🔑', category_type: 'fixed' },
+  { id: 'mortgage', label: 'Mortgage/Rent', icon: '🏠', category_type: 'fixed' },
+  { id: 'dining', label: 'Dining out', icon: '🍽️', category_type: 'variable' },
+  { id: 'subscriptions', label: 'Subscriptions', icon: '📺', category_type: 'fixed' },
+  { id: 'health', label: 'Health', icon: '💊', category_type: 'variable' },
+  { id: 'fitness', label: 'Fitness', icon: '💪', category_type: 'fixed' },
+  { id: 'clothing', label: 'Clothing', icon: '👕', category_type: 'variable' },
+  { id: 'entertainment', label: 'Entertainment', icon: '🎬', category_type: 'variable' },
+  { id: 'savings', label: 'Savings', icon: '💰', category_type: 'priority' },
+  { id: 'education', label: 'Education', icon: '📚', category_type: 'variable' },
+  { id: 'childcare', label: 'Childcare', icon: '👶', category_type: 'fixed' },
+  { id: 'cable_tv', label: 'Cable TV', icon: '📡', category_type: 'fixed' },
+  { id: 'life_insurance', label: 'Life insurance', icon: '🛡️', category_type: 'fixed' },
+  { id: 'other', label: 'Other', icon: '➕', category_type: 'variable' },
+]
+
 type Expense = {
   id: string
   label: string
@@ -33,6 +61,7 @@ export default function AssignScreen() {
     }))
   )
   const [saving, setSaving] = useState(false)
+  const [showAddCategory, setShowAddCategory] = useState<'fixed' | 'variable' | 'priority' | null>(null)
   const [error, setError] = useState('')
 
   const totalMonthlyIncome = data.incomeSources.reduce(
@@ -203,6 +232,36 @@ export default function AssignScreen() {
             </Text>
           </View>
           {fixedExpenses.map(e => renderExpenseRow(e))}
+          <TouchableOpacity
+            style={styles.addCategoryBtn}
+            onPress={() => setShowAddCategory(showAddCategory === 'fixed' ? null : 'fixed')}
+          >
+            <Text style={styles.addCategoryBtnText}>+ Add fixed expense</Text>
+          </TouchableOpacity>
+          {showAddCategory === 'fixed' && (
+            <View style={styles.addCategoryChips}>
+              {EXPENSE_CATEGORIES.filter(c => c.category_type === 'fixed' && !expenses.find(e => e.id === c.id)).map(cat => (
+                <TouchableOpacity
+                  key={cat.id}
+                  style={styles.addChip}
+                  onPress={() => {
+                    setExpenses([...expenses, {
+                      id: cat.id,
+                      label: cat.label,
+                      icon: cat.icon,
+                      amount: '',
+                      frequency: 'monthly',
+                      category_type: 'fixed',
+                    }])
+                    setShowAddCategory(null)
+                  }}
+                >
+                  <Text style={styles.addChipIcon}>{cat.icon}</Text>
+                  <Text style={styles.addChipText}>{cat.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
         </View>
       )}
 
