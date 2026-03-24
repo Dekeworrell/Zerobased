@@ -1,6 +1,6 @@
 import { router } from 'expo-router'
 import { useEffect, useState } from 'react'
-import { ActivityIndicator, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import { Colors } from '../constants/colors'
 import { supabase } from '../lib/supabase'
 
@@ -69,26 +69,34 @@ export default function SettingsScreen() {
   }
 
   async function handleDeleteAccount() {
-    const confirmed = window.confirm(
-      'Are you sure you want to delete your account? This will permanently delete all your data and cannot be undone.'
+    Alert.alert(
+      'Delete account',
+      'Are you sure you want to delete your account? This will permanently delete all your data and cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const { data: { user } } = await supabase.auth.getUser()
+              if (!user) return
+
+              await supabase.from('transactions').delete().eq('user_id', user.id)
+              await supabase.from('budget_categories').delete().eq('user_id', user.id)
+              await supabase.from('income_sources').delete().eq('user_id', user.id)
+              await supabase.from('accounts').delete().eq('user_id', user.id)
+              await supabase.from('profiles').delete().eq('id', user.id)
+              await supabase.auth.signOut()
+              router.replace('/')
+
+            } catch (err: any) {
+              setError(err.message)
+            }
+          }
+        }
+      ]
     )
-    if (!confirmed) return
-
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
-      await supabase.from('transactions').delete().eq('user_id', user.id)
-      await supabase.from('budget_categories').delete().eq('user_id', user.id)
-      await supabase.from('income_sources').delete().eq('user_id', user.id)
-      await supabase.from('accounts').delete().eq('user_id', user.id)
-      await supabase.from('profiles').delete().eq('id', user.id)
-      await supabase.auth.signOut()
-      router.replace('/')
-
-    } catch (err: any) {
-      setError(err.message)
-    }
   }
 
   if (loading) {
@@ -201,24 +209,15 @@ export default function SettingsScreen() {
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Budget</Text>
-        <TouchableOpacity
-          style={styles.linkRow}
-          onPress={() => router.push('/budget')}
-        >
+        <TouchableOpacity style={styles.linkRow} onPress={() => router.push('/budget')}>
           <Text style={styles.linkRowText}>Edit budget categories</Text>
           <Text style={styles.linkRowChevron}>›</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.linkRow}
-          onPress={() => router.push('/accounts')}
-        >
+        <TouchableOpacity style={styles.linkRow} onPress={() => router.push('/accounts')}>
           <Text style={styles.linkRowText}>Manage accounts</Text>
           <Text style={styles.linkRowChevron}>›</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.linkRow}
-          onPress={() => router.push('/onboarding/tracking-method')}
-        >
+        <TouchableOpacity style={styles.linkRow} onPress={() => router.push('/onboarding/tracking-method')}>
           <Text style={styles.linkRowText}>Redo budget setup</Text>
           <Text style={styles.linkRowChevron}>›</Text>
         </TouchableOpacity>

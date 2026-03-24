@@ -3,6 +3,7 @@ type TrackingMethod = 'bank' | 'manual'
 type Account = {
   type: string
   label: string
+  icon: string
   balance: string
 }
 
