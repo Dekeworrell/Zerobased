@@ -1,6 +1,6 @@
-import { router } from 'expo-router'
-import { useEffect, useState } from 'react'
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { router, useFocusEffect } from 'expo-router'
+import { useCallback, useState } from 'react'
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import CurrencyInput from '../components/CurrencyInput'
 import { Colors } from '../constants/colors'
 import { supabase } from '../lib/supabase'
@@ -10,7 +10,6 @@ type Account = {
   label: string
   type: string
   balance: number
-  isEditing?: boolean
 }
 
 const ACCOUNT_ICONS: { [key: string]: string } = {
@@ -18,42 +17,72 @@ const ACCOUNT_ICONS: { [key: string]: string } = {
   savings: '🏦',
   rrsp: '📈',
   tfsa: '🛡️',
-  fhsa: '🏠',
+  fhsa: '🏡',
   resp: '🎓',
-  mortgage: '🏠',
-  heloc: '🏦',
-  loc: '💳',
-  credit: '💰',
-  loan: '📋',
+  pension: '👴',
+  home: '🏡',
+  vehicle: '🚗',
   other: '➕',
+  margin: '📊',
+  mortgage: '🏦',
+  heloc: '🏦',
+  loc: '💸',
+  carloan: '🚗',
+  studentloan: '🎓',
+  creditcard: '💳',
+  other_liability: '📋',
+  loan: '📋',
+  credit: '💳',
+  car_loan: '🚗',
+  student_loan: '🎓',
+  credit_card: '💳',
+  line_of_credit: '💸',
 }
 
-const ACCOUNT_TYPES = [
+const LIABILITY_TYPES = [
+  'mortgage', 'heloc', 'loc',
+  'carloan', 'studentloan', 'creditcard', 'other_liability',
+  'loan', 'credit', 'car_loan', 'student_loan', 'credit_card', 'line_of_credit',
+  'car loan', 'student loan', 'credit card', 'line of credit',
+]
+
+const ASSET_TYPE_OPTIONS = [
   { id: 'chequing', label: 'Chequing', icon: '💳' },
   { id: 'savings', label: 'Savings', icon: '🏦' },
   { id: 'rrsp', label: 'RRSP', icon: '📈' },
   { id: 'tfsa', label: 'TFSA', icon: '🛡️' },
-  { id: 'fhsa', label: 'FHSA', icon: '🏠' },
+  { id: 'fhsa', label: 'FHSA', icon: '🏡' },
   { id: 'resp', label: 'RESP', icon: '🎓' },
-  { id: 'mortgage', label: 'Mortgage', icon: '🏠' },
+  { id: 'pension', label: 'Pension', icon: '👴' },
+  { id: 'home', label: 'Home value', icon: '🏡' },
+  { id: 'vehicle', label: 'Vehicle value', icon: '🚗' },
+  { id: 'other', label: 'Other asset', icon: '➕' },
+]
+
+const LIABILITY_TYPE_OPTIONS = [
+  { id: 'mortgage', label: 'Mortgage', icon: '🏦' },
   { id: 'heloc', label: 'HELOC', icon: '🏦' },
-  { id: 'loc', label: 'Line of credit', icon: '💳' },
-  { id: 'credit', label: 'Credit Card', icon: '💰' },
-  { id: 'loan', label: 'Loan', icon: '📋' },
-  { id: 'other', label: 'Other', icon: '➕' },
+  { id: 'loc', label: 'Line of credit', icon: '💸' },
+  { id: 'carloan', label: 'Car loan', icon: '🚗' },
+  { id: 'studentloan', label: 'Student loan', icon: '🎓' },
+  { id: 'creditcard', label: 'Credit card', icon: '💳' },
+  { id: 'other_liability', label: 'Other liability', icon: '📋' },
 ]
 
 export default function AccountsScreen() {
   const [accounts, setAccounts] = useState<Account[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [showAddAccount, setShowAddAccount] = useState(false)
+  const [showAddType, setShowAddType] = useState<'asset' | 'liability' | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
 
-  useEffect(() => {
-    loadAccounts()
-  }, [])
+  useFocusEffect(
+    useCallback(() => {
+      loadAccounts()
+    }, [])
+  )
 
   async function loadAccounts() {
     const { data: { user } } = await supabase.auth.getUser()
@@ -69,20 +98,25 @@ export default function AccountsScreen() {
     setLoading(false)
   }
 
-  async function updateBalance(id: string, balance: string) {
+  function updateBalance(id: string, balance: string) {
     setAccounts(accounts.map(a => a.id === id ? { ...a, balance: parseFloat(balance) || 0 } : a))
+  }
+
+  function updateLabel(id: string, label: string) {
+    setAccounts(accounts.map(a => a.id === id ? { ...a, label } : a))
   }
 
   async function saveBalances() {
     setSaving(true)
     setError('')
     setSuccess(false)
+    setEditingId(null)
 
     try {
       for (const account of accounts) {
         await supabase
           .from('accounts')
-          .update({ balance: account.balance })
+          .update({ balance: account.balance, label: account.label })
           .eq('id', account.id)
       }
       setSuccess(true)
@@ -93,7 +127,7 @@ export default function AccountsScreen() {
     setSaving(false)
   }
 
-  async function addAccount(type: string, label: string, icon: string) {
+  async function addAccount(type: string, label: string) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
@@ -105,20 +139,72 @@ export default function AccountsScreen() {
 
     if (data) {
       setAccounts([...accounts, data])
-      setShowAddAccount(false)
+      setShowAddType(null)
     }
   }
 
   async function deleteAccount(id: string) {
     await supabase.from('accounts').delete().eq('id', id)
-    setAccounts(accounts.filter(a => a.id !== id))
+    setAccounts(prev => prev.filter(a => a.id !== id))
   }
 
-  const assets = accounts.filter(a => !['mortgage', 'heloc', 'loc', 'credit', 'loan'].includes(a.type))
-  const liabilities = accounts.filter(a => ['mortgage', 'heloc', 'loc', 'credit', 'loan'].includes(a.type))
-  const totalAssets = assets.reduce((sum, a) => sum + a.balance, 0)
-  const totalLiabilities = liabilities.reduce((sum, a) => sum + a.balance, 0)
+  function isLiability(type: string) {
+    const t = type.toLowerCase()
+    return LIABILITY_TYPES.some(l => t.startsWith(l) || t.includes(l))
+  }
+
+  const assets = accounts.filter(a => !isLiability(a.type))
+  const liabilities = accounts.filter(a => isLiability(a.type))
+  const totalAssets = assets.reduce((sum, a) => sum + (parseFloat(a.balance.toString()) || 0), 0)
+  const totalLiabilities = liabilities.reduce((sum, a) => sum + (parseFloat(a.balance.toString()) || 0), 0)
   const netWorth = totalAssets - totalLiabilities
+
+  function getIcon(type: string) {
+    const t = type.toLowerCase()
+    for (const key of Object.keys(ACCOUNT_ICONS)) {
+      if (t.startsWith(key) || t === key) return ACCOUNT_ICONS[key]
+    }
+    return '💳'
+  }
+  
+  function renderAccount(account: Account) {
+    const isEditing = editingId === account.id
+    return (
+      <View key={account.id} style={styles.accountRow}>
+        <View style={styles.accountLeft}>
+          <Text style={styles.accountIcon}>
+            {getIcon(account.type)}
+          </Text>
+          {isEditing ? (
+            <TextInput
+              style={styles.accountLabelInput}
+              value={account.label}
+              onChangeText={(val) => updateLabel(account.id, val)}
+              autoFocus
+              onBlur={() => setEditingId(null)}
+              selectTextOnFocus
+            />
+          ) : (
+            <TouchableOpacity onPress={() => setEditingId(account.id)} style={{ flex: 1 }}>
+              <Text style={styles.accountLabel}>{account.label}</Text>
+              <Text style={styles.accountLabelHint}>tap to rename</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+        <View style={styles.accountRight}>
+          <CurrencyInput
+            style={styles.balanceInput}
+            value={account.balance.toString()}
+            onChangeText={(val) => updateBalance(account.id, val)}
+            placeholder="$0"
+          />
+          <TouchableOpacity onPress={() => deleteAccount(account.id)}>
+            <Text style={styles.deleteBtn}>✕</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    )
+  }
 
   if (loading) {
     return (
@@ -130,10 +216,6 @@ export default function AccountsScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-        <Text style={styles.backText}>← Back</Text>
-      </TouchableOpacity>
-
       <Text style={styles.title}>Accounts</Text>
 
       <View style={styles.netWorthCard}>
@@ -151,90 +233,63 @@ export default function AccountsScreen() {
         </View>
       </View>
 
+      <Text style={styles.sectionTitle}>Assets</Text>
       {assets.length > 0 && (
-        <>
-          <Text style={styles.sectionTitle}>Assets</Text>
-          <View style={styles.accountList}>
-            {assets.map((account, index) => (
-              <View key={account.id} style={styles.accountRow}>
-                <View style={styles.accountLeft}>
-                  <Text style={styles.accountIcon}>
-                    {ACCOUNT_ICONS[account.type] || '💳'}
-                  </Text>
-                  <Text style={styles.accountLabel}>{account.label}</Text>
-                </View>
-                <View style={styles.accountRight}>
-                  <CurrencyInput
-                    style={styles.balanceInput}
-                    value={account.balance.toString()}
-                    onChangeText={(val) => updateBalance(account.id, val)}
-                    placeholder="$0"
-                  />
-                  <TouchableOpacity onPress={() => deleteAccount(account.id)}>
-                    <Text style={styles.deleteBtn}>✕</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ))}
-          </View>
-        </>
+        <View style={styles.accountList}>
+          {assets.map(account => renderAccount(account))}
+        </View>
       )}
-
-      {liabilities.length > 0 && (
-        <>
-          <Text style={styles.sectionTitle}>Liabilities</Text>
-          <View style={styles.accountList}>
-            {liabilities.map((account, index) => (
-              <View key={account.id} style={styles.accountRow}>
-                <View style={styles.accountLeft}>
-                  <Text style={styles.accountIcon}>
-                    {ACCOUNT_ICONS[account.type] || '💳'}
-                  </Text>
-                  <Text style={styles.accountLabel}>{account.label}</Text>
-                </View>
-                <View style={styles.accountRight}>
-                  <CurrencyInput
-                    style={styles.balanceInput}
-                    value={account.balance.toString()}
-                    onChangeText={(val) => updateBalance(account.id, val)}
-                    placeholder="$0"
-                  />
-                  <TouchableOpacity onPress={() => deleteAccount(account.id)}>
-                    <Text style={styles.deleteBtn}>✕</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ))}
-          </View>
-        </>
-      )}
-
-      {showAddAccount && (
-        <>
-          <Text style={styles.sectionTitle}>Add account</Text>
-          <View style={styles.typeGrid}>
-            {ACCOUNT_TYPES.filter(t => !accounts.find(a => a.type === t.id)).map(type => (
-              <TouchableOpacity
-                key={type.id}
-                style={styles.typeChip}
-                onPress={() => addAccount(type.id, type.label, type.icon)}
-              >
-                <Text style={styles.typeChipIcon}>{type.icon}</Text>
-                <Text style={styles.typeChipLabel}>{type.label}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </>
-      )}
-
       <TouchableOpacity
-        style={styles.addButton}
-        onPress={() => setShowAddAccount(!showAddAccount)}
+        style={styles.addSmallBtn}
+        onPress={() => setShowAddType(showAddType === 'asset' ? null : 'asset')}
       >
-        <Text style={styles.addButtonText}>
-          {showAddAccount ? '− Cancel' : '+ Add account'}
+        <Text style={styles.addSmallBtnText}>
+          {showAddType === 'asset' ? '− Cancel' : '+ Add asset'}
         </Text>
       </TouchableOpacity>
+      {showAddType === 'asset' && (
+        <View style={styles.typeGrid}>
+          {ASSET_TYPE_OPTIONS.map(type => (
+            <TouchableOpacity
+              key={type.id}
+              style={styles.typeChip}
+              onPress={() => addAccount(type.id, type.label)}
+            >
+              <Text style={styles.typeChipIcon}>{type.icon}</Text>
+              <Text style={styles.typeChipLabel}>{type.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+
+      <Text style={styles.sectionTitle}>Liabilities</Text>
+      {liabilities.length > 0 && (
+        <View style={styles.accountList}>
+          {liabilities.map(account => renderAccount(account))}
+        </View>
+      )}
+      <TouchableOpacity
+        style={styles.addSmallBtn}
+        onPress={() => setShowAddType(showAddType === 'liability' ? null : 'liability')}
+      >
+        <Text style={styles.addSmallBtnText}>
+          {showAddType === 'liability' ? '− Cancel' : '+ Add liability'}
+        </Text>
+      </TouchableOpacity>
+      {showAddType === 'liability' && (
+        <View style={styles.typeGrid}>
+          {LIABILITY_TYPE_OPTIONS.map(type => (
+            <TouchableOpacity
+              key={type.id}
+              style={styles.typeChip}
+              onPress={() => addAccount(type.id, type.label)}
+            >
+              <Text style={styles.typeChipIcon}>{type.icon}</Text>
+              <Text style={styles.typeChipLabel}>{type.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
       {success ? <Text style={styles.successText}>✅ Balances saved!</Text> : null}
@@ -271,13 +326,6 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     width: '100%',
     gap: 16,
-  },
-  backButton: {
-    marginBottom: 8,
-  },
-  backText: {
-    color: Colors.primary,
-    fontSize: 16,
   },
   title: {
     fontSize: 28,
@@ -340,6 +388,20 @@ const styles = StyleSheet.create({
     color: Colors.text,
     fontWeight: '500',
   },
+  accountLabelInput: {
+    fontSize: 15,
+    color: Colors.text,
+    fontWeight: '500',
+    flex: 1,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.primary,
+    paddingVertical: 2,
+  },
+  accountLabelHint: {
+    fontSize: 10,
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
   accountRight: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -360,6 +422,21 @@ const styles = StyleSheet.create({
   deleteBtn: {
     color: Colors.textSecondary,
     fontSize: 16,
+    paddingHorizontal: 4,
+    paddingVertical: 4,
+  },
+  addSmallBtn: {
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 12,
+    borderStyle: 'dashed',
+  },
+  addSmallBtnText: {
+    color: Colors.primary,
+    fontSize: 14,
+    fontWeight: '500',
   },
   typeGrid: {
     flexDirection: 'row',
@@ -383,18 +460,6 @@ const styles = StyleSheet.create({
   typeChipLabel: {
     fontSize: 14,
     color: Colors.text,
-  },
-  addButton: {
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  addButtonText: {
-    color: Colors.primary,
-    fontSize: 15,
-    fontWeight: '500',
   },
   error: {
     color: Colors.danger,
