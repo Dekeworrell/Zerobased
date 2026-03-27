@@ -1,6 +1,7 @@
+import DateTimePicker from '@react-native-community/datetimepicker'
 import { router } from 'expo-router'
 import { useEffect, useState } from 'react'
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import CurrencyInput from '../components/CurrencyInput'
 import { Colors } from '../constants/colors'
 import { supabase } from '../lib/supabase'
@@ -16,7 +17,12 @@ export default function AddTransactionScreen() {
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null)
   const [amount, setAmount] = useState('')
   const [label, setLabel] = useState('')
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0])
+  const [date, setDate] = useState(() => {
+    const now = new Date()
+    const offset = now.getTimezoneOffset()
+    return new Date(now.getTime() - offset * 60 * 1000)
+  })
+  const [showDatePicker, setShowDatePicker] = useState(false)
   const [type, setType] = useState<'expense' | 'income'>('expense')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -39,9 +45,24 @@ export default function AddTransactionScreen() {
     setLoading(false)
   }
 
+  function formatDateDisplay(d: Date) {
+    return d.toLocaleDateString('en-CA', {
+      weekday: 'short',
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    })
+  }
+
+  function formatDateForDB(d: Date) {
+    const offset = d.getTimezoneOffset()
+    const local = new Date(d.getTime() - offset * 60 * 1000)
+    return local.toISOString().split('T')[0]
+  }
+
   async function handleSave() {
-    if (!amount || !label) {
-      setError('Please enter an amount and description')
+    if (!amount) {
+      setError('Please enter an amount')
       return
     }
 
@@ -52,12 +73,12 @@ export default function AddTransactionScreen() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not logged in')
 
-    await supabase.from('transactions').insert({
+      await supabase.from('transactions').insert({
         user_id: user.id,
         category_id: selectedCategory?.id === 'unexpected' ? null : selectedCategory?.id || null,
         label,
         amount: parseFloat(amount),
-        date,
+        date: formatDateForDB(date),
         type,
         is_unexpected: selectedCategory?.id === 'unexpected',
       })
@@ -114,7 +135,7 @@ export default function AddTransactionScreen() {
         onChangeText={setAmount}
       />
 
-      <Text style={styles.fieldLabel}>Description</Text>
+      <Text style={styles.fieldLabel}>Description (optional)</Text>
       <TextInput
         style={styles.input}
         placeholder="What was this for?"
@@ -125,13 +146,25 @@ export default function AddTransactionScreen() {
       />
 
       <Text style={styles.fieldLabel}>Date</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="YYYY-MM-DD"
-        placeholderTextColor={Colors.textSecondary}
-        value={date}
-        onChangeText={setDate}
-      />
+      <TouchableOpacity
+        style={styles.dateButton}
+        onPress={() => setShowDatePicker(true)}
+      >
+        <Text style={styles.dateButtonText}>📅  {formatDateDisplay(date)}</Text>
+      </TouchableOpacity>
+
+      {showDatePicker && (
+        <DateTimePicker
+          value={date}
+          mode="date"
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={(event, selectedDate) => {
+            if (selectedDate) setDate(selectedDate)
+            if (Platform.OS === 'android') setShowDatePicker(false)
+          }}
+          maximumDate={new Date()}
+        />
+      )}
 
       {type === 'expense' && (
         <>
@@ -254,6 +287,18 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
+    fontSize: 16,
+    color: Colors.text,
+  },
+  dateButton: {
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  dateButtonText: {
     fontSize: 16,
     color: Colors.text,
   },

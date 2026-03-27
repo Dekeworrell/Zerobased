@@ -1,5 +1,5 @@
-import { router } from 'expo-router'
-import { useEffect, useState } from 'react'
+import { router, useFocusEffect } from 'expo-router'
+import { useCallback, useState } from 'react'
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { Colors } from '../constants/colors'
 import { toMonthly } from '../lib/store'
@@ -15,9 +15,11 @@ export default function DashboardScreen() {
   const [totalSpent, setTotalSpent] = useState(0)
   const [error, setError] = useState('')
 
-  useEffect(() => {
-    loadDashboard()
-  }, [])
+  useFocusEffect(
+    useCallback(() => {
+      loadDashboard()
+    }, [])
+  )
 
   async function loadDashboard() {
     try {

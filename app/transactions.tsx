@@ -1,5 +1,5 @@
-import { router } from 'expo-router'
-import { useEffect, useState } from 'react'
+import { router, useFocusEffect } from 'expo-router'
+import { useCallback, useEffect, useState } from 'react'
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import { Colors } from '../constants/colors'
 import { supabase } from '../lib/supabase'
@@ -24,9 +24,11 @@ export default function TransactionsScreen() {
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<'all' | 'expense' | 'income' | 'unexpected'>('all')
 
-  useEffect(() => {
-    loadTransactions()
-  }, [])
+  useFocusEffect(
+    useCallback(() => {
+      loadTransactions()
+    }, [])
+  )
 
   useEffect(() => {
     applyFilter()
