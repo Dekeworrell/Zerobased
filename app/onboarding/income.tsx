@@ -1,9 +1,11 @@
-import { router } from 'expo-router'
-import { useState } from 'react'
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import DateTimePicker from '@react-native-community/datetimepicker'
+import { router, useLocalSearchParams } from 'expo-router'
+import { useEffect, useState } from 'react'
+import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import CurrencyInput from '../../components/CurrencyInput'
 import { Colors } from '../../constants/colors'
 import { getOnboardingData, setIncomeSources } from '../../lib/store'
+import { supabase } from '../../lib/supabase'
 
 const PAY_FREQUENCIES = [
   { id: 'weekly', label: 'Weekly' },
@@ -21,17 +23,56 @@ const INCOME_TYPES = [
 ]
 
 type IncomeSource = {
+  id?: string
   label: string
   amount: string
   frequency: string
   type: string
+  next_payday: string
 }
 
 export default function IncomeScreen() {
-  const [sources, setSources] = useState<IncomeSource[]>(() => {
-    const saved = getOnboardingData().incomeSources
-    return saved.length > 0 ? saved : [{ label: 'Primary income', amount: '', frequency: 'biweekly', type: 'employment' }]
-  })
+  const { from } = useLocalSearchParams<{ from?: string }>()
+  const isEditing = from === 'dashboard'
+  const [loading, setLoading] = useState(isEditing)
+  const [saving, setSaving] = useState(false)
+  const [showPaydayPicker, setShowPaydayPicker] = useState<number | null>(null)
+  const [sources, setSources] = useState<IncomeSource[]>([
+    { label: 'Primary income', amount: '', frequency: 'biweekly', type: 'employment', next_payday: '' }
+  ])
+
+  useEffect(() => {
+    if (isEditing) {
+      loadExistingIncome()
+    } else {
+      const saved = getOnboardingData().incomeSources
+      if (saved.length > 0) {
+        setSources(saved.map((s: any) => ({ ...s, next_payday: s.next_payday || '' })))
+      }
+    }
+  }, [])
+
+  async function loadExistingIncome() {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    const { data } = await supabase
+      .from('income_sources')
+      .select('*')
+      .eq('user_id', user.id)
+
+    if (data && data.length > 0) {
+      setSources(data.map((s: any) => ({
+        id: s.id,
+        label: s.label,
+        amount: s.amount.toString(),
+        frequency: s.frequency,
+        type: s.type,
+        next_payday: s.next_payday || '',
+      })))
+    }
+    setLoading(false)
+  }
 
   function updateSource(index: number, field: keyof IncomeSource, value: string) {
     const updated = [...sources]
@@ -40,16 +81,54 @@ export default function IncomeScreen() {
   }
 
   function addSource() {
-    setSources([...sources, { label: 'Additional income', amount: '', frequency: 'monthly', type: 'other' }])
+    setSources([...sources, {
+      label: 'Additional income',
+      amount: '',
+      frequency: 'monthly',
+      type: 'other',
+      next_payday: '',
+    }])
   }
 
   function removeSource(index: number) {
     setSources(sources.filter((_, i) => i !== index))
   }
 
-  function handleContinue() {
-    setIncomeSources(sources)
-    router.push('/onboarding/expenses')
+  async function handleContinue() {
+    if (isEditing) {
+      setSaving(true)
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+
+        await supabase.from('income_sources').delete().eq('user_id', user.id)
+        await supabase.from('income_sources').insert(
+          sources.map(s => ({
+            user_id: user.id,
+            label: s.label,
+            amount: parseFloat(s.amount) || 0,
+            frequency: s.frequency,
+            type: s.type,
+            next_payday: s.next_payday || null,
+          }))
+        )
+        router.replace('/dashboard')
+      } catch (err) {
+        console.error(err)
+      }
+      setSaving(false)
+    } else {
+      setIncomeSources(sources)
+      router.push('/onboarding/expenses')
+    }
+  }
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    )
   }
 
   return (
@@ -57,7 +136,7 @@ export default function IncomeScreen() {
       <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
         <Text style={styles.backText}>← Back</Text>
       </TouchableOpacity>
-      <Text style={styles.step}>Step 3 of 5</Text>
+      <Text style={styles.step}>{isEditing ? 'Edit income' : 'Step 3 of 5'}</Text>
       <Text style={styles.title}>Your income</Text>
       <Text style={styles.subtitle}>Add all sources of income you receive</Text>
 
@@ -101,6 +180,52 @@ export default function IncomeScreen() {
               ))}
             </View>
 
+            <Text style={styles.fieldLabel}>Next payday</Text>
+            {Platform.OS === 'web' ? (
+              <input
+                type="date"
+                value={source.next_payday}
+                min={new Date().toISOString().split('T')[0]}
+                onChange={(e) => updateSource(index, 'next_payday', e.target.value)}
+                style={{
+                  backgroundColor: '#1c1c1e',
+                  border: '1px solid #3a3a3c',
+                  borderRadius: 12,
+                  padding: '14px 16px',
+                  fontSize: 16,
+                  color: '#ffffff',
+                  width: '100%',
+                  boxSizing: 'border-box' as any,
+                  marginBottom: 8,
+                }}
+              />
+            ) : (
+              <TouchableOpacity
+                style={styles.dateButton}
+                onPress={() => setShowPaydayPicker(index)}
+              >
+                <Text style={styles.dateButtonText}>
+                  📅 {source.next_payday || 'Select your next payday'}
+                </Text>
+              </TouchableOpacity>
+            )}
+            {showPaydayPicker === index && (
+              <DateTimePicker
+                value={source.next_payday ? new Date(source.next_payday + 'T12:00:00') : new Date()}
+                mode="date"
+                display="spinner"
+                minimumDate={new Date()}
+                onChange={(event, selectedDate) => {
+                  setShowPaydayPicker(null)
+                  if (selectedDate) {
+                    const offset = selectedDate.getTimezoneOffset()
+                    const local = new Date(selectedDate.getTime() - offset * 60 * 1000)
+                    updateSource(index, 'next_payday', local.toISOString().split('T')[0])
+                  }
+                }}
+              />
+            )}
+
             <Text style={styles.fieldLabel}>Income type</Text>
             <View style={styles.chipRow}>
               {INCOME_TYPES.map((type) => (
@@ -123,14 +248,26 @@ export default function IncomeScreen() {
         <Text style={styles.addButtonText}>+ Add another income source</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.primaryButton} onPress={handleContinue}>
-        <Text style={styles.primaryButtonText}>Continue</Text>
+      <TouchableOpacity
+        style={[styles.primaryButton, saving && styles.disabled]}
+        onPress={handleContinue}
+        disabled={saving}
+      >
+        <Text style={styles.primaryButtonText}>
+          {saving ? 'Saving...' : isEditing ? 'Save & return to dashboard' : 'Continue'}
+        </Text>
       </TouchableOpacity>
     </ScrollView>
   )
 }
 
 const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: Colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   container: {
     flex: 1,
     backgroundColor: Colors.background,
@@ -142,7 +279,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     width: '100%',
   },
-backButton: {
+  backButton: {
     marginBottom: 24,
   },
   backText: {
@@ -155,7 +292,6 @@ backButton: {
     fontWeight: '600',
     marginBottom: 12,
   },
-
   title: {
     fontSize: 28,
     fontWeight: 'bold',
@@ -210,6 +346,19 @@ backButton: {
     fontSize: 16,
     color: Colors.text,
   },
+  dateButton: {
+    backgroundColor: Colors.background,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 14,
+    marginBottom: 4,
+  },
+  dateButtonText: {
+    fontSize: 15,
+    color: Colors.text,
+  },
   chipRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -253,6 +402,9 @@ backButton: {
     borderRadius: 12,
     alignItems: 'center',
     marginTop: 8,
+  },
+  disabled: {
+    opacity: 0.6,
   },
   primaryButtonText: {
     color: Colors.text,

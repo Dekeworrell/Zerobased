@@ -95,7 +95,20 @@ export default function DashboardScreen() {
 
   const totalBudgeted = categories.reduce((sum, c) => sum + toMonthly(c.budgeted_amount.toString(), c.frequency), 0)
   const unassigned = monthlyIncome - totalBudgeted
-  const netWorth = accounts.reduce((sum, a) => sum + (parseFloat(a.balance) || 0), 0)
+  const LIABILITY_TYPES = [
+  'mortgage', 'heloc', 'loc', 'carloan', 'studentloan', 'creditcard', 'other_liability',
+  'loan', 'credit', 'car_loan', 'student_loan', 'credit_card', 'line_of_credit',
+]
+
+function isLiability(type: string) {
+  const t = type.toLowerCase()
+  return LIABILITY_TYPES.some(l => t.startsWith(l) || t.includes(l))
+}
+
+const netWorth = accounts.reduce((sum, a) => {
+  const balance = parseFloat(a.balance) || 0
+  return isLiability(a.type) ? sum - balance : sum + balance
+}, 0)
 
   function getHour() {
     const h = new Date().getHours()
@@ -136,7 +149,12 @@ export default function DashboardScreen() {
 
       <View style={styles.row}>
         <View style={styles.statCard}>
-          <Text style={styles.statLabel}>Monthly income</Text>
+          <View style={styles.statCardHeader}>
+            <Text style={styles.statLabel}>Monthly income</Text>
+            <TouchableOpacity onPress={() => router.push('/onboarding/income?from=dashboard')}>
+              <Text style={styles.editLink}>Edit</Text>
+            </TouchableOpacity>
+          </View>
           <Text style={styles.statValue}>
             ${monthlyIncome.toLocaleString('en-CA', { maximumFractionDigits: 0 })}
           </Text>
@@ -144,6 +162,7 @@ export default function DashboardScreen() {
             ${(monthlyIncome / 2).toLocaleString('en-CA', { maximumFractionDigits: 0 })} per paycheque
           </Text>
         </View>
+
         <View style={styles.statCard}>
           <Text style={styles.statLabel}>Unassigned</Text>
           <Text style={[styles.statValue, { color: unassigned > 0 ? Colors.warning : Colors.success }]}>
@@ -574,5 +593,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  statCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
   },
 })

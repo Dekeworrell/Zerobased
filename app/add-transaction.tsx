@@ -146,24 +146,46 @@ export default function AddTransactionScreen() {
       />
 
       <Text style={styles.fieldLabel}>Date</Text>
-      <TouchableOpacity
-        style={styles.dateButton}
-        onPress={() => setShowDatePicker(true)}
-      >
-        <Text style={styles.dateButtonText}>📅  {formatDateDisplay(date)}</Text>
-      </TouchableOpacity>
-
-      {showDatePicker && (
-        <DateTimePicker
-          value={date}
-          mode="date"
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={(event, selectedDate) => {
-            if (selectedDate) setDate(selectedDate)
-            if (Platform.OS === 'android') setShowDatePicker(false)
+      {Platform.OS === 'web' ? (
+        <input
+          type="date"
+          value={formatDateForDB(date)}
+          max={formatDateForDB(new Date())}
+          onChange={(e) => {
+            if (e.target.value) setDate(new Date(e.target.value + 'T12:00:00'))
           }}
-          maximumDate={new Date()}
+          style={{
+            backgroundColor: '#1c1c1e',
+            border: '1px solid #3a3a3c',
+            borderRadius: 12,
+            padding: '14px 16px',
+            fontSize: 16,
+            color: '#ffffff',
+            width: '100%',
+            boxSizing: 'border-box',
+          }}
         />
+      ) : (
+        <>
+          <TouchableOpacity
+            style={styles.dateButton}
+            onPress={() => setShowDatePicker(true)}
+          >
+            <Text style={styles.dateButtonText}>📅  {formatDateDisplay(date)}</Text>
+          </TouchableOpacity>
+          {showDatePicker && (
+            <DateTimePicker
+              value={date}
+              mode="date"
+              display="spinner"
+              onChange={(event, selectedDate) => {
+                if (selectedDate) setDate(selectedDate)
+                if (Platform.OS === 'android') setShowDatePicker(false)
+              }}
+              maximumDate={new Date()}
+            />
+          )}
+        </>
       )}
 
       {type === 'expense' && (

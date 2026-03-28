@@ -1,9 +1,15 @@
 import { Tabs } from 'expo-router'
+import { useEffect } from 'react'
 import { Platform, Text } from 'react-native'
 import { Colors } from '../constants/colors'
+import { initStore } from '../lib/store'
 
 export default function RootLayout() {
   const tabBarHeight = Platform.OS === 'web' ? 48 : 54
+
+  useEffect(() => {
+    initStore()
+  }, [])
 
   return (
     <Tabs
@@ -38,13 +44,6 @@ export default function RootLayout() {
       <Tabs.Screen name="add-transaction" options={{ href: null, tabBarStyle: { display: 'none' } }} />
       <Tabs.Screen name="settings" options={{ href: null, tabBarStyle: { display: 'none' } }} />
       <Tabs.Screen
-        name="dashboard"
-        options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <Text style={{ fontSize: 18, color }}>🏠</Text>,
-        }}
-      />
-      <Tabs.Screen
         name="budget"
         options={{
           title: 'Budget',
@@ -56,6 +55,13 @@ export default function RootLayout() {
         options={{
           title: 'Transactions',
           tabBarIcon: ({ color }) => <Text style={{ fontSize: 18, color }}>💳</Text>,
+        }}
+      />
+      <Tabs.Screen
+        name="dashboard"
+        options={{
+          title: 'Dashboard',
+          tabBarIcon: ({ color }) => <Text style={{ fontSize: 18, color }}>💰</Text>,
         }}
       />
       <Tabs.Screen
