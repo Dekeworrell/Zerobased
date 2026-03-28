@@ -1,3 +1,5 @@
+import AsyncStorage from '@react-native-async-storage/async-storage'
+
 type TrackingMethod = 'bank' | 'manual'
 
 type Account = {
@@ -31,62 +33,64 @@ type OnboardingData = {
 
 const STORAGE_KEY = 'zerobased_onboarding'
 
-function getStorage(): OnboardingData {
-  try {
-    if (typeof window !== 'undefined' && window.sessionStorage) {
-      const stored = sessionStorage.getItem(STORAGE_KEY)
-      if (stored) return JSON.parse(stored)
-    }
-  } catch {}
-  return {
-    trackingMethod: null,
-    accounts: [],
-    incomeSources: [],
-    expenses: [],
-  }
+let memoryCache: OnboardingData = {
+  trackingMethod: null,
+  accounts: [],
+  incomeSources: [],
+  expenses: [],
 }
 
-function saveStorage(data: OnboardingData) {
+export async function initStore() {
   try {
-    if (typeof window !== 'undefined' && window.sessionStorage) {
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(data))
-    }
+    const stored = await AsyncStorage.getItem(STORAGE_KEY)
+    if (stored) memoryCache = JSON.parse(stored)
   } catch {}
+}
+
+async function saveStorage(data: OnboardingData) {
+  memoryCache = data
+  try {
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+  } catch {}
+}
+
+export function getOnboardingData(): OnboardingData {
+  return memoryCache
 }
 
 export function setTrackingMethod(method: TrackingMethod) {
-  const data = getStorage()
+  const data = getOnboardingData()
   data.trackingMethod = method
   saveStorage(data)
 }
 
 export function setAccounts(accounts: Account[]) {
-  const data = getStorage()
+  const data = getOnboardingData()
   data.accounts = accounts
   saveStorage(data)
 }
 
 export function setIncomeSources(sources: IncomeSource[]) {
-  const data = getStorage()
+  const data = getOnboardingData()
   data.incomeSources = sources
   saveStorage(data)
 }
 
 export function setExpenses(expenses: Expense[]) {
-  const data = getStorage()
+  const data = getOnboardingData()
   data.expenses = expenses
   saveStorage(data)
 }
 
-export function getOnboardingData(): OnboardingData {
-  return getStorage()
-}
-
 export function clearOnboardingData() {
+  memoryCache = {
+    trackingMethod: null,
+    accounts: [],
+    incomeSources: [],
+    expenses: [],
+  }
   try {
-    if (typeof window !== 'undefined' && window.sessionStorage) {
-      sessionStorage.removeItem(STORAGE_KEY)
-    }
+    AsyncStorage.removeItem(STORAGE_KEY)
   } catch {}
 }
 

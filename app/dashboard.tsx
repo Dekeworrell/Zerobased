@@ -29,7 +29,13 @@ export default function DashboardScreen() {
         return
       }
 
-      setName(user.email?.split('@')[0] || 'there')
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('name')
+        .eq('id', user.id)
+        .single()
+
+      setName(profile?.name || user.email?.split('@')[0] || 'there')
 
       const { data: income } = await supabase
         .from('income_sources')

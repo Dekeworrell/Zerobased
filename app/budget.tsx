@@ -207,9 +207,6 @@ export default function BudgetScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <TouchableOpacity onPress={() => router.push('/dashboard')} style={styles.backButton}>
-        <Text style={styles.backText}>← Back</Text>
-      </TouchableOpacity>
 
       <Text style={styles.title}>Edit budget</Text>
       <Text style={styles.subtitle}>Adjust your monthly budget categories</Text>

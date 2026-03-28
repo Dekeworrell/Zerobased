@@ -5,18 +5,31 @@ import { Colors } from '../constants/colors'
 import { supabase } from '../lib/supabase'
 
 export default function SignUpScreen() {
+  const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
   async function handleSignUp() {
+    if (!name.trim()) {
+      setError('Please enter your name')
+      return
+    }
     setLoading(true)
     setError('')
-  const { data, error } = await supabase.auth.signUp({ email, password })
+
+    const { data, error } = await supabase.auth.signUp({ email, password })
     if (error) {
       setError(error.message)
     } else if (data.session) {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        await supabase.from('profiles').upsert({
+          id: user.id,
+          name: name.trim(),
+        })
+      }
       router.replace('/onboarding/tracking-method')
     } else {
       setError('Please check your email to confirm your account.')
@@ -40,6 +53,16 @@ export default function SignUpScreen() {
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
         <View style={styles.form}>
+          <Text style={styles.label}>First name</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Your first name"
+            placeholderTextColor={Colors.textSecondary}
+            value={name}
+            onChangeText={setName}
+            autoCapitalize="words"
+          />
+
           <Text style={styles.label}>Email</Text>
           <TextInput
             style={styles.input}
@@ -88,8 +111,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
-
- inner: {
+  inner: {
     flex: 1,
     paddingHorizontal: 32,
     paddingVertical: 60,
@@ -98,11 +120,9 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     width: '100%',
   },
-
- backButton: {
+  backButton: {
     marginBottom: 32,
   },
-
   backText: {
     color: Colors.primary,
     fontSize: 16,

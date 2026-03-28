@@ -117,9 +117,6 @@ export default function TransactionsScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-        <Text style={styles.backText}>← Back</Text>
-      </TouchableOpacity>
 
       <View style={styles.headerRow}>
         <Text style={styles.title}>Transactions</Text>
