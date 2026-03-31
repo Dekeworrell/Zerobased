@@ -340,6 +340,7 @@ const styles = StyleSheet.create({
   },
   settingsBtn: {
     padding: 8,
+    paddingRight: 16,
   },
   settingsIcon: {
     fontSize: 24,
