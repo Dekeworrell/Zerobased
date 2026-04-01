@@ -140,7 +140,7 @@ const netWorth = accounts.reduce((sum, a) => {
       </View>
 
       <View style={styles.netWorthCard}>
-        <Text style={styles.netWorthLabel}>Net worth</Text>
+        <Text style={styles.netWorthLabel}>Net Worth</Text>
         <Text style={styles.netWorthAmount}>
           ${netWorth.toLocaleString('en-CA', { maximumFractionDigits: 0 })}
         </Text>
@@ -150,7 +150,7 @@ const netWorth = accounts.reduce((sum, a) => {
       <View style={styles.row}>
         <View style={styles.statCard}>
           <View style={styles.statCardHeader}>
-            <Text style={styles.statLabel}>Monthly income</Text>
+            <Text style={styles.statLabel}>Monthly Income</Text>
             <TouchableOpacity onPress={() => router.push('/onboarding/income?from=dashboard')}>
               <Text style={styles.editLink}>Edit</Text>
             </TouchableOpacity>
@@ -165,11 +165,11 @@ const netWorth = accounts.reduce((sum, a) => {
 
         <View style={styles.statCard}>
           <Text style={styles.statLabel}>Unassigned</Text>
-          <Text style={[styles.statValue, { color: unassigned > 0 ? Colors.warning : Colors.success }]}>
-            ${Math.abs(unassigned).toLocaleString('en-CA', { maximumFractionDigits: 0 })}
+          <Text style={[styles.statValue, { color: unassigned < 0 ? Colors.danger : unassigned === 0 ? Colors.success : Colors.info }]}>
+            {unassigned < 0 ? '-' : ''}${Math.abs(unassigned).toLocaleString('en-CA', { maximumFractionDigits: 0 })}
           </Text>
           <Text style={styles.statBiweekly}>
-            ${Math.abs(unassigned / 2).toLocaleString('en-CA', { maximumFractionDigits: 0 })} per paycheque
+            {unassigned < 0 ? 'Over by $' : '$'}{Math.abs(unassigned / 2).toLocaleString('en-CA', { maximumFractionDigits: 0 })} per paycheque
           </Text>
         </View>
       </View>
@@ -177,9 +177,9 @@ const netWorth = accounts.reduce((sum, a) => {
       {categories.length > 0 && (
         <>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Budget categories</Text>
+            <Text style={styles.sectionTitle}>Budget Categories</Text>
             <TouchableOpacity onPress={() => router.push('/budget')}>
-              <Text style={styles.editLink}>Edit budget</Text>
+              <Text style={styles.editLink}>Edit Budget</Text>
             </TouchableOpacity>
           </View>
 
@@ -272,11 +272,11 @@ const netWorth = accounts.reduce((sum, a) => {
       )}
 
       <View style={styles.quickActions}>
-        <Text style={styles.sectionTitle}>Quick actions</Text>
+        <Text style={styles.sectionTitle}>Quick Actions</Text>
         <View style={styles.actionRow}>
           <TouchableOpacity style={styles.actionBtn} onPress={() => router.push('/add-transaction')}>
             <Text style={styles.actionIcon}>➕</Text>
-            <Text style={styles.actionLabel}>Add transaction</Text>
+            <Text style={styles.actionLabel}>Add Transaction</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.actionBtn} onPress={() => router.push('/transactions')}>
             <Text style={styles.actionIcon}>📋</Text>
@@ -345,26 +345,28 @@ const styles = StyleSheet.create({
   settingsIcon: {
     fontSize: 24,
   },
-  netWorthCard: {
-    backgroundColor: Colors.primary,
+netWorthCard: {
+    backgroundColor: Colors.primaryLight,
     borderRadius: 20,
     padding: 24,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.primary,
   },
   netWorthLabel: {
     fontSize: 14,
-    color: 'rgba(255,255,255,0.7)',
+    color: Colors.primary,
     marginBottom: 8,
   },
   netWorthAmount: {
     fontSize: 40,
     fontWeight: 'bold',
-    color: Colors.text,
+    color: '#0A2A1A',
     marginBottom: 8,
   },
   netWorthSub: {
     fontSize: 13,
-    color: 'rgba(255,255,255,0.7)',
+    color: Colors.primary,
   },
   row: {
     flexDirection: 'row',
@@ -480,9 +482,9 @@ const styles = StyleSheet.create({
   },
   actionBtn: {
     flex: 1,
-    backgroundColor: Colors.card,
+    backgroundColor: Colors.primaryLight,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: Colors.primary,
     borderRadius: 16,
     padding: 16,
     alignItems: 'center',
@@ -493,7 +495,8 @@ const styles = StyleSheet.create({
   },
   actionLabel: {
     fontSize: 12,
-    color: Colors.textSecondary,
+    color: Colors.primary,
+    fontWeight: '500',
     textAlign: 'center',
   },
   sectionHeader: {

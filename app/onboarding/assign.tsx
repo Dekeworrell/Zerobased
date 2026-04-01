@@ -240,13 +240,13 @@ export default function AssignScreen() {
           </TouchableOpacity>
           {showAddCategory === 'fixed' && (
             <View style={styles.addCategoryChips}>
-              {EXPENSE_CATEGORIES.filter(c => c.category_type === 'fixed' && !expenses.find(e => e.id === c.id)).map(cat => (
+              {EXPENSE_CATEGORIES.filter(c => c.category_type === 'fixed' && (c.id === 'loan_repayment' || !expenses.find(e => e.id === c.id || e.id.startsWith(c.id + '_')))).map(cat => (
                 <TouchableOpacity
                   key={cat.id}
                   style={styles.addChip}
                   onPress={() => {
                     setExpenses([...expenses, {
-                      id: cat.id,
+                      id: `${cat.id}_${Date.now()}`,
                       label: cat.label,
                       icon: cat.icon,
                       amount: '',
@@ -282,13 +282,17 @@ export default function AssignScreen() {
           </TouchableOpacity>
           {showAddCategory === 'variable' && (
             <View style={styles.addCategoryChips}>
-              {EXPENSE_CATEGORIES.filter(c => c.category_type === 'variable' && !expenses.find(e => e.id === c.id)).map(cat => (
+              {EXPENSE_CATEGORIES.filter(c => {
+                if (c.category_type !== 'variable') return false
+                if (c.id === 'entertainment' || c.id === 'other') return true
+                return !expenses.find(e => e.id === c.id)
+              }).map(cat => (
                 <TouchableOpacity
                   key={cat.id}
                   style={styles.addChip}
                   onPress={() => {
                     setExpenses([...expenses, {
-                      id: cat.id,
+                      id: `${cat.id}_${Date.now()}`,
                       label: cat.label,
                       icon: cat.icon,
                       amount: '',

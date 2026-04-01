@@ -71,28 +71,39 @@ export default function SettingsScreen() {
   async function handleDeleteAccount() {
     Alert.alert(
       'Delete account',
-      'Are you sure you want to delete your account? This will permanently delete all your data and cannot be undone.',
+      'Are you sure? This cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Delete',
+          text: 'Yes, delete everything',
           style: 'destructive',
-          onPress: async () => {
-            try {
-              const { data: { user } } = await supabase.auth.getUser()
-              if (!user) return
-
-              await supabase.from('transactions').delete().eq('user_id', user.id)
-              await supabase.from('budget_categories').delete().eq('user_id', user.id)
-              await supabase.from('income_sources').delete().eq('user_id', user.id)
-              await supabase.from('accounts').delete().eq('user_id', user.id)
-              await supabase.from('profiles').delete().eq('id', user.id)
-              await supabase.auth.signOut()
-              router.replace('/')
-
-            } catch (err: any) {
-              setError(err.message)
-            }
+          onPress: () => {
+            Alert.alert(
+              'Final confirmation',
+              'All your data will be permanently deleted.',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'DELETE my account',
+                  style: 'destructive',
+                  onPress: async () => {
+                    try {
+                      const { data: { user } } = await supabase.auth.getUser()
+                      if (!user) return
+                      await supabase.from('transactions').delete().eq('user_id', user.id)
+                      await supabase.from('budget_categories').delete().eq('user_id', user.id)
+                      await supabase.from('income_sources').delete().eq('user_id', user.id)
+                      await supabase.from('accounts').delete().eq('user_id', user.id)
+                      await supabase.from('profiles').delete().eq('id', user.id)
+                      await supabase.auth.signOut()
+                      router.replace('/')
+                    } catch (err: any) {
+                      setError(err.message)
+                    }
+                  }
+                }
+              ]
+            )
           }
         }
       ]

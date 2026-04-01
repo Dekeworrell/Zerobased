@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { StyleSheet, TextInput, TextInputProps } from 'react-native'
 import { Colors } from '../constants/colors'
 
@@ -8,7 +9,10 @@ type Props = Omit<TextInputProps, 'value' | 'onChangeText'> & {
 }
 
 export default function CurrencyInput({ value, onChangeText, style, ...props }: Props) {
+  const [isFocused, setIsFocused] = useState(false)
+
   function format(raw: string): string {
+    if (!raw || raw === '0') return isFocused ? '' : ''
     const digits = raw.replace(/[^0-9.]/g, '')
     const parts = digits.split('.')
     const whole = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',')
@@ -23,16 +27,32 @@ export default function CurrencyInput({ value, onChangeText, style, ...props }: 
     onChangeText(raw)
   }
 
+  function handleFocus() {
+    setIsFocused(true)
+    if (value === '0' || value === '') {
+      onChangeText('')
+    }
+  }
+
+  function handleBlur() {
+    setIsFocused(false)
+    if (!value || value === '') {
+      onChangeText('0')
+    }
+  }
+
   return (
     <TextInput
       {...props}
       value={format(value)}
       onChangeText={handleChange}
+      onFocus={handleFocus}
+      onBlur={handleBlur}
       keyboardType="decimal-pad"
+      selectTextOnFocus
       placeholderTextColor={Colors.textSecondary}
+      placeholder="$0"
       style={[styles.input, style]}
-      // @ts-ignore
-      tabIndex={props.tabIndex}
     />
   )
 }

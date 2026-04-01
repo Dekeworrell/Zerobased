@@ -99,7 +99,7 @@ export default function AccountsScreen() {
   }
 
   function updateBalance(id: string, balance: string) {
-    setAccounts(accounts.map(a => a.id === id ? { ...a, balance: parseFloat(balance) || 0 } : a))
+    setAccounts(accounts.map(a => a.id === id ? { ...a, balance: balance as any } : a))
   }
 
   function updateLabel(id: string, label: string) {

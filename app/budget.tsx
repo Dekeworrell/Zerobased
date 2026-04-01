@@ -100,10 +100,12 @@ export default function BudgetScreen() {
     setLoading(false)
   }
 
+  const MULTI_ALLOWED = ['entertainment', 'other', 'loan_repayment']
+
   function addCategory(cat: typeof EXPENSE_CATEGORIES[0]) {
-    if (categories.find(c => c.label === cat.label)) return
+    if (!MULTI_ALLOWED.includes(cat.id) && categories.find(c => c.label === cat.label)) return
     setCategories([...categories, {
-      id: cat.id,
+      id: MULTI_ALLOWED.includes(cat.id) ? `${cat.id}_${Date.now()}` : cat.id,
       label: cat.label,
       icon: cat.icon,
       budgeted_amount: '',
@@ -212,19 +214,19 @@ export default function BudgetScreen() {
       <Text style={styles.subtitle}>Adjust your monthly budget categories</Text>
 
       <View style={[styles.statusCard, {
-        borderColor: remaining < 0 ? Colors.danger : Math.abs(remaining) < 0.5 ? Colors.success : '#4FC3F7',
-        backgroundColor: Math.abs(remaining) < 0.5 ? Colors.success + '22' : remaining < 0 ? Colors.danger + '22' : Colors.card,
+        borderColor: remaining < 0 ? Colors.danger : Math.abs(remaining) < 0.5 ? Colors.success : Colors.primary,
+        backgroundColor: Math.abs(remaining) < 0.5 ? Colors.success + '22' : remaining < 0 ? Colors.danger + '22' : Colors.primaryLight,
       }]}>
         <Text style={styles.statusLabel}>Remaining to assign</Text>
         <Text style={[styles.statusAmount, {
-          color: remaining < 0 ? Colors.danger : remaining === 0 ? Colors.success : '#4FC3F7'
+          color: remaining < 0 ? Colors.danger : remaining === 0 ? Colors.success : Colors.primary
         }]}>
           {Math.abs(remaining) < 0.5 ? '🎉 $0' : '$' + Math.abs(remaining).toLocaleString('en-CA', { maximumFractionDigits: 0 })}
         </Text>
         <Text style={[styles.statusBiweekly, {
-          color: remaining < 0 ? Colors.danger : remaining === 0 ? Colors.success : '#4FC3F7'
+          color: remaining < 0 ? Colors.danger : remaining === 0 ? Colors.success : Colors.primary
         }]}>
-          {Math.abs(remaining) < 0.5 ? 'Every dollar assigned!' : (remaining < 0 ? 'Over budget by $' : '$') + Math.abs(remaining / 2).toLocaleString('en-CA', { maximumFractionDigits: 0 }) + ' per paycheque'}
+          {Math.abs(remaining) < 0.5 ? 'Every dollar assigned!' : (remaining < 0 ? 'Over budget by $' : 'Unassigned $') + Math.abs(remaining / 2).toLocaleString('en-CA', { maximumFractionDigits: 0 }) + ' per paycheque'}
         </Text>
         <Text style={styles.statusIncome}>
           Monthly income: ${monthlyIncome.toLocaleString('en-CA', { maximumFractionDigits: 0 })} · Per paycheque: ${(monthlyIncome / 2).toLocaleString('en-CA', { maximumFractionDigits: 0 })}
@@ -276,6 +278,7 @@ export default function BudgetScreen() {
       <Text style={styles.addLabel}>Add a category</Text>
       <View style={styles.typeGrid}>
         {EXPENSE_CATEGORIES.filter(c =>
+          ['entertainment', 'other', 'loan_repayment'].includes(c.id) ||
           !categories.find(e => e.label === c.label)
         ).map((category) => (
           <TouchableOpacity

@@ -18,6 +18,7 @@ const EXPENSE_CATEGORIES = [
   { id: 'property_tax', label: 'Property tax', icon: '🏛️', type: 'fixed' },
   { id: 'water_sewer', label: 'Water & sewer', icon: '💧', type: 'fixed' },
   { id: 'car_loan', label: 'Car loan', icon: '🔑', type: 'fixed' },
+  { id: 'student_loan', label: 'Student loan', icon: '🎓', type: 'fixed' },
   { id: 'loan_repayment', label: 'Loan repayment', icon: '💳', type: 'fixed', permanent: true },
   { id: 'mortgage', label: 'Mortgage/Rent', icon: '🏠', type: 'fixed' },
   { id: 'dining', label: 'Dining out', icon: '🍽️', type: 'variable' },
