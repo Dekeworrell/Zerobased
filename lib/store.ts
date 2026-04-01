@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
 type TrackingMethod = 'bank' | 'manual'
+type BudgetCycle = 'monthly' | 'paycycle'
 
 type Account = {
   type: string
@@ -14,6 +15,7 @@ type IncomeSource = {
   amount: string
   frequency: string
   type: string
+  next_payday?: string
 }
 
 type Expense = {
@@ -26,6 +28,7 @@ type Expense = {
 
 type OnboardingData = {
   trackingMethod: TrackingMethod | null
+  budgetCycle: BudgetCycle
   accounts: Account[]
   incomeSources: IncomeSource[]
   expenses: Expense[]
@@ -35,6 +38,7 @@ const STORAGE_KEY = 'zerobased_onboarding'
 
 let memoryCache: OnboardingData = {
   trackingMethod: null,
+  budgetCycle: 'monthly',
   accounts: [],
   incomeSources: [],
   expenses: [],
@@ -64,6 +68,12 @@ export function setTrackingMethod(method: TrackingMethod) {
   saveStorage(data)
 }
 
+export function setBudgetCycle(cycle: BudgetCycle) {
+  const data = getOnboardingData()
+  data.budgetCycle = cycle
+  saveStorage(data)
+}
+
 export function setAccounts(accounts: Account[]) {
   const data = getOnboardingData()
   data.accounts = accounts
@@ -85,6 +95,7 @@ export function setExpenses(expenses: Expense[]) {
 export function clearOnboardingData() {
   memoryCache = {
     trackingMethod: null,
+    budgetCycle: 'monthly',
     accounts: [],
     incomeSources: [],
     expenses: [],
@@ -100,4 +111,32 @@ export function toMonthly(amount: string | number, frequency: string): number {
   if (frequency === 'weekly') return val * 4
   if (frequency === 'semimonthly') return val * 2
   return val
+}
+
+export function getPayPeriodDates(nextPayday: string, frequency: string): { start: Date, end: Date } {
+  const payday = new Date(nextPayday + 'T12:00:00')
+  const today = new Date()
+  today.setHours(12, 0, 0, 0)
+
+  let periodDays = 14
+  if (frequency === 'weekly') periodDays = 7
+  if (frequency === 'monthly') periodDays = 30
+  if (frequency === 'semimonthly') periodDays = 15
+
+  while (payday > today) {
+    payday.setDate(payday.getDate() - periodDays)
+  }
+  while (payday <= today) {
+    const next = new Date(payday)
+    next.setDate(next.getDate() + periodDays)
+    if (next > today) break
+    payday.setDate(payday.getDate() + periodDays)
+  }
+
+  const start = new Date(payday)
+  start.setDate(start.getDate() - periodDays)
+  const end = new Date(payday)
+  end.setDate(end.getDate() - 1)
+
+  return { start, end }
 }

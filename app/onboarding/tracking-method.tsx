@@ -1,16 +1,62 @@
 import { router } from 'expo-router'
+import { useState } from 'react'
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { Colors } from '../../constants/colors'
-import { setTrackingMethod } from '../../lib/store'
+import { setBudgetCycle, setTrackingMethod } from '../../lib/store'
 
 export default function TrackingMethodScreen() {
-function handleChoice(method: 'bank' | 'manual') {
+  const [step, setStep] = useState<'tracking' | 'cycle'>('tracking')
+  const [selectedTracking, setSelectedTracking] = useState<'bank' | 'manual' | null>(null)
+
+  function handleTrackingChoice(method: 'bank' | 'manual') {
+    setSelectedTracking(method)
     setTrackingMethod(method)
-    if (method === 'bank') {
-      router.push('/onboarding/accounts-everyday')
-    } else {
-      router.push('/onboarding/accounts-everyday')
-    }
+    setStep('cycle')
+  }
+
+  function handleCycleChoice(cycle: 'monthly' | 'paycycle') {
+    setBudgetCycle(cycle)
+    router.push('/onboarding/accounts-everyday')
+  }
+
+  if (step === 'cycle') {
+    return (
+      <View style={styles.container}>
+        <View style={styles.inner}>
+          <TouchableOpacity onPress={() => setStep('tracking')} style={styles.backButton}>
+            <Text style={styles.backText}>← Back</Text>
+          </TouchableOpacity>
+          <Text style={styles.step}>Step 1 of 5</Text>
+          <Text style={styles.title}>How do you want to budget?</Text>
+          <Text style={styles.subtitle}>This affects how your budget resets and how spending is tracked</Text>
+
+          <View style={styles.options}>
+            <TouchableOpacity
+              style={styles.optionCard}
+              onPress={() => handleCycleChoice('monthly')}
+            >
+              <Text style={styles.optionIcon}>📅</Text>
+              <Text style={styles.optionTitle}>Calendar month</Text>
+              <Text style={styles.optionDesc}>
+                Budget resets on the 1st of every month. Simple and straightforward — works best if you're paid monthly.
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.optionCard}
+              onPress={() => handleCycleChoice('paycycle')}
+            >
+              <Text style={styles.optionIcon}>💰</Text>
+              <Text style={styles.optionTitle}>Pay cycle</Text>
+              <Text style={styles.optionDesc}>
+                Budget resets with each paycheque. Perfect for bi-weekly or weekly pay — your budget follows your actual cash flow.
+              </Text>
+              <Text style={styles.optionTag}>Recommended for bi-weekly pay</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    )
   }
 
   return (
@@ -26,7 +72,7 @@ function handleChoice(method: 'bank' | 'manual') {
         <View style={styles.options}>
           <TouchableOpacity
             style={styles.optionCard}
-            onPress={() => handleChoice('bank')}
+            onPress={() => handleTrackingChoice('bank')}
           >
             <Text style={styles.optionIcon}>🏦</Text>
             <Text style={styles.optionTitle}>Connect my bank</Text>
@@ -38,7 +84,7 @@ function handleChoice(method: 'bank' | 'manual') {
 
           <TouchableOpacity
             style={styles.optionCard}
-            onPress={() => handleChoice('manual')}
+            onPress={() => handleTrackingChoice('manual')}
           >
             <Text style={styles.optionIcon}>✏️</Text>
             <Text style={styles.optionTitle}>Enter manually</Text>
@@ -83,9 +129,8 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     marginBottom: 40,
   },
- backButton: {
+  backButton: {
     marginBottom: 24,
-
   },
   backText: {
     color: Colors.primary,
@@ -94,7 +139,6 @@ const styles = StyleSheet.create({
   options: {
     gap: 16,
   },
-
   optionCard: {
     backgroundColor: Colors.card,
     borderWidth: 1,

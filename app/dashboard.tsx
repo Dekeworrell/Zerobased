@@ -2,7 +2,7 @@ import { router, useFocusEffect } from 'expo-router'
 import { useCallback, useState } from 'react'
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { Colors } from '../constants/colors'
-import { toMonthly } from '../lib/store'
+import { getPayPeriodDates, toMonthly } from '../lib/store'
 import { supabase } from '../lib/supabase'
 
 export default function DashboardScreen() {
@@ -14,6 +14,10 @@ export default function DashboardScreen() {
   const [accounts, setAccounts] = useState<any[]>([])
   const [totalSpent, setTotalSpent] = useState(0)
   const [error, setError] = useState('')
+  const [budgetCycle, setBudgetCycle] = useState<'monthly' | 'paycycle'>('monthly')
+  const [payPeriodLabel, setPayPeriodLabel] = useState('this month')
+  const [payPeriodStart, setPayPeriodStart] = useState<Date | null>(null)
+  const [payPeriodEnd, setPayPeriodEnd] = useState<Date | null>(null)
 
   useFocusEffect(
     useCallback(() => {
@@ -31,20 +35,46 @@ export default function DashboardScreen() {
 
       const { data: profile } = await supabase
         .from('profiles')
-        .select('name')
+        .select('name, budget_cycle')
         .eq('id', user.id)
         .single()
 
       setName(profile?.name || user.email?.split('@')[0] || 'there')
+
+      const cycle = profile?.budget_cycle || 'monthly'
+      setBudgetCycle(cycle)
 
       const { data: income } = await supabase
         .from('income_sources')
         .select('*')
         .eq('user_id', user.id)
 
+      let periodStart: Date | null = null
+      let periodEnd: Date | null = null
+
       if (income) {
         const total = income.reduce((sum: number, s: any) => sum + toMonthly(s.amount.toString(), s.frequency), 0)
         setMonthlyIncome(total)
+
+        if (cycle === 'paycycle') {
+          const primaryIncome = income.find((s: any) => s.next_payday) || income[0]
+          if (primaryIncome?.next_payday) {
+            const { start, end } = getPayPeriodDates(primaryIncome.next_payday, primaryIncome.frequency)
+            periodStart = start
+            periodEnd = end
+            setPayPeriodStart(start)
+            setPayPeriodEnd(end)
+
+            const startStr = start.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })
+            const endStr = end.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })
+            setPayPeriodLabel(`${startStr} – ${endStr}`)
+          }
+        } else {
+          const now = new Date()
+          periodStart = new Date(now.getFullYear(), now.getMonth(), 1)
+          periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+          setPayPeriodLabel('this month')
+        }
       }
 
       const { data: cats } = await supabase
@@ -53,11 +83,19 @@ export default function DashboardScreen() {
         .eq('user_id', user.id)
 
       if (cats) {
-        const { data: txns } = await supabase
+        let txnQuery = supabase
           .from('transactions')
-          .select('category_id, amount, type, is_unexpected')
+          .select('category_id, amount, type, is_unexpected, date')
           .eq('user_id', user.id)
           .eq('type', 'expense')
+
+        if (periodStart && periodEnd) {
+          txnQuery = txnQuery
+            .gte('date', periodStart.toISOString().split('T')[0])
+            .lte('date', periodEnd.toISOString().split('T')[0])
+        }
+
+        const { data: txns } = await txnQuery
 
         const catsWithSpent = cats.map((cat: any) => {
           const spent = txns
@@ -93,22 +131,31 @@ export default function DashboardScreen() {
     setLoading(false)
   }
 
-  const totalBudgeted = categories.reduce((sum, c) => sum + toMonthly(c.budgeted_amount.toString(), c.frequency), 0)
-  const unassigned = monthlyIncome - totalBudgeted
+  const totalBudgeted = categories.reduce((sum, c) => {
+    const monthly = toMonthly(c.budgeted_amount.toString(), c.frequency)
+    if (budgetCycle === 'paycycle' && payPeriodStart && payPeriodEnd) {
+      const days = Math.round((payPeriodEnd.getTime() - payPeriodStart.getTime()) / (1000 * 60 * 60 * 24)) + 1
+      return sum + (monthly / 30) * days
+    }
+    return sum + monthly
+  }, 0)
+
+  const unassigned = monthlyIncome - categories.reduce((sum, c) => sum + toMonthly(c.budgeted_amount.toString(), c.frequency), 0)
+
   const LIABILITY_TYPES = [
-  'mortgage', 'heloc', 'loc', 'carloan', 'studentloan', 'creditcard', 'other_liability',
-  'loan', 'credit', 'car_loan', 'student_loan', 'credit_card', 'line_of_credit',
-]
+    'mortgage', 'heloc', 'loc', 'carloan', 'studentloan', 'creditcard', 'other_liability',
+    'loan', 'credit', 'car_loan', 'student_loan', 'credit_card', 'line_of_credit',
+  ]
 
-function isLiability(type: string) {
-  const t = type.toLowerCase()
-  return LIABILITY_TYPES.some(l => t.startsWith(l) || t.includes(l))
-}
+  function isLiability(type: string) {
+    const t = type.toLowerCase()
+    return LIABILITY_TYPES.some(l => t.startsWith(l) || t.includes(l))
+  }
 
-const netWorth = accounts.reduce((sum, a) => {
-  const balance = parseFloat(a.balance) || 0
-  return isLiability(a.type) ? sum - balance : sum + balance
-}, 0)
+  const netWorth = accounts.reduce((sum, a) => {
+    const balance = parseFloat(a.balance) || 0
+    return isLiability(a.type) ? sum - balance : sum + balance
+  }, 0)
 
   function getHour() {
     const h = new Date().getHours()
@@ -132,7 +179,11 @@ const netWorth = accounts.reduce((sum, a) => {
       <View style={styles.header}>
         <View>
           <Text style={styles.greeting}>{getHour()}, {name} 👋</Text>
-          <Text style={styles.subGreeting}>Here's your budget this month</Text>
+          <Text style={styles.subGreeting}>
+            {budgetCycle === 'paycycle'
+              ? `Pay period: ${payPeriodLabel}`
+              : `Here's your budget this month`}
+          </Text>
         </View>
         <TouchableOpacity onPress={() => router.push('/settings')} style={styles.settingsBtn}>
           <Text style={styles.settingsIcon}>⚙️</Text>
@@ -198,7 +249,7 @@ const netWorth = accounts.reduce((sum, a) => {
               </View>
               <View style={styles.budgetSummaryRight}>
                 <Text style={styles.budgetSummaryAmount}>
-                  ${totalBudgeted.toLocaleString('en-CA', { maximumFractionDigits: 0 })}/mo
+                  ${totalBudgeted.toLocaleString('en-CA', { maximumFractionDigits: 0 })}{budgetCycle === 'paycycle' ? '/period' : '/mo'}
                 </Text>
                 <Text style={styles.budgetSummaryChevron}>
                   {categoriesExpanded ? '▲' : '▼'}
@@ -225,6 +276,11 @@ const netWorth = accounts.reduce((sum, a) => {
             <View style={styles.categoryList}>
               {categories.map((cat) => {
                 const monthlyAmount = toMonthly(cat.budgeted_amount.toString(), cat.frequency)
+                let periodAmount = monthlyAmount
+                if (budgetCycle === 'paycycle' && payPeriodStart && payPeriodEnd) {
+                  const days = Math.round((payPeriodEnd.getTime() - payPeriodStart.getTime()) / (1000 * 60 * 60 * 24)) + 1
+                  periodAmount = (monthlyAmount / 30) * days
+                }
                 return (
                   <TouchableOpacity key={cat.id} style={styles.categoryCard}>
                     <View style={styles.categoryHeader}>
@@ -234,24 +290,24 @@ const netWorth = accounts.reduce((sum, a) => {
                       </View>
                       <View style={styles.categoryRight}>
                         <Text style={styles.categoryBudgeted}>
-                          ${monthlyAmount.toLocaleString('en-CA', { maximumFractionDigits: 0 })}/mo
+                          ${periodAmount.toLocaleString('en-CA', { maximumFractionDigits: 0 })}{budgetCycle === 'paycycle' ? '/period' : '/mo'}
                         </Text>
                       </View>
                     </View>
-                  <View style={styles.categoryProgressBar}>
-                    <View style={[styles.categoryProgressFill, {
-                      width: `${Math.min((cat.spent / monthlyAmount) * 100, 100)}%` as any,
-                      backgroundColor: cat.spent >= monthlyAmount ? Colors.danger : cat.spent >= monthlyAmount * 0.8 ? Colors.warning : Colors.success
-                    }]} />
-                  </View>
-                  <View style={styles.categorySpentRow}>
-                    <Text style={styles.categoryRemaining}>
-                      ${(monthlyAmount - cat.spent).toLocaleString('en-CA', { maximumFractionDigits: 0 })} remaining
-                    </Text>
-                    <Text style={styles.categorySpentAmount}>
-                      ${cat.spent.toLocaleString('en-CA', { maximumFractionDigits: 0 })} spent
-                    </Text>
-                  </View>
+                    <View style={styles.categoryProgressBar}>
+                      <View style={[styles.categoryProgressFill, {
+                        width: `${Math.min((cat.spent / periodAmount) * 100, 100)}%` as any,
+                        backgroundColor: cat.spent >= periodAmount ? Colors.danger : cat.spent >= periodAmount * 0.8 ? Colors.warning : Colors.success
+                      }]} />
+                    </View>
+                    <View style={styles.categorySpentRow}>
+                      <Text style={styles.categoryRemaining}>
+                        ${(periodAmount - cat.spent).toLocaleString('en-CA', { maximumFractionDigits: 0 })} remaining
+                      </Text>
+                      <Text style={styles.categorySpentAmount}>
+                        ${cat.spent.toLocaleString('en-CA', { maximumFractionDigits: 0 })} spent
+                      </Text>
+                    </View>
                   </TouchableOpacity>
                 )
               })}
@@ -345,7 +401,7 @@ const styles = StyleSheet.create({
   settingsIcon: {
     fontSize: 24,
   },
-netWorthCard: {
+  netWorthCard: {
     backgroundColor: Colors.primaryLight,
     borderRadius: 20,
     padding: 24,
@@ -562,23 +618,6 @@ netWorthCard: {
     fontSize: 12,
     color: Colors.textSecondary,
   },
-  spendingCard: {
-    backgroundColor: Colors.card,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: 16,
-    padding: 20,
-    gap: 10,
-  },
-  spendingHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  spendingAmount: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-  },
   progressBar: {
     height: 8,
     backgroundColor: Colors.border,
@@ -588,10 +627,6 @@ netWorthCard: {
   progressFill: {
     height: '100%',
     borderRadius: 4,
-  },
-  spendingSubtext: {
-    fontSize: 13,
-    color: Colors.textSecondary,
   },
   budgetSummaryFooter: {
     flexDirection: 'row',

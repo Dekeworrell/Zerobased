@@ -109,6 +109,7 @@ export default function AssignScreen() {
       await supabase.from('profiles').upsert({
         id: user.id,
         tracking_method: onboarding.trackingMethod,
+        budget_cycle: onboarding.budgetCycle || 'monthly',
       })
 
       await supabase.from('budget_categories').delete().eq('user_id', user.id)

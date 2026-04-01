@@ -15,6 +15,7 @@ export default function SettingsScreen() {
   const [budgetAlerts, setBudgetAlerts] = useState(true)
   const [paychequeReminders, setPaychequeReminders] = useState(true)
   const [trackingMethod, setTrackingMethod] = useState('manual')
+  const [budgetCycleLocal, setBudgetCycleLocal] = useState<'monthly' | 'paycycle'>('monthly')
 
   useEffect(() => {
     loadProfile()
@@ -35,6 +36,7 @@ export default function SettingsScreen() {
     if (profile) {
       setName(profile.name || '')
       setTrackingMethod(profile.tracking_method || 'manual')
+      setBudgetCycleLocal(profile.budget_cycle || 'monthly')
     }
 
     setLoading(false)
@@ -53,6 +55,7 @@ export default function SettingsScreen() {
         id: user.id,
         name,
         tracking_method: trackingMethod,
+        budget_cycle: budgetCycleLocal,
       })
 
       setSuccess(true)
@@ -166,6 +169,29 @@ export default function SettingsScreen() {
           >
             <Text style={[styles.methodBtnText, trackingMethod === 'bank' && styles.methodBtnTextActive]}>
               🏦 Bank connected
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Budget cycle</Text>
+        <Text style={styles.switchSubLabel}>How should your budget reset?</Text>
+        <View style={styles.toggleRow}>
+          <TouchableOpacity
+            style={[styles.methodBtn, budgetCycleLocal === 'monthly' && styles.methodBtnActive]}
+            onPress={() => setBudgetCycleLocal('monthly')}
+          >
+            <Text style={[styles.methodBtnText, budgetCycleLocal === 'monthly' && styles.methodBtnTextActive]}>
+              📅 Calendar month
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.methodBtn, budgetCycleLocal === 'paycycle' && styles.methodBtnActive]}
+            onPress={() => setBudgetCycleLocal('paycycle')}
+          >
+            <Text style={[styles.methodBtnText, budgetCycleLocal === 'paycycle' && styles.methodBtnTextActive]}>
+              💰 Pay cycle
             </Text>
           </TouchableOpacity>
         </View>
