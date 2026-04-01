@@ -1,7 +1,7 @@
 import DateTimePicker from '@react-native-community/datetimepicker'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useEffect, useState } from 'react'
-import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import CurrencyInput from '../../components/CurrencyInput'
 import { Colors } from '../../constants/colors'
 import { getOnboardingData, setIncomeSources } from '../../lib/store'
@@ -132,6 +132,10 @@ export default function IncomeScreen() {
   }
 
   return (
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
         <Text style={styles.backText}>← Back</Text>
@@ -210,20 +214,27 @@ export default function IncomeScreen() {
               </TouchableOpacity>
             )}
             {showPaydayPicker === index && (
-              <DateTimePicker
-                value={source.next_payday ? new Date(source.next_payday + 'T12:00:00') : new Date()}
-                mode="date"
-                display="spinner"
-                minimumDate={new Date()}
-                onChange={(event, selectedDate) => {
-                  setShowPaydayPicker(null)
-                  if (selectedDate) {
-                    const offset = selectedDate.getTimezoneOffset()
-                    const local = new Date(selectedDate.getTime() - offset * 60 * 1000)
-                    updateSource(index, 'next_payday', local.toISOString().split('T')[0])
-                  }
-                }}
-              />
+              <View>
+                <DateTimePicker
+                  value={source.next_payday ? new Date(source.next_payday + 'T12:00:00') : new Date()}
+                  mode="date"
+                  display="spinner"
+                  minimumDate={new Date()}
+                  onChange={(event, selectedDate) => {
+                    if (selectedDate) {
+                      const offset = selectedDate.getTimezoneOffset()
+                      const local = new Date(selectedDate.getTime() - offset * 60 * 1000)
+                      updateSource(index, 'next_payday', local.toISOString().split('T')[0])
+                    }
+                  }}
+                />
+                <TouchableOpacity
+                  style={styles.datePickerDoneBtn}
+                  onPress={() => setShowPaydayPicker(null)}
+                >
+                  <Text style={styles.datePickerDoneBtnText}>Done</Text>
+                </TouchableOpacity>
+              </View>
             )}
 
             <Text style={styles.fieldLabel}>Income type</Text>
@@ -258,6 +269,7 @@ export default function IncomeScreen() {
         </Text>
       </TouchableOpacity>
     </ScrollView>
+    </KeyboardAvoidingView>
   )
 }
 
@@ -407,6 +419,18 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   primaryButtonText: {
+    color: Colors.text,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  datePickerDoneBtn: {
+    backgroundColor: Colors.primary,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  datePickerDoneBtnText: {
     color: Colors.text,
     fontSize: 16,
     fontWeight: '600',

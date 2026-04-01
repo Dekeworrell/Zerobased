@@ -1,6 +1,6 @@
 import { router } from 'expo-router'
 import { useEffect, useState } from 'react'
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import CurrencyInput from '../components/CurrencyInput'
 import { Colors } from '../constants/colors'
 import { toMonthly } from '../lib/store'
@@ -208,6 +208,10 @@ export default function BudgetScreen() {
   }
 
   return (
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
 
       <Text style={styles.title}>Edit budget</Text>
@@ -306,6 +310,7 @@ export default function BudgetScreen() {
         }
       </TouchableOpacity>
     </ScrollView>
+    </KeyboardAvoidingView>
   )
 }
 

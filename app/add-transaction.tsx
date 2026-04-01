@@ -1,7 +1,7 @@
 import DateTimePicker from '@react-native-community/datetimepicker'
 import { router } from 'expo-router'
 import { useEffect, useState } from 'react'
-import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import CurrencyInput from '../components/CurrencyInput'
 import { Colors } from '../constants/colors'
 import { supabase } from '../lib/supabase'
@@ -101,6 +101,10 @@ export default function AddTransactionScreen() {
   }
 
   return (
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <TouchableOpacity onPress={() => router.push('/dashboard')} style={styles.backButton}>
         <Text style={styles.backText}>← Back</Text>
@@ -232,6 +236,7 @@ export default function AddTransactionScreen() {
         }
       </TouchableOpacity>
     </ScrollView>
+    </KeyboardAvoidingView>
   )
 }
 

@@ -1,6 +1,6 @@
 import { router } from 'expo-router'
 import { useState } from 'react'
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import CurrencyInput from '../../components/CurrencyInput'
 import { Colors } from '../../constants/colors'
 import { getOnboardingData, setExpenses as saveExpensesToStore } from '../../lib/store'
@@ -108,6 +108,7 @@ export default function ExpensesScreen() {
   }
 
   return (
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
         <Text style={styles.backText}>← Back</Text>
@@ -197,6 +198,7 @@ export default function ExpensesScreen() {
         <Text style={styles.primaryButtonText}>Continue</Text>
       </TouchableOpacity>
     </ScrollView>
+    </KeyboardAvoidingView>
   )
 }
 
