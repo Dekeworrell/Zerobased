@@ -1,3 +1,4 @@
+import DateTimePicker from '@react-native-community/datetimepicker'
 import { router, useFocusEffect } from 'expo-router'
 import { useCallback, useEffect, useState } from 'react'
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
@@ -23,6 +24,10 @@ export default function TransactionsScreen() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<'all' | 'expense' | 'income' | 'unexpected'>('all')
+  const [startDate, setStartDate] = useState<Date | null>(null)
+  const [endDate, setEndDate] = useState<Date | null>(null)
+  const [showStartPicker, setShowStartPicker] = useState(false)
+  const [showEndPicker, setShowEndPicker] = useState(false)
 
   useFocusEffect(
     useCallback(() => {
@@ -32,7 +37,7 @@ export default function TransactionsScreen() {
 
   useEffect(() => {
     applyFilter()
-  }, [transactions, search, filter])
+  }, [transactions, search, filter, startDate, endDate])
 
   async function loadTransactions() {
     const { data: { user } } = await supabase.auth.getUser()
@@ -69,6 +74,13 @@ export default function TransactionsScreen() {
     if (filter === 'expense') result = result.filter(t => t.type === 'expense' && !t.is_unexpected)
     if (filter === 'income') result = result.filter(t => t.type === 'income')
     if (filter === 'unexpected') result = result.filter(t => t.is_unexpected)
+
+    if (startDate) {
+      result = result.filter(t => new Date(t.date + 'T00:00:00') >= startDate)
+    }
+    if (endDate) {
+      result = result.filter(t => new Date(t.date + 'T00:00:00') <= endDate)
+    }
 
     setFiltered(result)
   }
@@ -156,6 +168,72 @@ export default function TransactionsScreen() {
         value={search}
         onChangeText={setSearch}
       />
+
+      <View style={styles.dateRow}>
+        <TouchableOpacity
+          style={styles.dateBtn}
+          onPress={() => setShowStartPicker(!showStartPicker)}
+        >
+          <Text style={styles.dateBtnText}>
+            {startDate ? startDate.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' }) : '📅 From'}
+          </Text>
+        </TouchableOpacity>
+        <Text style={styles.dateSeparator}>→</Text>
+        <TouchableOpacity
+          style={styles.dateBtn}
+          onPress={() => setShowEndPicker(!showEndPicker)}
+        >
+          <Text style={styles.dateBtnText}>
+            {endDate ? endDate.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' }) : '📅 To'}
+          </Text>
+        </TouchableOpacity>
+        {(startDate || endDate) && (
+          <TouchableOpacity
+            style={styles.dateClearBtn}
+            onPress={() => { setStartDate(null); setEndDate(null) }}
+          >
+            <Text style={styles.dateClearBtnText}>✕ Clear</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {showStartPicker && (
+        <View>
+          <DateTimePicker
+            value={startDate || new Date()}
+            mode="date"
+            display="spinner"
+            onChange={(event, date) => {
+              if (date) setStartDate(date)
+            }}
+          />
+          <TouchableOpacity
+            style={styles.datePickerDoneBtn}
+            onPress={() => setShowStartPicker(false)}
+          >
+            <Text style={styles.datePickerDoneBtnText}>Done</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {showEndPicker && (
+        <View>
+          <DateTimePicker
+            value={endDate || new Date()}
+            mode="date"
+            display="spinner"
+            onChange={(event, date) => {
+              if (date) setEndDate(date)
+            }}
+          />
+          <TouchableOpacity
+            style={styles.datePickerDoneBtn}
+            onPress={() => setShowEndPicker(false)}
+          >
+            <Text style={styles.datePickerDoneBtnText}>Done</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <View style={styles.filterRow}>
         {(['all', 'expense', 'income', 'unexpected'] as const).map(f => (
@@ -403,6 +481,55 @@ const styles = StyleSheet.create({
   },
   transactionAmount: {
     fontSize: 15,
+    fontWeight: '600',
+  },
+  dateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  dateBtn: {
+    flex: 1,
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  dateBtnText: {
+    fontSize: 13,
+    color: Colors.text,
+    fontWeight: '500',
+  },
+  dateSeparator: {
+    fontSize: 16,
+    color: Colors.textSecondary,
+  },
+  dateClearBtn: {
+    backgroundColor: Colors.danger + '22',
+    borderWidth: 1,
+    borderColor: Colors.danger,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  dateClearBtnText: {
+    fontSize: 13,
+    color: Colors.danger,
+    fontWeight: '500',
+  },
+  datePickerDoneBtn: {
+    backgroundColor: Colors.primary,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  datePickerDoneBtnText: {
+    color: Colors.text,
+    fontSize: 16,
     fontWeight: '600',
   },
 })

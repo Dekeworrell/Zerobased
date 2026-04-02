@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import CurrencyInput from '../components/CurrencyInput'
 import { Colors } from '../constants/colors'
-import { toMonthly } from '../lib/store'
+import { calculateBudgetStatus, toMonthly } from '../lib/store'
 import { supabase } from '../lib/supabase'
 
 const EXPENSE_CATEGORIES = [
@@ -197,9 +197,7 @@ export default function BudgetScreen() {
     setSaving(false)
   }
 
-  const totalBudgeted = categories.reduce((sum, c) =>
-    sum + toMonthly(c.budgeted_amount, c.frequency), 0)
-  const remaining = Math.round((monthlyIncome - totalBudgeted) * 100) / 100
+  const { totalBudgeted, remaining } = calculateBudgetStatus(monthlyIncome, categories)
 
   if (loading) {
     return (

@@ -23,7 +23,7 @@ export default function AddTransactionScreen() {
     return new Date(now.getTime() - offset * 60 * 1000)
   })
   const [showDatePicker, setShowDatePicker] = useState(false)
-  const [type, setType] = useState<'expense' | 'income'>('expense')
+  const [type, setType] = useState<'expense' | 'income' | 'unexpected'>('expense')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -75,12 +75,12 @@ export default function AddTransactionScreen() {
 
       await supabase.from('transactions').insert({
         user_id: user.id,
-        category_id: selectedCategory?.id === 'unexpected' ? null : selectedCategory?.id || null,
-        label,
+        category_id: type === 'unexpected' ? null : selectedCategory?.id || null,
+        label: label || selectedCategory?.label || 'Transaction',
         amount: parseFloat(amount),
         date: formatDateForDB(date),
-        type,
-        is_unexpected: selectedCategory?.id === 'unexpected',
+        type: type === 'unexpected' ? 'expense' : type,
+        is_unexpected: type === 'unexpected',
       })
 
       router.replace('/dashboard')
@@ -127,6 +127,14 @@ export default function AddTransactionScreen() {
         >
           <Text style={[styles.typeBtnText, type === 'income' && styles.typeBtnTextActive]}>
             Income
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.typeBtn, type === 'unexpected' && styles.typeBtnUnexpectedActive]}
+          onPress={() => { setType('unexpected' as any); setSelectedCategory(null) }}
+        >
+          <Text style={[styles.typeBtnText, type === 'unexpected' && styles.typeBtnTextActive]}>
+            ⚠️ Unexpected
           </Text>
         </TouchableOpacity>
       </View>
@@ -192,9 +200,18 @@ export default function AddTransactionScreen() {
         </>
       )}
 
-      {type === 'expense' && (
+      {(type === 'expense' || type === 'unexpected') && (
         <>
-          <Text style={styles.fieldLabel}>Category</Text>
+          <Text style={styles.fieldLabel}>
+            {type === 'unexpected' ? 'What was the unexpected expense for?' : 'Category'}
+          </Text>
+          {type === 'unexpected' && (
+            <View style={styles.unexpectedInfo}>
+              <Text style={styles.unexpectedInfoText}>
+                ⚠️ Unexpected expenses are tracked separately to help identify spending patterns and improve future budget suggestions.
+              </Text>
+            </View>
+          )}
           <View style={styles.categoryList}>
             {categories.map(cat => (
               <TouchableOpacity
@@ -387,5 +404,20 @@ const styles = StyleSheet.create({
     color: Colors.text,
     fontSize: 16,
     fontWeight: '600',
+  },
+  typeBtnUnexpectedActive: {
+    backgroundColor: Colors.warning,
+  },
+  unexpectedInfo: {
+    backgroundColor: Colors.warning + '22',
+    borderWidth: 1,
+    borderColor: Colors.warning,
+    borderRadius: 12,
+    padding: 12,
+  },
+  unexpectedInfoText: {
+    fontSize: 13,
+    color: Colors.text,
+    lineHeight: 20,
   },
 })

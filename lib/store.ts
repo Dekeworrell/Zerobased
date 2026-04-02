@@ -139,4 +139,15 @@ export function getPayPeriodDates(nextPayday: string, frequency: string): { star
   end.setDate(end.getDate() - 1)
 
   return { start, end }
+  
+}export function calculateBudgetStatus(
+  monthlyIncome: number,
+  categories: { budgeted_amount: string | number, frequency: string }[]
+) {
+  const totalBudgeted = categories.reduce((sum, c) => {
+    const amount = parseFloat(c.budgeted_amount.toString()) || 0
+    return sum + toMonthly(amount, c.frequency)
+  }, 0)
+  const remaining = Math.round((monthlyIncome - totalBudgeted) * 100) / 100
+  return { totalBudgeted, remaining }
 }

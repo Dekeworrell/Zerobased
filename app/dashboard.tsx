@@ -2,7 +2,7 @@ import { router, useFocusEffect } from 'expo-router'
 import { useCallback, useState } from 'react'
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { Colors } from '../constants/colors'
-import { getPayPeriodDates, toMonthly } from '../lib/store'
+import { calculateBudgetStatus, getPayPeriodDates, toMonthly } from '../lib/store'
 import { supabase } from '../lib/supabase'
 
 export default function DashboardScreen() {
@@ -131,16 +131,15 @@ export default function DashboardScreen() {
     setLoading(false)
   }
 
-  const totalBudgeted = categories.reduce((sum, c) => {
-    const monthly = toMonthly(c.budgeted_amount.toString(), c.frequency)
-    if (budgetCycle === 'paycycle' && payPeriodStart && payPeriodEnd) {
-      const days = Math.round((payPeriodEnd.getTime() - payPeriodStart.getTime()) / (1000 * 60 * 60 * 24)) + 1
-      return sum + (monthly / 30) * days
-    }
-    return sum + monthly
-  }, 0)
+  const { totalBudgeted: monthlyBudgeted, remaining: unassigned } = calculateBudgetStatus(monthlyIncome, categories)
 
-  const unassigned = monthlyIncome - categories.reduce((sum, c) => sum + toMonthly(c.budgeted_amount.toString(), c.frequency), 0)
+  const totalBudgeted = budgetCycle === 'paycycle' && payPeriodStart && payPeriodEnd
+    ? categories.reduce((sum, c) => {
+        const monthly = toMonthly(c.budgeted_amount.toString(), c.frequency)
+        const days = Math.round((payPeriodEnd.getTime() - payPeriodStart.getTime()) / (1000 * 60 * 60 * 24)) + 1
+        return sum + (monthly / 30) * days
+      }, 0)
+    : monthlyBudgeted
 
   const LIABILITY_TYPES = [
     'mortgage', 'heloc', 'loc', 'carloan', 'studentloan', 'creditcard', 'other_liability',
