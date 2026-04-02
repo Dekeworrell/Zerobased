@@ -36,7 +36,7 @@ const EXPENSE_CATEGORIES = [
   { id: 'cable_tv', label: 'Cable TV', icon: '📡', type: 'fixed' },
   { id: 'life_insurance', label: 'Life insurance', icon: '🛡️', type: 'fixed' },
   { id: 'rrsp', label: 'RRSP', icon: '📈', type: 'priority' },
-  { id: 'tfsa', label: 'TFSA', icon: '🛡️', type: 'priority' },
+  { id: 'tfsa', label: 'TFSA', icon: '🌱', type: 'fixed' },
   { id: 'fhsa', label: 'FHSA', icon: '🏠', type: 'priority' },
   { id: 'mortgage_extra', label: 'Mortgage overpayment', icon: '🏦', type: 'priority' },
   { id: 'emergency_fund', label: 'Emergency fund', icon: '🆘', type: 'priority' },

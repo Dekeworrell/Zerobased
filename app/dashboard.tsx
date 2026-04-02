@@ -250,7 +250,7 @@ export default function DashboardScreen() {
               </View>
               <View style={styles.budgetSummaryRight}>
                 <Text style={styles.budgetSummaryAmount}>
-                  ${totalBudgeted.toLocaleString('en-CA', { maximumFractionDigits: 0 })}{budgetCycle === 'paycycle' ? '/period' : '/mo'}
+                  ${monthlyBudgeted.toLocaleString('en-CA', { maximumFractionDigits: 0 })}/mo
                 </Text>
                 <Text style={styles.budgetSummaryChevron}>
                   {categoriesExpanded ? '▲' : '▼'}

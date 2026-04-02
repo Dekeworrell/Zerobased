@@ -8,7 +8,7 @@ import { supabase } from '../../lib/supabase'
 
 const PRIORITY_ITEMS = [
   { id: 'rrsp', label: 'RRSP', icon: '📈' },
-  { id: 'tfsa', label: 'TFSA', icon: '🛡️' },
+  { id: 'tfsa', label: 'TFSA', icon: '🌱' },
   { id: 'fhsa', label: 'FHSA', icon: '🏠' },
   { id: 'emergency_fund', label: 'Emergency fund', icon: '🆘' },
   { id: 'mortgage_extra', label: 'Mortgage overpayment', icon: '🏦' },

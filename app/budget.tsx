@@ -36,7 +36,7 @@ const EXPENSE_CATEGORIES = [
   { id: 'cable_tv', label: 'Cable TV', icon: '📡', type: 'fixed' },
   { id: 'life_insurance', label: 'Life insurance', icon: '🛡️', type: 'fixed' },
   { id: 'rrsp', label: 'RRSP', icon: '📈', type: 'priority' },
-  { id: 'tfsa', label: 'TFSA', icon: '🛡️', type: 'priority' },
+  { id: 'tfsa', label: 'TFSA', icon: '🌱', type: 'priority' },
   { id: 'fhsa', label: 'FHSA', icon: '🏠', type: 'priority' },
   { id: 'mortgage_extra', label: 'Mortgage overpayment', icon: '🏦', type: 'priority' },
   { id: 'emergency_fund', label: 'Emergency fund', icon: '🆘', type: 'priority' },
@@ -102,12 +102,9 @@ export default function BudgetScreen() {
     setLoading(false)
   }
 
-  const MULTI_ALLOWED = ['entertainment', 'other', 'loan_repayment']
-
   function addCategory(cat: typeof EXPENSE_CATEGORIES[0]) {
-    if (!MULTI_ALLOWED.includes(cat.id) && categories.find(c => c.label === cat.label)) return
     setCategories([...categories, {
-      id: MULTI_ALLOWED.includes(cat.id) ? `${cat.id}_${Date.now()}` : cat.id,
+      id: `${cat.id}_${Date.now()}`,
       label: cat.label,
       icon: cat.icon,
       budgeted_amount: '',
@@ -281,10 +278,7 @@ export default function BudgetScreen() {
 
       <Text style={styles.addLabel}>Add a category</Text>
       <View style={styles.typeGrid}>
-        {EXPENSE_CATEGORIES.filter(c =>
-          ['entertainment', 'other', 'loan_repayment'].includes(c.id) ||
-          !categories.find(e => e.label === c.label)
-        ).sort((a, b) => a.label.localeCompare(b.label)).map((category) => (
+        {EXPENSE_CATEGORIES.sort((a, b) => a.label.localeCompare(b.label)).map((category) => (
           <TouchableOpacity
             key={category.id}
             style={styles.typeChip}
