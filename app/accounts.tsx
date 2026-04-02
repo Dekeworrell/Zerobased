@@ -5,11 +5,13 @@ import CurrencyInput from '../components/CurrencyInput'
 import { Colors } from '../constants/colors'
 import { supabase } from '../lib/supabase'
 
+
 type Account = {
   id: string
   label: string
   type: string
   balance: number
+  interest_rate?: number
 }
 
 const ACCOUNT_ICONS: { [key: string]: string } = {
@@ -102,6 +104,10 @@ export default function AccountsScreen() {
     setAccounts(accounts.map(a => a.id === id ? { ...a, balance: balance as any } : a))
   }
 
+  function updateInterestRate(id: string, rate: string) {
+    setAccounts(accounts.map(a => a.id === id ? { ...a, interest_rate: parseFloat(rate) || 0 } : a))
+  }
+
   function updateLabel(id: string, label: string) {
     setAccounts(accounts.map(a => a.id === id ? { ...a, label } : a))
   }
@@ -116,7 +122,11 @@ export default function AccountsScreen() {
       for (const account of accounts) {
         await supabase
           .from('accounts')
-          .update({ balance: account.balance, label: account.label })
+          .update({ 
+            balance: account.balance, 
+            label: account.label,
+            interest_rate: account.interest_rate || 0,
+          })
           .eq('id', account.id)
       }
       setSuccess(true)
@@ -202,6 +212,20 @@ export default function AccountsScreen() {
             <Text style={styles.deleteBtn}>✕</Text>
           </TouchableOpacity>
         </View>
+        {isLiability(account.type) && (
+          <View style={styles.interestRow}>
+            <Text style={styles.interestLabel}>Interest rate</Text>
+            <TextInput
+              style={styles.interestInput}
+              value={account.interest_rate?.toString() || ''}
+              onChangeText={(val) => updateInterestRate(account.id, val)}
+              keyboardType="decimal-pad"
+              placeholder="0.00"
+              placeholderTextColor={Colors.textSecondary}
+            />
+            <Text style={styles.interestLabel}>%</Text>
+          </View>
+        )}
       </View>
     )
   }
@@ -488,5 +512,30 @@ const styles = StyleSheet.create({
     color: Colors.text,
     fontSize: 16,
     fontWeight: '600',
+  },
+  interestRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    marginTop: 4,
+  },
+  interestLabel: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+  },
+  interestInput: {
+    backgroundColor: Colors.background,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    fontSize: 14,
+    color: Colors.text,
+    width: 70,
+    textAlign: 'right',
   },
 })
