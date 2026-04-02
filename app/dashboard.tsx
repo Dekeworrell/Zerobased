@@ -177,8 +177,10 @@ export default function DashboardScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
 
       <View style={styles.header}>
-        <View>
-          <Text style={styles.greeting}>{getHour()}, {name} 👋</Text>
+        <View style={{ flex: 1, marginRight: 8 }}>
+          <Text style={styles.greeting} numberOfLines={1} ellipsizeMode="tail">
+            {getHour()}, {name} 👋
+          </Text>
           <Text style={styles.subGreeting}>
             {budgetCycle === 'paycycle'
               ? `Pay period: ${payPeriodLabel}`

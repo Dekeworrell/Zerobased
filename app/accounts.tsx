@@ -274,7 +274,7 @@ export default function AccountsScreen() {
       </TouchableOpacity>
       {showAddType === 'asset' && (
         <View style={styles.typeGrid}>
-          {ASSET_TYPE_OPTIONS.map(type => (
+          {[...ASSET_TYPE_OPTIONS].sort((a, b) => a.label.localeCompare(b.label)).map(type => (
             <TouchableOpacity
               key={type.id}
               style={styles.typeChip}
@@ -303,7 +303,7 @@ export default function AccountsScreen() {
       </TouchableOpacity>
       {showAddType === 'liability' && (
         <View style={styles.typeGrid}>
-          {LIABILITY_TYPE_OPTIONS.map(type => (
+          {[...LIABILITY_TYPE_OPTIONS].sort((a, b) => a.label.localeCompare(b.label)).map(type => (
             <TouchableOpacity
               key={type.id}
               style={styles.typeChip}

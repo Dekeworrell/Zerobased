@@ -19,6 +19,8 @@ const EXPENSE_CATEGORIES = [
   { id: 'property_tax', label: 'Property tax', icon: '🏛️', type: 'fixed' },
   { id: 'water_sewer', label: 'Water & sewer', icon: '💧', type: 'fixed' },
   { id: 'car_loan', label: 'Car loan', icon: '🔑', type: 'fixed' },
+  { id: 'loc', label: 'Line of credit', icon: '💸', type: 'fixed' },
+  { id: 'studentloan', label: 'Student loan', icon: '🎓', type: 'fixed' },
   { id: 'mortgage', label: 'Mortgage', icon: '🏦', type: 'fixed' },
   { id: 'dining', label: 'Dining out', icon: '🍽️', type: 'variable' },
   { id: 'subscriptions', label: 'Subscriptions', icon: '📺', type: 'fixed' },
@@ -284,7 +286,7 @@ export default function BudgetScreen() {
         {EXPENSE_CATEGORIES.filter(c =>
           ['entertainment', 'other', 'loan_repayment'].includes(c.id) ||
           !categories.find(e => e.label === c.label)
-        ).map((category) => (
+        ).sort((a, b) => a.label.localeCompare(b.label)).map((category) => (
           <TouchableOpacity
             key={category.id}
             style={styles.typeChip}

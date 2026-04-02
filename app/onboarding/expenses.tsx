@@ -18,6 +18,8 @@ const EXPENSE_CATEGORIES = [
   { id: 'property_tax', label: 'Property tax', icon: '🏛️', type: 'fixed' },
   { id: 'water_sewer', label: 'Water & sewer', icon: '💧', type: 'fixed' },
   { id: 'car_loan', label: 'Car loan', icon: '🔑', type: 'fixed' },
+  { id: 'loc', label: 'Line of credit', icon: '💸', type: 'fixed' },
+  { id: 'studentloan', label: 'Student loan', icon: '🎓', type: 'fixed' },
   { id: 'student_loan', label: 'Student loan', icon: '🎓', type: 'fixed' },
   { id: 'loan_repayment', label: 'Loan repayment', icon: '💳', type: 'fixed', permanent: true },
   { id: 'mortgage', label: 'Mortgage/Rent', icon: '🏠', type: 'fixed' },
@@ -182,7 +184,7 @@ export default function ExpensesScreen() {
 
       <Text style={styles.addLabel}>Add a category</Text>
       <View style={styles.typeGrid}>
-        {EXPENSE_CATEGORIES.filter(c => MULTI_ALLOWED.includes(c.id) || !expenses.find(e => e.id === c.id)).map((category) => (
+        {EXPENSE_CATEGORIES.filter(c => MULTI_ALLOWED.includes(c.id) || !expenses.find(e => e.id === c.id)).sort((a, b) => a.label.localeCompare(b.label)).map((category) => (
           <TouchableOpacity
             key={category.id}
             style={styles.typeChip}
