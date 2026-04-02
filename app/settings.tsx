@@ -2,6 +2,7 @@ import { router } from 'expo-router'
 import { useEffect, useState } from 'react'
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import { Colors } from '../constants/colors'
+import { registerForPushNotifications } from '../lib/notifications'
 import { supabase } from '../lib/supabase'
 
 export default function SettingsScreen() {
@@ -11,8 +12,9 @@ export default function SettingsScreen() {
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
-  const [notifications, setNotifications] = useState(true)
-  const [budgetAlerts, setBudgetAlerts] = useState(true)
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true)
+  const [notifyAt1, setNotifyAt1] = useState(80)
+  const [notifyAt2, setNotifyAt2] = useState(90)
   const [paychequeReminders, setPaychequeReminders] = useState(true)
   const [trackingMethod, setTrackingMethod] = useState('manual')
   const [budgetCycleLocal, setBudgetCycleLocal] = useState<'monthly' | 'paycycle'>('monthly')
@@ -37,6 +39,9 @@ export default function SettingsScreen() {
       setName(profile.name || '')
       setTrackingMethod(profile.tracking_method || 'manual')
       setBudgetCycleLocal(profile.budget_cycle || 'monthly')
+      setNotificationsEnabled(profile.notifications_enabled ?? true)
+      setNotifyAt1(profile.notify_at_percent_1 ?? 80)
+      setNotifyAt2(profile.notify_at_percent_2 ?? 90)
     }
 
     setLoading(false)
@@ -56,8 +61,10 @@ export default function SettingsScreen() {
         name,
         tracking_method: trackingMethod,
         budget_cycle: budgetCycleLocal,
+        notifications_enabled: notificationsEnabled,
+        notify_at_percent_1: notifyAt1,
+        notify_at_percent_2: notifyAt2,
       })
-
       setSuccess(true)
       setTimeout(() => setSuccess(false), 2000)
     } catch (err: any) {
@@ -212,36 +219,66 @@ export default function SettingsScreen() {
             <Text style={styles.switchSubLabel}>Receive budget alerts and reminders</Text>
           </View>
           <Switch
-            value={notifications}
-            onValueChange={setNotifications}
+            value={notificationsEnabled}
+            onValueChange={async (val) => {
+              setNotificationsEnabled(val)
+              if (val) await registerForPushNotifications()
+            }}
             trackColor={{ false: Colors.border, true: Colors.primary }}
             thumbColor={Colors.text}
           />
         </View>
-        <View style={styles.switchRow}>
-          <View style={styles.switchLeft}>
-            <Text style={styles.switchLabel}>Budget alerts</Text>
-            <Text style={styles.switchSubLabel}>Warn when approaching category limits</Text>
-          </View>
-          <Switch
-            value={budgetAlerts}
-            onValueChange={setBudgetAlerts}
-            trackColor={{ false: Colors.border, true: Colors.primary }}
-            thumbColor={Colors.text}
-          />
-        </View>
-        <View style={styles.switchRow}>
-          <View style={styles.switchLeft}>
-            <Text style={styles.switchLabel}>Paycheque reminders</Text>
-            <Text style={styles.switchSubLabel}>Alert if expected income not detected</Text>
-          </View>
-          <Switch
-            value={paychequeReminders}
-            onValueChange={setPaychequeReminders}
-            trackColor={{ false: Colors.border, true: Colors.primary }}
-            thumbColor={Colors.text}
-          />
-        </View>
+        {notificationsEnabled && (
+          <>
+            <Text style={styles.switchSubLabel}>
+              Set up to 2 warning thresholds for variable expense categories (e.g. warn me at 80% and 90%)
+            </Text>
+            <View style={styles.thresholdRow}>
+              <Text style={styles.switchLabel}>Warning 1</Text>
+              <View style={styles.thresholdBtns}>
+                {[50, 60, 70, 75, 80, 85, 90, 95].map(pct => (
+                  <TouchableOpacity
+                    key={pct}
+                    style={[styles.thresholdBtn, notifyAt1 === pct && styles.thresholdBtnActive]}
+                    onPress={() => setNotifyAt1(notifyAt1 === pct ? 0 : pct)}
+                  >
+                    <Text style={[styles.thresholdBtnText, notifyAt1 === pct && styles.thresholdBtnTextActive]}>
+                      {pct}%
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+            <View style={styles.thresholdRow}>
+              <Text style={styles.switchLabel}>Warning 2</Text>
+              <View style={styles.thresholdBtns}>
+                {[50, 60, 70, 75, 80, 85, 90, 95].map(pct => (
+                  <TouchableOpacity
+                    key={pct}
+                    style={[styles.thresholdBtn, notifyAt2 === pct && styles.thresholdBtnActive]}
+                    onPress={() => setNotifyAt2(notifyAt2 === pct ? 0 : pct)}
+                  >
+                    <Text style={[styles.thresholdBtnText, notifyAt2 === pct && styles.thresholdBtnTextActive]}>
+                      {pct}%
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+            <View style={styles.switchRow}>
+              <View style={styles.switchLeft}>
+                <Text style={styles.switchLabel}>Paycheque reminders</Text>
+                <Text style={styles.switchSubLabel}>Remind me to update balances on payday</Text>
+              </View>
+              <Switch
+                value={paychequeReminders}
+                onValueChange={setPaychequeReminders}
+                trackColor={{ false: Colors.border, true: Colors.primary }}
+                thumbColor={Colors.text}
+              />
+            </View>
+          </>
+        )}
       </View>
 
       <View style={styles.section}>
@@ -503,5 +540,33 @@ const styles = StyleSheet.create({
   deleteButtonText: {
     color: Colors.danger,
     fontSize: 16,
+  },
+  thresholdRow: {
+    gap: 8,
+  },
+  thresholdBtns: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  thresholdBtn: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: Colors.background,
+  },
+  thresholdBtnActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  thresholdBtnText: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+  },
+  thresholdBtnTextActive: {
+    color: Colors.text,
+    fontWeight: '600',
   },
 })
