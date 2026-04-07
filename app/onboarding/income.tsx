@@ -29,6 +29,7 @@ type IncomeSource = {
   frequency: string
   type: string
   next_payday: string
+  second_payday: string
 }
 
 export default function IncomeScreen() {
@@ -37,8 +38,9 @@ export default function IncomeScreen() {
   const [loading, setLoading] = useState(isEditing)
   const [saving, setSaving] = useState(false)
   const [showPaydayPicker, setShowPaydayPicker] = useState<number | null>(null)
+  const [showSecondPaydayPicker, setShowSecondPaydayPicker] = useState<number | null>(null)
   const [sources, setSources] = useState<IncomeSource[]>([
-    { label: 'Primary income', amount: '', frequency: 'biweekly', type: 'employment', next_payday: '' }
+    { label: 'Primary income', amount: '', frequency: 'biweekly', type: 'employment', next_payday: '', second_payday: '' }
   ])
 
   useEffect(() => {
@@ -62,14 +64,18 @@ export default function IncomeScreen() {
       .eq('user_id', user.id)
 
     if (data && data.length > 0) {
-      setSources(data.map((s: any) => ({
-        id: s.id,
-        label: s.label,
-        amount: s.amount.toString(),
-        frequency: s.frequency,
-        type: s.type,
-        next_payday: s.next_payday || '',
-      })))
+      setSources(data.map((s: any) => {
+        const dates = (s.next_payday || '').split('|')
+        return {
+          id: s.id,
+          label: s.label,
+          amount: s.amount.toString(),
+          frequency: s.frequency,
+          type: s.type,
+          next_payday: dates[0] || '',
+          second_payday: dates[1] || '',
+        }
+      }))
     }
     setLoading(false)
   }
@@ -87,6 +93,7 @@ export default function IncomeScreen() {
       frequency: 'monthly',
       type: 'other',
       next_payday: '',
+      second_payday: '',
     }])
   }
 
@@ -109,7 +116,9 @@ export default function IncomeScreen() {
             amount: parseFloat(s.amount) || 0,
             frequency: s.frequency,
             type: s.type,
-            next_payday: s.next_payday || null,
+            next_payday: s.frequency === 'semimonthly' && s.second_payday
+              ? `${s.next_payday}|${s.second_payday}`
+              : s.next_payday || null,
           }))
         )
         router.replace('/dashboard')
@@ -184,7 +193,9 @@ export default function IncomeScreen() {
               ))}
             </View>
 
-            <Text style={styles.fieldLabel}>Next payday</Text>
+            <Text style={styles.fieldLabel}>
+              {source.frequency === 'semimonthly' ? '1st payday of the period' : 'Next payday'}
+            </Text>
             {Platform.OS === 'web' ? (
               <input
                 type="date"
@@ -209,7 +220,7 @@ export default function IncomeScreen() {
                 onPress={() => setShowPaydayPicker(index)}
               >
                 <Text style={styles.dateButtonText}>
-                  📅 {source.next_payday || 'Select your next payday'}
+                  📅 {source.next_payday || 'Select date'}
                 </Text>
               </TouchableOpacity>
             )}
@@ -235,6 +246,63 @@ export default function IncomeScreen() {
                   <Text style={styles.datePickerDoneBtnText}>Done</Text>
                 </TouchableOpacity>
               </View>
+            )}
+
+            {source.frequency === 'semimonthly' && (
+              <>
+                <Text style={styles.fieldLabel}>2nd payday of the period</Text>
+                {Platform.OS === 'web' ? (
+                  <input
+                    type="date"
+                    value={source.second_payday}
+                    min={new Date().toISOString().split('T')[0]}
+                    onChange={(e) => updateSource(index, 'second_payday', e.target.value)}
+                    style={{
+                      backgroundColor: '#1c1c1e',
+                      border: '1px solid #3a3a3c',
+                      borderRadius: 12,
+                      padding: '14px 16px',
+                      fontSize: 16,
+                      color: '#ffffff',
+                      width: '100%',
+                      boxSizing: 'border-box' as any,
+                      marginBottom: 8,
+                    }}
+                  />
+                ) : (
+                  <TouchableOpacity
+                    style={styles.dateButton}
+                    onPress={() => setShowSecondPaydayPicker(index)}
+                  >
+                    <Text style={styles.dateButtonText}>
+                      📅 {source.second_payday || 'Select date'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                {showSecondPaydayPicker === index && (
+                  <View>
+                    <DateTimePicker
+                      value={source.second_payday ? new Date(source.second_payday + 'T12:00:00') : new Date()}
+                      mode="date"
+                      display="spinner"
+                      minimumDate={new Date()}
+                      onChange={(event, selectedDate) => {
+                        if (selectedDate) {
+                          const offset = selectedDate.getTimezoneOffset()
+                          const local = new Date(selectedDate.getTime() - offset * 60 * 1000)
+                          updateSource(index, 'second_payday', local.toISOString().split('T')[0])
+                        }
+                      }}
+                    />
+                    <TouchableOpacity
+                      style={styles.datePickerDoneBtn}
+                      onPress={() => setShowSecondPaydayPicker(null)}
+                    >
+                      <Text style={styles.datePickerDoneBtnText}>Done</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </>
             )}
 
             <Text style={styles.fieldLabel}>Income type</Text>
