@@ -41,6 +41,7 @@ const EXPENSE_CATEGORIES = [
   { id: 'mortgage_extra', label: 'Mortgage overpayment', icon: '🏦', type: 'priority' },
   { id: 'emergency_fund', label: 'Emergency fund', icon: '🆘', type: 'priority' },
   { id: 'pets', label: 'Pets', icon: '🐾', type: 'variable' },
+  { id: 'sports', label: 'Sports', icon: '⚽', type: 'variable' },
   { id: 'other', label: 'Other', icon: '➕', type: 'variable', permanent: true },
 ]
 
@@ -54,7 +55,6 @@ type LocalExpense = {
   permanent?: boolean
 }
 
-const MULTI_ALLOWED = ['other', 'entertainment', 'loan_repayment']
 export default function ExpensesScreen() {
   const [masterFrequency, setMasterFrequency] = useState<'monthly' | 'biweekly'>('monthly')
   const [expenses, setExpenses] = useState<LocalExpense[]>(() => {
@@ -67,13 +67,8 @@ export default function ExpensesScreen() {
     ]
   })
 
-  const MULTI_ALLOWED = ['other', 'entertainment', 'loan_repayment']
-
   function addExpense(category: typeof EXPENSE_CATEGORIES[0]) {
-    if (!MULTI_ALLOWED.includes(category.id) && expenses.find(e => e.id === category.id)) return
-    const newId = MULTI_ALLOWED.includes(category.id)
-      ? `${category.id}_${Date.now()}`
-      : category.id
+    const newId = `${category.id}_${Date.now()}`
     setExpenses([...expenses, {
       id: newId,
       label: category.label,
@@ -184,7 +179,7 @@ export default function ExpensesScreen() {
 
       <Text style={styles.addLabel}>Add a category</Text>
       <View style={styles.typeGrid}>
-        {EXPENSE_CATEGORIES.filter(c => MULTI_ALLOWED.includes(c.id) || !expenses.find(e => e.id === c.id)).sort((a, b) => a.label.localeCompare(b.label)).map((category) => (
+        {EXPENSE_CATEGORIES.sort((a, b) => a.label.localeCompare(b.label)).map((category) => (
           <TouchableOpacity
             key={category.id}
             style={styles.typeChip}

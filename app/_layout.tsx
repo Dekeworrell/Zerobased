@@ -5,7 +5,7 @@ import { Colors } from '../constants/colors'
 import { initStore } from '../lib/store'
 
 export default function RootLayout() {
-  const tabBarHeight = Platform.OS === 'web' ? 54 : 54
+  const tabBarHeight = Platform.OS === 'web' ? 54 : 68
 
   useEffect(() => {
     initStore()
@@ -19,8 +19,8 @@ export default function RootLayout() {
           backgroundColor: Colors.card,
           borderTopColor: Colors.border,
           borderTopWidth: 1,
-          paddingBottom: Platform.OS === 'web' ? 8 : 2,
-          paddingTop: 2,
+          paddingBottom: Platform.OS === 'web' ? 8 : 16,
+          paddingTop: 4,
           height: tabBarHeight,
         },
         tabBarItemStyle: {

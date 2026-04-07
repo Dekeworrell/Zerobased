@@ -11,14 +11,14 @@ type Account = {
   label: string
   type: string
   balance: number
-  interest_rate?: number
+
 }
 
 const ACCOUNT_ICONS: { [key: string]: string } = {
   chequing: '💳',
   savings: '🏦',
   rrsp: '📈',
-  tfsa: '🛡️',
+  tfsa: '🌱',
   fhsa: '🏡',
   resp: '🎓',
   pension: '👴',
@@ -52,7 +52,7 @@ const ASSET_TYPE_OPTIONS = [
   { id: 'chequing', label: 'Chequing', icon: '💳' },
   { id: 'savings', label: 'Savings', icon: '🏦' },
   { id: 'rrsp', label: 'RRSP', icon: '📈' },
-  { id: 'tfsa', label: 'TFSA', icon: '🛡️' },
+  { id: 'tfsa', label: 'TFSA', icon: '🌱' },
   { id: 'fhsa', label: 'FHSA', icon: '🏡' },
   { id: 'resp', label: 'RESP', icon: '🎓' },
   { id: 'pension', label: 'Pension', icon: '👴' },
@@ -104,10 +104,6 @@ export default function AccountsScreen() {
     setAccounts(accounts.map(a => a.id === id ? { ...a, balance: balance as any } : a))
   }
 
-  function updateInterestRate(id: string, rate: string) {
-    setAccounts(accounts.map(a => a.id === id ? { ...a, interest_rate: parseFloat(rate) || 0 } : a))
-  }
-
   function updateLabel(id: string, label: string) {
     setAccounts(accounts.map(a => a.id === id ? { ...a, label } : a))
   }
@@ -123,9 +119,8 @@ export default function AccountsScreen() {
         await supabase
           .from('accounts')
           .update({ 
-            balance: account.balance, 
+            balance: account.balance,
             label: account.label,
-            interest_rate: account.interest_rate || 0,
           })
           .eq('id', account.id)
       }
@@ -212,20 +207,6 @@ export default function AccountsScreen() {
             <Text style={styles.deleteBtn}>✕</Text>
           </TouchableOpacity>
         </View>
-        {isLiability(account.type) && (
-          <View style={styles.interestRow}>
-            <Text style={styles.interestLabel}>Interest rate</Text>
-            <TextInput
-              style={styles.interestInput}
-              value={account.interest_rate?.toString() || ''}
-              onChangeText={(val) => updateInterestRate(account.id, val)}
-              keyboardType="decimal-pad"
-              placeholder="0.00"
-              placeholderTextColor={Colors.textSecondary}
-            />
-            <Text style={styles.interestLabel}>%</Text>
-          </View>
-        )}
       </View>
     )
   }
