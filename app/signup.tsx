@@ -2,6 +2,7 @@ import { router } from 'expo-router'
 import { useState } from 'react'
 import { KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import { Colors } from '../constants/colors'
+import { setCountry } from '../lib/store'
 import { supabase } from '../lib/supabase'
 
 export default function SignUpScreen() {
@@ -10,7 +11,8 @@ export default function SignUpScreen() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-
+  const [emailSent, setEmailSent] = useState(false)
+  const [country, setCountryState] = useState<'CA' | 'US'>('CA')
   async function handleSignUp() {
     if (!name.trim()) {
       setError('Please enter your name')
@@ -28,13 +30,44 @@ export default function SignUpScreen() {
         await supabase.from('profiles').upsert({
           id: user.id,
           name: name.trim(),
+          country,
         })
       }
+      setCountry(country)
       router.replace('/onboarding/tracking-method')
     } else {
-      setError('Please check your email to confirm your account.')
+      setEmailSent(true)
     }
     setLoading(false)
+  }
+
+  if (emailSent) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.inner}>
+          <Text style={styles.title}>Check your email 📬</Text>
+          <Text style={styles.subtitle}>
+            We sent a confirmation link to {email}. Click it to activate your account, then come back and log in.
+          </Text>
+          <TouchableOpacity
+            style={styles.primaryButton}
+            onPress={() => router.replace('/login')}
+          >
+            <Text style={styles.primaryButtonText}>Go to Login</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={{ alignItems: 'center', marginTop: 16 }}
+            onPress={async () => {
+              await supabase.auth.resend({ type: 'signup', email })
+              setError('Verification email resent!')
+            }}
+          >
+            <Text style={{ color: Colors.primary, fontSize: 14 }}>Resend verification email</Text>
+          </TouchableOpacity>
+          {error ? <Text style={[styles.error, { textAlign: 'center', marginTop: 12 }]}>{error}</Text> : null}
+        </View>
+      </View>
+    )
   }
 
   return (
@@ -73,6 +106,22 @@ export default function SignUpScreen() {
             autoCapitalize="none"
             keyboardType="email-address"
           />
+
+          <Text style={styles.label}>Country</Text>
+          <View style={{ flexDirection: 'row', gap: 12, marginBottom: 8 }}>
+            <TouchableOpacity
+              style={[styles.input, { flex: 1, alignItems: 'center', backgroundColor: country === 'CA' ? Colors.primary : Colors.card }]}
+              onPress={() => setCountryState('CA')}
+            >
+              <Text style={{ color: Colors.text, fontSize: 16 }}>🇨🇦 Canada</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.input, { flex: 1, alignItems: 'center', backgroundColor: country === 'US' ? Colors.primary : Colors.card }]}
+              onPress={() => setCountryState('US')}
+            >
+              <Text style={{ color: Colors.text, fontSize: 16 }}>🇺🇸 United States</Text>
+            </TouchableOpacity>
+          </View>
 
           <Text style={styles.label}>Password</Text>
           <TextInput

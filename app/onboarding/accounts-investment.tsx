@@ -5,13 +5,24 @@ import CurrencyInput from '../../components/CurrencyInput'
 import { Colors } from '../../constants/colors'
 import { getOnboardingData, setAccounts } from '../../lib/store'
 
-const INVESTMENT_ACCOUNTS = [
+const CA_INVESTMENT_ACCOUNTS = [
   { id: 'rrsp', label: 'RRSP', icon: '📈', multi: true },
   { id: 'tfsa', label: 'TFSA', icon: '🌱', multi: true },
   { id: 'fhsa', label: 'FHSA', icon: '🏠', multi: false },
   { id: 'resp', label: 'RESP', icon: '🎓', multi: true },
   { id: 'pension', label: 'Pension', icon: '👴', multi: false },
   { id: 'margin', label: 'Margin account', icon: '📊', multi: true },
+  { id: 'crypto', label: 'Crypto', icon: '🪙', multi: true },
+  { id: 'other_investment', label: 'Other', icon: '💹', multi: true },
+]
+
+const US_INVESTMENT_ACCOUNTS = [
+  { id: '401k', label: '401(k)', icon: '📈', multi: false },
+  { id: 'ira', label: 'IRA', icon: '🏦', multi: true },
+  { id: 'roth_ira', label: 'Roth IRA', icon: '🌱', multi: true },
+  { id: 'hsa', label: 'HSA', icon: '💊', multi: false },
+  { id: '529', label: '529 Plan', icon: '🎓', multi: true },
+  { id: 'brokerage', label: 'Brokerage', icon: '📊', multi: true },
   { id: 'crypto', label: 'Crypto', icon: '🪙', multi: true },
   { id: 'other_investment', label: 'Other', icon: '💹', multi: true },
 ]
@@ -24,7 +35,11 @@ type Account = {
 }
 
 export default function AccountsInvestmentScreen() {
-  const existing = getOnboardingData().accounts.filter(a =>
+  const onboardingData = getOnboardingData()
+  const INVESTMENT_ACCOUNTS = onboardingData.country === 'US' ? US_INVESTMENT_ACCOUNTS : CA_INVESTMENT_ACCOUNTS
+  const isUS = onboardingData.country === 'US'
+
+  const existing = onboardingData.accounts.filter(a =>
     INVESTMENT_ACCOUNTS.some(e => a.type === e.id || a.type.startsWith(e.id + '_'))
   )
 
@@ -62,10 +77,11 @@ export default function AccountsInvestmentScreen() {
 
   function handleContinue() {
     const existing = getOnboardingData().accounts
+    const allInvestmentAccounts = [...CA_INVESTMENT_ACCOUNTS, ...US_INVESTMENT_ACCOUNTS]
     const otherAccounts = existing.filter(a => {
       const baseType = a.type.split('_')[0]
-      return !INVESTMENT_ACCOUNTS.find(e => e.id === a.type) &&
-             !INVESTMENT_ACCOUNTS.find(e => e.id === baseType)
+      return !allInvestmentAccounts.find(e => e.id === a.type) &&
+             !allInvestmentAccounts.find(e => e.id === baseType)
     })
     setAccounts([...otherAccounts, ...accounts])
     router.push('/onboarding/assets')
@@ -80,7 +96,10 @@ export default function AccountsInvestmentScreen() {
       <Text style={styles.step}>Step 4 of 9</Text>
       <Text style={styles.title}>Investment accounts</Text>
       <Text style={styles.subtitle}>
-        Canadian registered accounts like RRSPs and TFSAs are a key part of building wealth. Adding them here gives you a complete financial picture.
+        {isUS
+          ? 'Tax-advantaged accounts like 401(k)s and IRAs are key to building wealth. Adding them here gives you a complete financial picture.'
+          : 'Canadian registered accounts like RRSPs and TFSAs are a key part of building wealth. Adding them here gives you a complete financial picture.'
+        }
       </Text>
 
       <View style={styles.chipRow}>

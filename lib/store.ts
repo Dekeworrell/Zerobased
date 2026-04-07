@@ -29,6 +29,7 @@ type Expense = {
 type OnboardingData = {
   trackingMethod: TrackingMethod | null
   budgetCycle: BudgetCycle
+  country: 'CA' | 'US'
   accounts: Account[]
   incomeSources: IncomeSource[]
   expenses: Expense[]
@@ -39,6 +40,7 @@ const STORAGE_KEY = 'zerobased_onboarding'
 let memoryCache: OnboardingData = {
   trackingMethod: null,
   budgetCycle: 'monthly',
+  country: 'CA',
   accounts: [],
   incomeSources: [],
   expenses: [],
@@ -60,6 +62,12 @@ async function saveStorage(data: OnboardingData) {
 
 export function getOnboardingData(): OnboardingData {
   return memoryCache
+}
+
+export function setCountry(country: 'CA' | 'US') {
+  const data = getOnboardingData()
+  data.country = country
+  saveStorage(data)
 }
 
 export function setTrackingMethod(method: TrackingMethod) {
@@ -96,6 +104,7 @@ export function clearOnboardingData() {
   memoryCache = {
     trackingMethod: null,
     budgetCycle: 'monthly',
+    country: 'CA',
     accounts: [],
     incomeSources: [],
     expenses: [],
@@ -139,7 +148,7 @@ export function getPayPeriodDates(nextPayday: string, frequency: string): { star
   end.setDate(end.getDate() - 1)
 
   return { start, end }
-  
+
 }export function calculateBudgetStatus(
   monthlyIncome: number,
   categories: { budgeted_amount: string | number, frequency: string }[]
