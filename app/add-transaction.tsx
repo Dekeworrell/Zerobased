@@ -178,7 +178,9 @@ export default function AddTransactionScreen() {
             true
           )
         }
-        if ((type as string) === 'income' && profile?.notifications_enabled) {
+      }
+
+      if ((type as string) === 'income' && profile?.notifications_enabled) {
         const { data: incomeData } = await supabase
           .from('income_sources')
           .select('next_payday, frequency')
@@ -188,7 +190,6 @@ export default function AddTransactionScreen() {
         if (incomeData?.next_payday) {
           await schedulePaydayReminder(incomeData.next_payday)
         }
-      }
       }
       router.replace('/dashboard')
 

@@ -2,6 +2,7 @@ import { Tabs } from 'expo-router'
 import { useEffect } from 'react'
 import { Platform, Text } from 'react-native'
 import { Colors } from '../constants/colors'
+import { registerForPushNotifications } from '../lib/notifications'
 import { initStore } from '../lib/store'
 
 export default function RootLayout() {
@@ -9,6 +10,7 @@ export default function RootLayout() {
 
   useEffect(() => {
     initStore()
+    registerForPushNotifications()
   }, [])
 
   return (
