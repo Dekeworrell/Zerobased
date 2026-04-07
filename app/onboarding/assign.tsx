@@ -6,7 +6,7 @@ import { Colors } from '../../constants/colors'
 import { clearOnboardingData, getOnboardingData, toMonthly } from '../../lib/store'
 import { supabase } from '../../lib/supabase'
 
-const PRIORITY_ITEMS = [
+const CA_PRIORITY_ITEMS = [
   { id: 'rrsp', label: 'RRSP', icon: '📈' },
   { id: 'tfsa', label: 'TFSA', icon: '🌱' },
   { id: 'fhsa', label: 'FHSA', icon: '🏠' },
@@ -18,6 +18,20 @@ const PRIORITY_ITEMS = [
   { id: 'car_fund', label: 'Car fund', icon: '🚗' },
   { id: 'home_fund', label: 'Home down payment', icon: '🏡' },
   { id: 'education_fund', label: 'Education fund', icon: '📚' },
+  { id: 'custom_goal', label: 'Custom goal', icon: '🎯' },
+]
+
+const US_PRIORITY_ITEMS = [
+  { id: '401k', label: '401(k)', icon: '📈' },
+  { id: 'ira', label: 'IRA', icon: '🏦' },
+  { id: 'roth_ira', label: 'Roth IRA', icon: '🌱' },
+  { id: 'hsa', label: 'HSA', icon: '💊' },
+  { id: '529', label: '529 Plan', icon: '🎓' },
+  { id: 'emergency_fund', label: 'Emergency fund', icon: '🆘' },
+  { id: 'investments', label: 'Investments', icon: '💰' },
+  { id: 'savings', label: 'General savings', icon: '🏦' },
+  { id: 'vacation', label: 'Vacation fund', icon: '✈️' },
+  { id: 'car_fund', label: 'Car fund', icon: '🚗' },
   { id: 'custom_goal', label: 'Custom goal', icon: '🎯' },
 ]
 
@@ -62,6 +76,7 @@ type Expense = {
 
 export default function AssignScreen() {
   const data = getOnboardingData()
+  const PRIORITY_ITEMS = data.country === 'US' ? US_PRIORITY_ITEMS : CA_PRIORITY_ITEMS
   const [expenses, setExpenses] = useState<Expense[]>(
     (data.expenses as Expense[]).map(e => ({
       ...e,
