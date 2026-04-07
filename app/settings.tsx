@@ -100,13 +100,12 @@ export default function SettingsScreen() {
                   style: 'destructive',
                   onPress: async () => {
                     try {
-                      const { data: { user } } = await supabase.auth.getUser()
-                      if (!user) return
-                      await supabase.from('transactions').delete().eq('user_id', user.id)
-                      await supabase.from('budget_categories').delete().eq('user_id', user.id)
-                      await supabase.from('income_sources').delete().eq('user_id', user.id)
-                      await supabase.from('accounts').delete().eq('user_id', user.id)
-                      await supabase.from('profiles').delete().eq('id', user.id)
+                      const { data: { session } } = await supabase.auth.getSession()
+                      if (!session) return
+                      await supabase.functions.invoke('delete-user', {
+                        headers: { Authorization: `Bearer ${session.access_token}` }
+                      })
+                      clearOnboardingData()
                       await supabase.auth.signOut()
                       router.replace('/')
                     } catch (err: any) {
