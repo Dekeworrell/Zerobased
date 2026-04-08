@@ -273,8 +273,10 @@ export default function DashboardScreen() {
             </View>
             <View style={[styles.budgetSummaryRow, { marginTop: 8 }]}>
               <Text style={styles.budgetSummaryAmount}>
-                ${(summaryView === 'monthly' ? monthlyBudgeted : totalBudgeted).toLocaleString('en-CA', { maximumFractionDigits: 0 })}
-                {summaryView === 'monthly' ? '/mo' : budgetCycle === 'paycycle' ? '/period' : '/mo'}
+                ${((summaryView === 'monthly' ? monthlyBudgeted : totalBudgeted) - totalSpent).toLocaleString('en-CA', { maximumFractionDigits: 0 })} remaining
+              </Text>
+              <Text style={[styles.budgetSummaryAmount, { fontSize: 13, color: Colors.textSecondary, fontWeight: '400' }]}>
+                {' '}of ${(summaryView === 'monthly' ? monthlyBudgeted : totalBudgeted).toLocaleString('en-CA', { maximumFractionDigits: 0 })}{summaryView === 'monthly' ? '/mo' : budgetCycle === 'paycycle' ? '/period' : '/mo'}
               </Text>
             </View>
             <View style={styles.progressBar}>
