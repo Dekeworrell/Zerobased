@@ -271,7 +271,7 @@ export default function DashboardScreen() {
                 </Text>
               </View>
             </View>
-            <View style={styles.budgetSummaryRow} style={{ marginTop: 8 }}>
+            <View style={[styles.budgetSummaryRow, { marginTop: 8 }]}>
               <Text style={styles.budgetSummaryAmount}>
                 ${(summaryView === 'monthly' ? monthlyBudgeted : totalBudgeted).toLocaleString('en-CA', { maximumFractionDigits: 0 })}
                 {summaryView === 'monthly' ? '/mo' : budgetCycle === 'paycycle' ? '/period' : '/mo'}
