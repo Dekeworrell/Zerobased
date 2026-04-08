@@ -6,12 +6,12 @@ import { Colors } from '../../constants/colors'
 import { getOnboardingData, setAccounts } from '../../lib/store'
 
 const DEBT_ACCOUNTS = [
-  { id: 'mortgage', label: 'Mortgage', icon: '🏠', multi: false },
-  { id: 'heloc', label: 'HELOC', icon: '🏦', multi: false },
-  { id: 'loc', label: 'Line of Credit', icon: '💳', multi: false },
+  { id: 'mortgage', label: 'Mortgage', icon: '🏠', multi: true },
+  { id: 'heloc', label: 'HELOC', icon: '🏦', multi: true },
+  { id: 'loc', label: 'Line of Credit', icon: '💳', multi: true },
   { id: 'credit', label: 'Credit card', icon: '💳', multi: true },
   { id: 'car_loan', label: 'Car loan', icon: '🚗', multi: true },
-  { id: 'student_loan', label: 'Student loan', icon: '🎓', multi: false },
+  { id: 'student_loan', label: 'Student loan', icon: '🎓', multi: true },
   { id: 'personal_loan', label: 'Personal loan', icon: '📋', multi: true },
   { id: 'other_debt', label: 'Other', icon: '➕', multi: true },
 ]

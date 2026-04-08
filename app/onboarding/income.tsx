@@ -204,7 +204,7 @@ export default function IncomeScreen() {
                 onChange={(e) => updateSource(index, 'next_payday', e.target.value)}
                 style={{
                   backgroundColor: '#1c1c1e',
-                  border: '1px solid #3a3a3c',
+                  border: '1px solid #ffffff',
                   borderRadius: 12,
                   padding: '14px 16px',
                   fontSize: 16,
@@ -427,9 +427,9 @@ const styles = StyleSheet.create({
     color: Colors.text,
   },
   dateButton: {
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.card,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: Colors.primary,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 14,

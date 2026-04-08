@@ -36,6 +36,13 @@ export default function SignUpScreen() {
       setCountry(country)
       router.replace('/onboarding/tracking-method')
     } else {
+      if (data.user) {
+        await supabase.from('profiles').upsert({
+          id: data.user.id,
+          name: name.trim(),
+          country,
+        })
+      }
       setEmailSent(true)
     }
     setLoading(false)

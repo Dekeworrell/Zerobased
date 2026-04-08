@@ -6,12 +6,12 @@ import { Colors } from '../../constants/colors'
 import { getOnboardingData, setAccounts } from '../../lib/store'
 
 const ASSET_TYPES = [
-  { id: 'home', label: 'Home', icon: '🏠' },
+  { id: 'home', label: 'Home', icon: '🏠', multi: true },
   { id: 'vehicle', label: 'Vehicle', icon: '🚗', multi: true },
-  { id: 'cottage', label: 'Cottage/Cabin', icon: '🏡' },
-  { id: 'rental', label: 'Rental property', icon: '🏢' },
-  { id: 'business', label: 'Business', icon: '💼' },
-  { id: 'other_asset', label: 'Other asset', icon: '💎' },
+  { id: 'cottage', label: 'Cottage/Cabin', icon: '🏡', multi: true },
+  { id: 'rental', label: 'Rental property', icon: '🏢', multi: true },
+  { id: 'business', label: 'Business', icon: '💼', multi: true },
+  { id: 'other_asset', label: 'Other asset', icon: '💎', multi: true },
 ]
 
 type Asset = {
@@ -71,6 +71,9 @@ export default function AssetsScreen() {
       <Text style={styles.title}>Physical assets</Text>
       <Text style={styles.subtitle}>
         Your home, vehicles, and other major assets are part of your net worth. Adding estimated values gives you a more complete financial picture.
+      </Text>
+      <Text style={styles.subtitle}>
+        What's the estimated current value of each?
       </Text>
 
       <View style={styles.chipRow}>

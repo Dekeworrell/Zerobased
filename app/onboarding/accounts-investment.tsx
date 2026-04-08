@@ -8,9 +8,9 @@ import { getOnboardingData, setAccounts } from '../../lib/store'
 const CA_INVESTMENT_ACCOUNTS = [
   { id: 'rrsp', label: 'RRSP', icon: '📈', multi: true },
   { id: 'tfsa', label: 'TFSA', icon: '🌱', multi: true },
-  { id: 'fhsa', label: 'FHSA', icon: '🏠', multi: false },
+  { id: 'fhsa', label: 'FHSA', icon: '🏠', multi: true },
   { id: 'resp', label: 'RESP', icon: '🎓', multi: true },
-  { id: 'pension', label: 'Pension', icon: '👴', multi: false },
+  { id: 'pension', label: 'Pension', icon: '👴', multi: true },
   { id: 'margin', label: 'Margin account', icon: '📊', multi: true },
   { id: 'crypto', label: 'Crypto', icon: '🪙', multi: true },
   { id: 'other_investment', label: 'Other', icon: '💹', multi: true },

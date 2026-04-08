@@ -116,6 +116,7 @@ export default function ReportsScreen() {
   }
 
   const currentMonth = months.find(m => m.month === selectedMonth)
+  const currentNet = monthlyIncome - (currentMonth?.expenses ?? 0)
 
   if (loading) {
     return (
@@ -157,18 +158,18 @@ export default function ReportsScreen() {
           {currentMonth && (
             <>
               <View style={[styles.netCard, {
-                borderColor: currentMonth.net >= 0 ? Colors.success : Colors.danger
+                borderColor: currentNet >= 0 ? Colors.success : Colors.danger
               }]}>
                 <Text style={styles.netLabel}>
-                  {currentMonth.net >= 0 ? '✅ Net positive' : '⚠️ Net negative'}
+                  {currentNet >= 0 ? '✅ Net positive' : '⚠️ Net negative'}
                 </Text>
                 <Text style={[styles.netAmount, {
-                  color: currentMonth.net >= 0 ? Colors.success : Colors.danger
+                  color: currentNet >= 0 ? Colors.success : Colors.danger
                 }]}>
-                  {currentMonth.net >= 0 ? '+' : ''}
-                  ${currentMonth.net.toLocaleString('en-CA', { maximumFractionDigits: 0 })}
+                  {currentNet >= 0 ? '+' : ''}
+                  ${currentNet.toLocaleString('en-CA', { maximumFractionDigits: 0 })}
                 </Text>
-                <Text style={styles.netMonth}>{currentMonth.label}</Text>
+                <Text style={styles.netMonth}>{currentMonth.label} · ${currentMonth.expenses.toLocaleString('en-CA', { maximumFractionDigits: 0 })} spent</Text>
               </View>
 
               <View style={styles.summaryRow}>
