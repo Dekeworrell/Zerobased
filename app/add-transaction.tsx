@@ -46,7 +46,15 @@ export default function AddTransactionScreen() {
 
   useEffect(() => {
     loadData()
-  }, [])
+    setAmount('')
+    setLabel('')
+    setType('expense')
+    if (categoryId && categoryLabel && categoryIcon) {
+      setSelectedCategory({ id: categoryId, label: categoryLabel, icon: categoryIcon })
+    } else {
+      setSelectedCategory(null)
+    }
+  }, [categoryId])
 
   async function loadData() {
     const { data: { user } } = await supabase.auth.getUser()
@@ -302,6 +310,7 @@ export default function AddTransactionScreen() {
                 value={date}
                 mode="date"
                 display="spinner"
+                themeVariant="dark"
                 onChange={(event, selectedDate) => {
                   if (selectedDate) setDate(selectedDate)
                   if (Platform.OS === 'android') setShowDatePicker(false)

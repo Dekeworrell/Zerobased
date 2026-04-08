@@ -40,7 +40,7 @@ export default function DashboardScreen() {
         .eq('id', user.id)
         .single()
 
-      setName(profile?.name || user.email?.split('@')[0] || 'there')
+      setName(profile?.name || 'there')
 
       const cycle = profile?.budget_cycle || 'monthly'
       setBudgetCycle(cycle)
@@ -246,7 +246,7 @@ export default function DashboardScreen() {
             <View style={styles.budgetSummaryRow}>
               <View style={styles.budgetSummaryLeft}>
                 <Text style={styles.budgetSummaryIcons}>
-                  {categories.slice(0, 4).map(c => c.icon).join(' ')}
+                  {categories.slice(0, 3).map(c => c.icon).join(' ')}
                 </Text>
                 <Text style={styles.budgetSummaryText}>
                   {categories.length} categories

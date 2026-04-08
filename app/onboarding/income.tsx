@@ -230,6 +230,7 @@ export default function IncomeScreen() {
                   value={source.next_payday ? new Date(source.next_payday + 'T12:00:00') : new Date()}
                   mode="date"
                   display="spinner"
+                  themeVariant="dark"
                   minimumDate={new Date()}
                   onChange={(event, selectedDate) => {
                     if (selectedDate) {
@@ -285,6 +286,7 @@ export default function IncomeScreen() {
                       value={source.second_payday ? new Date(source.second_payday + 'T12:00:00') : new Date()}
                       mode="date"
                       display="spinner"
+                      themeVariant="dark"
                       minimumDate={new Date()}
                       onChange={(event, selectedDate) => {
                         if (selectedDate) {

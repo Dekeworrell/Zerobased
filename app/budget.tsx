@@ -215,17 +215,17 @@ export default function BudgetScreen() {
       <Text style={styles.subtitle}>Adjust your monthly budget categories</Text>
 
       <View style={[styles.statusCard, {
-        borderColor: remaining < 0 ? Colors.danger : Math.abs(remaining) < 0.5 ? Colors.success : Colors.primary,
-        backgroundColor: Math.abs(remaining) < 0.5 ? Colors.success + '22' : remaining < 0 ? Colors.danger + '22' : Colors.primaryLight,
+        borderColor: remaining < 0 ? Colors.danger : Math.abs(remaining) < 0.5 ? Colors.success : Colors.info,
+        backgroundColor: remaining < 0 ? Colors.danger + '22' : Math.abs(remaining) < 0.5 ? Colors.success + '22' : Colors.info + '22',
       }]}>
         <Text style={styles.statusLabel}>Remaining to assign</Text>
         <Text style={[styles.statusAmount, {
-          color: remaining < 0 ? Colors.danger : remaining === 0 ? Colors.success : Colors.primary
+          color: remaining < 0 ? Colors.danger : Math.abs(remaining) < 0.5 ? Colors.success : Colors.info
         }]}>
           {Math.abs(remaining) < 0.5 ? '🎉 $0' : '$' + Math.abs(remaining).toLocaleString('en-CA', { maximumFractionDigits: 0 })}
         </Text>
         <Text style={[styles.statusBiweekly, {
-          color: remaining < 0 ? Colors.danger : remaining === 0 ? Colors.success : Colors.primary
+          color: remaining < 0 ? Colors.danger : Math.abs(remaining) < 0.5 ? Colors.success : Colors.info
         }]}>
           {Math.abs(remaining) < 0.5 ? 'Every dollar assigned!' : (remaining < 0 ? 'Over budget by $' : 'Unassigned $') + Math.abs(remaining / 2).toLocaleString('en-CA', { maximumFractionDigits: 0 }) + ' per paycheque'}
         </Text>
