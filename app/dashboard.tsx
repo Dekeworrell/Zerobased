@@ -18,6 +18,7 @@ export default function DashboardScreen() {
   const [payPeriodLabel, setPayPeriodLabel] = useState('this month')
   const [payPeriodStart, setPayPeriodStart] = useState<Date | null>(null)
   const [payPeriodEnd, setPayPeriodEnd] = useState<Date | null>(null)
+  const [summaryView, setSummaryView] = useState<'cycle' | 'monthly'>('cycle')
 
   useFocusEffect(
     useCallback(() => {
@@ -252,26 +253,42 @@ export default function DashboardScreen() {
                 </Text>
               </View>
               <View style={styles.budgetSummaryRight}>
-                <Text style={styles.budgetSummaryAmount}>
-                  ${monthlyBudgeted.toLocaleString('en-CA', { maximumFractionDigits: 0 })}/mo
-                </Text>
+                <TouchableOpacity
+                  onPress={(e) => {
+                    e.stopPropagation()
+                    setSummaryView(v => v === 'cycle' ? 'monthly' : 'cycle')
+                  }}
+                  style={styles.togglePill}
+                >
+                  <Text style={styles.togglePillText}>
+                    {summaryView === 'cycle'
+                      ? budgetCycle === 'paycycle' ? '📅 Pay period' : '📅 Monthly'
+                      : '🗓 Monthly'}
+                  </Text>
+                </TouchableOpacity>
                 <Text style={styles.budgetSummaryChevron}>
                   {categoriesExpanded ? '▲' : '▼'}
                 </Text>
               </View>
             </View>
+            <View style={styles.budgetSummaryRow} style={{ marginTop: 8 }}>
+              <Text style={styles.budgetSummaryAmount}>
+                ${(summaryView === 'monthly' ? monthlyBudgeted : totalBudgeted).toLocaleString('en-CA', { maximumFractionDigits: 0 })}
+                {summaryView === 'monthly' ? '/mo' : budgetCycle === 'paycycle' ? '/period' : '/mo'}
+              </Text>
+            </View>
             <View style={styles.progressBar}>
               <View style={[styles.progressFill, {
-                width: `${Math.min((totalSpent / totalBudgeted) * 100, 100)}%` as any,
+                width: `${Math.min((totalSpent / (summaryView === 'monthly' ? monthlyBudgeted : totalBudgeted)) * 100, 100)}%` as any,
                 backgroundColor: totalSpent >= totalBudgeted ? Colors.danger : totalSpent >= totalBudgeted * 0.8 ? Colors.warning : Colors.primary
               }]} />
             </View>
             <View style={styles.budgetSummaryFooter}>
               <Text style={styles.budgetSummarySubtext}>
-                ${totalSpent.toLocaleString('en-CA', { maximumFractionDigits: 0 })} spent · ${(totalBudgeted - totalSpent).toLocaleString('en-CA', { maximumFractionDigits: 0 })} remaining
+                ${totalSpent.toLocaleString('en-CA', { maximumFractionDigits: 0 })} spent · ${((summaryView === 'monthly' ? monthlyBudgeted : totalBudgeted) - totalSpent).toLocaleString('en-CA', { maximumFractionDigits: 0 })} remaining
               </Text>
               <Text style={styles.budgetSummarySubtext}>
-                {totalBudgeted > 0 ? ((totalSpent / totalBudgeted) * 100).toFixed(0) : 0}%
+                {totalBudgeted > 0 ? ((totalSpent / (summaryView === 'monthly' ? monthlyBudgeted : totalBudgeted)) * 100).toFixed(0) : 0}%
               </Text>
             </View>
           </TouchableOpacity>
@@ -608,6 +625,19 @@ const styles = StyleSheet.create({
   budgetSummaryChevron: {
     fontSize: 12,
     color: Colors.textSecondary,
+  },
+  togglePill: {
+    backgroundColor: Colors.primaryLight,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  togglePillText: {
+    fontSize: 11,
+    color: Colors.primary,
+    fontWeight: '600',
   },
   budgetSummarySubtext: {
     fontSize: 12,
