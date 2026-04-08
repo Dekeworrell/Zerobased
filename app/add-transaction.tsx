@@ -1,7 +1,7 @@
 import DateTimePicker from '@react-native-community/datetimepicker'
-import { router } from 'expo-router'
+import { router, useLocalSearchParams } from 'expo-router'
 import { useEffect, useState } from 'react'
-import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import CurrencyInput from '../components/CurrencyInput'
 import { Colors } from '../constants/colors'
 import { checkBudgetAndNotify, schedulePaydayReminder } from '../lib/notifications'
@@ -20,9 +20,12 @@ type Account = {
 }
 
 export default function AddTransactionScreen() {
+  const { categoryId, categoryLabel, categoryIcon } = useLocalSearchParams<{ categoryId?: string, categoryLabel?: string, categoryIcon?: string }>()
   const [categories, setCategories] = useState<Category[]>([])
   const [accounts, setAccounts] = useState<Account[]>([])
-  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null)
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(
+    categoryId && categoryLabel && categoryIcon ? { id: categoryId, label: categoryLabel, icon: categoryIcon } : null
+  )
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null)
   const [defaultAccountId, setDefaultAccountId] = useState<string | null>(null)
   const [amount, setAmount] = useState('')
@@ -95,11 +98,11 @@ export default function AddTransactionScreen() {
 
   async function handleSave() {
     if (!amount) {
-      setError('Please enter an amount')
+      Alert.alert('Missing amount', 'Please enter a transaction amount before saving.')
       return
     }
     if (!selectedAccount) {
-      setError('Please select an account')
+      Alert.alert('No account selected', 'Please select an account to log this transaction against.')
       return
     }
 
@@ -316,50 +319,6 @@ export default function AddTransactionScreen() {
         </>
       )}
 
-      <TouchableOpacity
-        style={styles.sectionHeader}
-        onPress={() => setAccountsExpanded(!accountsExpanded)}
-      >
-        <Text style={styles.fieldLabel}>
-          Account {selectedAccount ? `— ${selectedAccount.label}` : ''}
-        </Text>
-        <Text style={styles.sectionChevron}>{accountsExpanded ? '▲' : '▼'}</Text>
-      </TouchableOpacity>
-      {accountsExpanded && <View style={styles.accountList}>
-        {accounts.map(acc => (
-          <TouchableOpacity
-            key={acc.id}
-            style={[
-              styles.accountRow,
-              selectedAccount?.id === acc.id && styles.accountRowActive
-            ]}
-            onPress={() => setSelectedAccount(acc)}
-          >
-            <Text style={[
-              styles.accountRowText,
-              selectedAccount?.id === acc.id && styles.accountRowTextActive
-            ]}>
-              🏦 {acc.label}
-            </Text>
-            {selectedAccount?.id === acc.id && (
-              <Text style={styles.accountRowCheck}>✓</Text>
-            )}
-          </TouchableOpacity>
-        ))}
-      </View>}
-
-      {selectedAccount && selectedAccount.id !== defaultAccountId && (
-        <TouchableOpacity
-          style={styles.defaultToggle}
-          onPress={() => setSetAsDefault(!setAsDefault)}
-        >
-          <View style={[styles.checkbox, setAsDefault && styles.checkboxActive]}>
-            {setAsDefault && <Text style={styles.checkboxCheck}>✓</Text>}
-          </View>
-          <Text style={styles.defaultToggleText}>Set as default account</Text>
-        </TouchableOpacity>
-      )}
-
       {(type === 'expense' || type === 'unexpected') && (
         <>
           <TouchableOpacity
@@ -405,6 +364,50 @@ export default function AddTransactionScreen() {
             ))}
           </View>}
         </>
+      )}
+
+      <TouchableOpacity
+        style={styles.sectionHeader}
+        onPress={() => setAccountsExpanded(!accountsExpanded)}
+      >
+        <Text style={styles.fieldLabel}>
+          Account {selectedAccount ? `— ${selectedAccount.label}` : ''}
+        </Text>
+        <Text style={styles.sectionChevron}>{accountsExpanded ? '▲' : '▼'}</Text>
+      </TouchableOpacity>
+      {accountsExpanded && <View style={styles.accountList}>
+        {accounts.map(acc => (
+          <TouchableOpacity
+            key={acc.id}
+            style={[
+              styles.accountRow,
+              selectedAccount?.id === acc.id && styles.accountRowActive
+            ]}
+            onPress={() => setSelectedAccount(acc)}
+          >
+            <Text style={[
+              styles.accountRowText,
+              selectedAccount?.id === acc.id && styles.accountRowTextActive
+            ]}>
+              🏦 {acc.label}
+            </Text>
+            {selectedAccount?.id === acc.id && (
+              <Text style={styles.accountRowCheck}>✓</Text>
+            )}
+          </TouchableOpacity>
+        ))}
+      </View>}
+
+      {selectedAccount && selectedAccount.id !== defaultAccountId && (
+        <TouchableOpacity
+          style={styles.defaultToggle}
+          onPress={() => setSetAsDefault(!setAsDefault)}
+        >
+          <View style={[styles.checkbox, setAsDefault && styles.checkboxActive]}>
+            {setAsDefault && <Text style={styles.checkboxCheck}>✓</Text>}
+          </View>
+          <Text style={styles.defaultToggleText}>Set as default account</Text>
+        </TouchableOpacity>
       )}
 
       {error ? <Text style={styles.error}>{error}</Text> : null}

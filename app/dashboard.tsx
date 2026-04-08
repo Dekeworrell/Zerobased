@@ -97,6 +97,7 @@ export default function DashboardScreen() {
 
         const { data: txns } = await txnQuery
 
+        const TYPE_ORDER: { [key: string]: number } = { fixed: 0, variable: 1, priority: 2 }
         const catsWithSpent = cats.map((cat: any) => {
           const spent = txns
             ? txns
@@ -112,7 +113,9 @@ export default function DashboardScreen() {
               .reduce((sum: number, t: any) => sum + t.amount, 0)
           : 0
 
-        setCategories(catsWithSpent)
+        setCategories(catsWithSpent.sort((a: any, b: any) =>
+          (TYPE_ORDER[a.category_type] ?? 1) - (TYPE_ORDER[b.category_type] ?? 1)
+        ))
         setTotalSpent(
           catsWithSpent.reduce((sum: number, c: any) => sum + c.spent, 0) + unexpectedTotal
         )
@@ -283,7 +286,7 @@ export default function DashboardScreen() {
                   periodAmount = (monthlyAmount / 30) * days
                 }
                 return (
-                  <TouchableOpacity key={cat.id} style={styles.categoryCard}>
+                  <TouchableOpacity key={cat.id} style={styles.categoryCard} onPress={() => router.push({ pathname: '/add-transaction', params: { categoryId: cat.id, categoryLabel: cat.label, categoryIcon: cat.icon } })}>
                     <View style={styles.categoryHeader}>
                       <View style={styles.categoryLeft}>
                         <Text style={styles.categoryIcon}>{cat.icon}</Text>
