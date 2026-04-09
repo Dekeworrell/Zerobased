@@ -39,6 +39,7 @@ export default function IncomeScreen() {
   const [saving, setSaving] = useState(false)
   const [showPaydayPicker, setShowPaydayPicker] = useState<number | null>(null)
   const [showSecondPaydayPicker, setShowSecondPaydayPicker] = useState<number | null>(null)
+  const [paydayError, setPaydayError] = useState('')
   const [sources, setSources] = useState<IncomeSource[]>([
     { label: 'Primary income', amount: '', frequency: 'biweekly', type: 'employment', next_payday: '', second_payday: '' }
   ])
@@ -102,6 +103,12 @@ export default function IncomeScreen() {
   }
 
   async function handleContinue() {
+    const missing = sources.find(s => !s.next_payday)
+    if (missing) {
+      setPaydayError('Please choose your next payday date before continuing.')
+      return
+    }
+    setPaydayError('')
     if (isEditing) {
       setSaving(true)
       try {
@@ -150,8 +157,8 @@ export default function IncomeScreen() {
         <Text style={styles.backText}>← Back</Text>
       </TouchableOpacity>
       <Text style={styles.step}>{isEditing ? 'Edit income' : 'Step 3 of 5'}</Text>
-      <Text style={styles.title}>Your income</Text>
-      <Text style={styles.subtitle}>Add all sources of income you receive</Text>
+      <Text style={styles.title}>How much do you bring home?</Text>
+      <Text style={styles.subtitle}>Enter your take-home pay after tax. Add multiple sources if you have them.</Text>
 
       <View style={styles.sourceList}>
         {sources.map((source, index) => (
@@ -203,15 +210,16 @@ export default function IncomeScreen() {
                 min={new Date().toISOString().split('T')[0]}
                 onChange={(e) => updateSource(index, 'next_payday', e.target.value)}
                 style={{
-                  backgroundColor: '#1c1c1e',
-                  border: '1px solid #ffffff',
+                  backgroundColor: Colors.card,
+                  border: `2px solid ${source.next_payday ? Colors.primary : Colors.border}`,
                   borderRadius: 12,
                   padding: '14px 16px',
                   fontSize: 16,
-                  color: '#ffffff',
+                  color: Colors.text,
                   width: '100%',
                   boxSizing: 'border-box' as any,
                   marginBottom: 8,
+                  cursor: 'pointer',
                 }}
               />
             ) : (
@@ -328,6 +336,12 @@ export default function IncomeScreen() {
       <TouchableOpacity style={styles.addButton} onPress={addSource}>
         <Text style={styles.addButtonText}>+ Add another income source</Text>
       </TouchableOpacity>
+
+      {paydayError ? (
+        <View style={styles.paydayError}>
+          <Text style={styles.paydayErrorText}>⚠️ {paydayError}</Text>
+        </View>
+      ) : null}
 
       <TouchableOpacity
         style={[styles.primaryButton, saving && styles.disabled]}
@@ -504,5 +518,19 @@ const styles = StyleSheet.create({
     color: Colors.text,
     fontSize: 16,
     fontWeight: '600',
+  },
+  paydayError: {
+    backgroundColor: Colors.danger + '22',
+    borderWidth: 2,
+    borderColor: Colors.danger,
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+  },
+  paydayErrorText: {
+    color: Colors.danger,
+    fontSize: 16,
+    fontWeight: '700',
+    textAlign: 'center',
   },
 })

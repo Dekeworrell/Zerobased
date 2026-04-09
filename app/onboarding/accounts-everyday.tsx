@@ -74,9 +74,9 @@ export default function AccountsEverydayScreen() {
       </TouchableOpacity>
 
       <Text style={styles.step}>Step 2 of 9</Text>
-      <Text style={styles.title}>Everyday accounts</Text>
+      <Text style={styles.title}>Where does your money live?</Text>
       <Text style={styles.subtitle}>
-        These are the accounts you use day to day. Adding your current balances gives you an accurate net worth picture from day one.
+        Add your chequing, savings, and cash accounts — estimates are fine!
       </Text>
 
       <View style={styles.chipRow}>

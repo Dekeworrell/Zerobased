@@ -111,8 +111,8 @@ export default function ExpensesScreen() {
         <Text style={styles.backText}>← Back</Text>
       </TouchableOpacity>
       <Text style={styles.step}>Step 4 of 5</Text>
-      <Text style={styles.title}>Your expenses</Text>
-      <Text style={styles.subtitle}>Add your monthly bills and spending categories</Text>
+      <Text style={styles.title}>What are your regular expenses?</Text>
+      <Text style={styles.subtitle}>Start with your biggest bills — you can always add more later.</Text>
       <View style={styles.masterToggle}>
         <Text style={styles.masterToggleLabel}>Set all to:</Text>
         <TouchableOpacity

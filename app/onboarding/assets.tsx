@@ -68,9 +68,9 @@ export default function AssetsScreen() {
       </TouchableOpacity>
 
       <Text style={styles.step}>Step 5 of 9</Text>
-      <Text style={styles.title}>Physical assets</Text>
+      <Text style={styles.title}>What do you own of value?</Text>
       <Text style={styles.subtitle}>
-        Your home, vehicles, and other major assets are part of your net worth. Adding estimated values gives you a more complete financial picture.
+        Your home, vehicles, and other major assets count toward your net worth. Rough estimates work great!
       </Text>
       <Text style={styles.subtitle}>
         What's the estimated current value of each?

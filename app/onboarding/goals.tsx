@@ -91,9 +91,9 @@ export default function GoalsScreen() {
       </TouchableOpacity>
 
       <Text style={styles.step}>Step 6 of 9</Text>
-      <Text style={styles.title}>Your goals</Text>
+      <Text style={styles.title}>What are you working toward?</Text>
       <Text style={styles.subtitle}>
-        Understanding your goals helps Zerobased build a budget that actually moves you forward — not just tracks where your money went.
+        Pick everything that applies — your budget will be built around making these happen.
       </Text>
 
       <Text style={styles.sectionLabel}>What are you working toward? (select all that apply)</Text>

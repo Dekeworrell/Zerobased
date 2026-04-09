@@ -72,9 +72,9 @@ export default function AccountsDebtScreen() {
       </TouchableOpacity>
 
       <Text style={styles.step}>Step 3 of 9</Text>
-      <Text style={styles.title}>Debt accounts</Text>
+      <Text style={styles.title}>What do you currently owe?</Text>
       <Text style={styles.subtitle}>
-        Knowing your debts gives you a complete net worth picture. It also helps Zerobased suggest the most effective way to pay them down.
+        Include mortgages, credit cards, and loans — knowing your debts is the first step to crushing them.
       </Text>
 
       <View style={styles.chipRow}>

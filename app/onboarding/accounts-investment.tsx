@@ -94,11 +94,11 @@ export default function AccountsInvestmentScreen() {
       </TouchableOpacity>
 
       <Text style={styles.step}>Step 4 of 9</Text>
-      <Text style={styles.title}>Investment accounts</Text>
+      <Text style={styles.title}>Are you investing for your future?</Text>
       <Text style={styles.subtitle}>
         {isUS
-          ? 'Tax-advantaged accounts like 401(k)s and IRAs are key to building wealth. Adding them here gives you a complete financial picture.'
-          : 'Canadian registered accounts like RRSPs and TFSAs are a key part of building wealth. Adding them here gives you a complete financial picture.'
+          ? 'Add your 401(k)s, IRAs, and other investment accounts to see your complete net worth.'
+          : 'Add your RRSPs, TFSAs, and other investment accounts to see your complete net worth.'
         }
       </Text>
 
