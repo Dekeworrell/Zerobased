@@ -12,8 +12,8 @@ Deno.serve(async (req) => {
 
   try {
     const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      'https://tkldjaqcovjdiwjpnphf.supabase.co',
+      Deno.env.get('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRrbGRqYXFjb3ZqZGl3anBucGhmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NDA0ODAzNiwiZXhwIjoyMDg5NjI0MDM2fQ.7iMsTlcfHjZddQ50q12BimgiPBoziB-MipReHUwcBBI') ?? '',
       { auth: { autoRefreshToken: false, persistSession: false } }
     )
 
