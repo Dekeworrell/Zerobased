@@ -104,9 +104,7 @@ export default function SettingsScreen() {
     try {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return
-      await supabase.functions.invoke('delete-user', {
-        headers: { Authorization: `Bearer ${session.access_token}` }
-      })
+      await supabase.rpc('delete_user_account')
       clearOnboardingData()
       await supabase.auth.signOut()
       router.replace('/')
