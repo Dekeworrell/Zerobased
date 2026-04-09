@@ -1,6 +1,6 @@
 import { router } from 'expo-router'
 import { useState } from 'react'
-import { Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native'
+import { Image, Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import { Colors } from '../constants/colors'
 import { setCountry } from '../lib/store'
 import { supabase } from '../lib/supabase'
@@ -84,7 +84,6 @@ export default function SignUpScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1 }} onScrollBeginDrag={Keyboard.dismiss}>
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <View style={styles.inner}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Text style={styles.backText}>← Back</Text>
@@ -120,16 +119,18 @@ export default function SignUpScreen() {
           <Text style={styles.label}>Country</Text>
           <View style={{ flexDirection: 'row', gap: 12, marginBottom: 8 }}>
             <TouchableOpacity
-              style={[styles.input, { flex: 1, alignItems: 'center', backgroundColor: country === 'CA' ? Colors.primary : Colors.card }]}
+              style={[styles.input, { flex: 1, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8, backgroundColor: country === 'CA' ? Colors.primary : Colors.card }]}
               onPress={() => setCountryState('CA')}
             >
-              <Text style={{ color: Colors.text, fontSize: 16 }}>🇨🇦 Canada</Text>
+              <Image source={{ uri: 'https://flagcdn.com/w40/ca.png' }} style={{ width: 24, height: 16, borderRadius: 2 }} />
+              <Text style={{ color: Colors.text, fontSize: 15, fontWeight: '500' }}>Canada</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.input, { flex: 1, alignItems: 'center', backgroundColor: country === 'US' ? Colors.primary : Colors.card }]}
+              style={[styles.input, { flex: 1, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8, backgroundColor: country === 'US' ? Colors.primary : Colors.card }]}
               onPress={() => setCountryState('US')}
             >
-              <Text style={{ color: Colors.text, fontSize: 16 }}>🇺🇸 United States</Text>
+              <Image source={{ uri: 'https://flagcdn.com/w40/us.png' }} style={{ width: 24, height: 16, borderRadius: 2 }} />
+              <Text style={{ color: Colors.text, fontSize: 15, fontWeight: '500' }}>United States</Text>
             </TouchableOpacity>
           </View>
 
@@ -161,7 +162,6 @@ export default function SignUpScreen() {
           </Text>
         </Text>
       </View>
-      </TouchableWithoutFeedback>
     </ScrollView>
     </KeyboardAvoidingView>
   )
