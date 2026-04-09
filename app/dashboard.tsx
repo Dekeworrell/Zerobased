@@ -137,13 +137,17 @@ export default function DashboardScreen() {
 
   const { totalBudgeted: monthlyBudgeted, remaining: unassigned } = calculateBudgetStatus(monthlyIncome, categories)
 
-  const totalBudgeted = budgetCycle === 'paycycle' && payPeriodStart && payPeriodEnd
+  const paycycleBudgeted = payPeriodStart && payPeriodEnd
     ? categories.reduce((sum, c) => {
         const monthly = toMonthly(c.budgeted_amount.toString(), c.frequency)
         const days = Math.round((payPeriodEnd.getTime() - payPeriodStart.getTime()) / (1000 * 60 * 60 * 24)) + 1
         return sum + (monthly / 30) * days
       }, 0)
-    : monthlyBudgeted
+    : monthlyBudgeted / 2
+
+  const totalBudgeted = budgetCycle === 'paycycle' ? paycycleBudgeted : monthlyBudgeted
+
+  const displayBudgeted = summaryView === 'monthly' ? monthlyBudgeted : totalBudgeted
 
   const LIABILITY_TYPES = [
     'mortgage', 'heloc', 'loc', 'carloan', 'studentloan', 'creditcard', 'other_liability',
@@ -273,24 +277,24 @@ export default function DashboardScreen() {
             </View>
             <View style={[styles.budgetSummaryRow, { marginTop: 8 }]}>
               <Text style={styles.budgetSummaryAmount}>
-                ${((summaryView === 'monthly' ? monthlyBudgeted : totalBudgeted) - totalSpent).toLocaleString('en-CA', { maximumFractionDigits: 0 })} remaining
+                ${(displayBudgeted - totalSpent).toLocaleString('en-CA', { maximumFractionDigits: 0 })} remaining
               </Text>
               <Text style={[styles.budgetSummaryAmount, { fontSize: 13, color: Colors.textSecondary, fontWeight: '400' }]}>
-                {' '}of ${(summaryView === 'monthly' ? monthlyBudgeted : totalBudgeted).toLocaleString('en-CA', { maximumFractionDigits: 0 })}{summaryView === 'monthly' ? '/mo' : budgetCycle === 'paycycle' ? '/period' : '/mo'}
+                {' '}of ${displayBudgeted.toLocaleString('en-CA', { maximumFractionDigits: 0 })}{summaryView === 'monthly' ? '/mo' : budgetCycle === 'paycycle' ? '/period' : '/mo'}
               </Text>
             </View>
             <View style={styles.progressBar}>
               <View style={[styles.progressFill, {
-                width: `${Math.min((totalSpent / (summaryView === 'monthly' ? monthlyBudgeted : totalBudgeted)) * 100, 100)}%` as any,
-                backgroundColor: totalSpent >= totalBudgeted ? Colors.danger : totalSpent >= totalBudgeted * 0.8 ? Colors.warning : Colors.primary
+                width: `${Math.min((totalSpent / displayBudgeted) * 100, 100)}%` as any,
+                backgroundColor: totalSpent >= displayBudgeted ? Colors.danger : totalSpent >= displayBudgeted * 0.8 ? Colors.warning : Colors.primary
               }]} />
             </View>
             <View style={styles.budgetSummaryFooter}>
               <Text style={styles.budgetSummarySubtext}>
-                ${totalSpent.toLocaleString('en-CA', { maximumFractionDigits: 0 })} spent · ${((summaryView === 'monthly' ? monthlyBudgeted : totalBudgeted) - totalSpent).toLocaleString('en-CA', { maximumFractionDigits: 0 })} remaining
+                ${totalSpent.toLocaleString('en-CA', { maximumFractionDigits: 0 })} spent · ${(displayBudgeted - totalSpent).toLocaleString('en-CA', { maximumFractionDigits: 0 })} remaining
               </Text>
               <Text style={styles.budgetSummarySubtext}>
-                {totalBudgeted > 0 ? ((totalSpent / (summaryView === 'monthly' ? monthlyBudgeted : totalBudgeted)) * 100).toFixed(0) : 0}%
+                {displayBudgeted > 0 ? ((totalSpent / displayBudgeted) * 100).toFixed(0) : 0}%
               </Text>
             </View>
           </TouchableOpacity>
