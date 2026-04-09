@@ -17,19 +17,6 @@ export default function LoginScreen() {
     if (error) {
       setError(error.message)
     } else {
-      if (data.user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('name')
-          .eq('id', data.user.id)
-          .single()
-        if (!profile?.name) {
-          const onboardingName = getOnboardingData().incomeSources?.[0]?.label
-          if (onboardingName) {
-            await supabase.from('profiles').upsert({ id: data.user.id, name: onboardingName })
-          }
-        }
-      }
       router.replace('/dashboard')
     }
     setLoading(false)
@@ -41,7 +28,6 @@ export default function LoginScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1 }} onScrollBeginDrag={Keyboard.dismiss}>
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <View style={styles.inner}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Text style={styles.backText}>← Back</Text>
@@ -96,7 +82,6 @@ export default function LoginScreen() {
           </Text>
         </Text>
       </View>
-      </TouchableWithoutFeedback>
     </ScrollView>
     </KeyboardAvoidingView>
   )
