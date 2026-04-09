@@ -1,6 +1,6 @@
 import { router } from 'expo-router'
 import { useEffect, useState } from 'react'
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { ActivityIndicator, Alert, Platform, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import { Colors } from '../constants/colors'
 import { registerForPushNotifications } from '../lib/notifications'
 import { clearOnboardingData } from '../lib/store'
@@ -81,44 +81,38 @@ export default function SettingsScreen() {
   }
 
   async function handleDeleteAccount() {
-    Alert.alert(
-      'Delete account',
-      'Are you sure? This cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Yes, delete everything',
-          style: 'destructive',
-          onPress: () => {
-            Alert.alert(
-              'Final confirmation',
-              'All your data will be permanently deleted.',
-              [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                  text: 'DELETE my account',
-                  style: 'destructive',
-                  onPress: async () => {
-                    try {
-                      const { data: { session } } = await supabase.auth.getSession()
-                      if (!session) return
-                      await supabase.functions.invoke('delete-user', {
-                        headers: { Authorization: `Bearer ${session.access_token}` }
-                      })
-                      clearOnboardingData()
-                      await supabase.auth.signOut()
-                      router.replace('/')
-                    } catch (err: any) {
-                      setError(err.message)
-                    }
-                  }
-                }
-              ]
-            )
-          }
-        }
-      ]
-    )
+    const confirm1 = Platform.OS === 'web'
+      ? window.confirm('Are you sure you want to delete your account? This cannot be undone.')
+      : await new Promise<boolean>(resolve => Alert.alert(
+          'Delete account', 'Are you sure? This cannot be undone.',
+          [{ text: 'Cancel', onPress: () => resolve(false), style: 'cancel' },
+           { text: 'Yes, delete everything', onPress: () => resolve(true), style: 'destructive' }]
+        ))
+
+    if (!confirm1) return
+
+    const confirm2 = Platform.OS === 'web'
+      ? window.confirm('Final confirmation — all your data will be permanently deleted.')
+      : await new Promise<boolean>(resolve => Alert.alert(
+          'Final confirmation', 'All your data will be permanently deleted.',
+          [{ text: 'Cancel', onPress: () => resolve(false), style: 'cancel' },
+           { text: 'DELETE my account', onPress: () => resolve(true), style: 'destructive' }]
+        ))
+
+    if (!confirm2) return
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+      await supabase.functions.invoke('delete-user', {
+        headers: { Authorization: `Bearer ${session.access_token}` }
+      })
+      clearOnboardingData()
+      await supabase.auth.signOut()
+      router.replace('/')
+    } catch (err: any) {
+      setError(err.message)
+    }
   }
 
   if (loading) {
