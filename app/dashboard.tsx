@@ -304,10 +304,16 @@ export default function DashboardScreen() {
               {categories.map((cat) => {
                 const monthlyAmount = toMonthly(cat.budgeted_amount.toString(), cat.frequency)
                 let periodAmount = monthlyAmount
-                if (budgetCycle === 'paycycle' && payPeriodStart && payPeriodEnd) {
-                  const days = Math.round((payPeriodEnd.getTime() - payPeriodStart.getTime()) / (1000 * 60 * 60 * 24)) + 1
-                  periodAmount = (monthlyAmount / 30) * days
+                if (budgetCycle === 'paycycle') {
+                  if (payPeriodStart && payPeriodEnd) {
+                    const days = Math.round((payPeriodEnd.getTime() - payPeriodStart.getTime()) / (1000 * 60 * 60 * 24)) + 1
+                    periodAmount = (monthlyAmount / 30) * days
+                  } else {
+                    periodAmount = monthlyAmount / 2
+                  }
                 }
+                const displayAmount = summaryView === 'monthly' ? monthlyAmount : periodAmount
+                const displayLabel = summaryView === 'monthly' ? '/mo' : budgetCycle === 'paycycle' ? '/period' : '/mo'
                 return (
                   <TouchableOpacity key={cat.id} style={styles.categoryCard} onPress={() => router.push({ pathname: '/add-transaction', params: { categoryId: cat.id, categoryLabel: cat.label, categoryIcon: cat.icon } })}>
                     <View style={styles.categoryHeader}>
@@ -317,19 +323,19 @@ export default function DashboardScreen() {
                       </View>
                       <View style={styles.categoryRight}>
                         <Text style={styles.categoryBudgeted}>
-                          ${periodAmount.toLocaleString('en-CA', { maximumFractionDigits: 0 })}{budgetCycle === 'paycycle' ? '/period' : '/mo'}
+                          ${displayAmount.toLocaleString('en-CA', { maximumFractionDigits: 0 })}{displayLabel}
                         </Text>
                       </View>
                     </View>
                     <View style={styles.categoryProgressBar}>
                       <View style={[styles.categoryProgressFill, {
-                        width: `${Math.min((cat.spent / periodAmount) * 100, 100)}%` as any,
-                        backgroundColor: cat.spent >= periodAmount ? Colors.danger : cat.spent >= periodAmount * 0.8 ? Colors.warning : Colors.success
+                        width: `${Math.min((cat.spent / displayAmount) * 100, 100)}%` as any,
+                        backgroundColor: cat.spent >= displayAmount ? Colors.danger : cat.spent >= displayAmount * 0.8 ? Colors.warning : Colors.success
                       }]} />
                     </View>
                     <View style={styles.categorySpentRow}>
                       <Text style={styles.categoryRemaining}>
-                        ${(periodAmount - cat.spent).toLocaleString('en-CA', { maximumFractionDigits: 0 })} remaining
+                        ${(displayAmount - cat.spent).toLocaleString('en-CA', { maximumFractionDigits: 0 })} remaining
                       </Text>
                       <Text style={styles.categorySpentAmount}>
                         ${cat.spent.toLocaleString('en-CA', { maximumFractionDigits: 0 })} spent
