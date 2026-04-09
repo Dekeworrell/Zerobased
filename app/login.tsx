@@ -1,8 +1,7 @@
 import { router } from 'expo-router'
 import { useState } from 'react'
-import { Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native'
+import { Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import { Colors } from '../constants/colors'
-import { getOnboardingData } from '../lib/store'
 import { supabase } from '../lib/supabase'
 
 export default function LoginScreen() {
