@@ -42,6 +42,7 @@ export default function SignUpScreen() {
           name: name.trim(),
           country,
         })
+        setCountry(country)
       }
       setEmailSent(true)
     }

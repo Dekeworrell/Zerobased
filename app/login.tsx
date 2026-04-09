@@ -2,6 +2,7 @@ import { router } from 'expo-router'
 import { useState } from 'react'
 import { Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native'
 import { Colors } from '../constants/colors'
+import { getOnboardingData } from '../lib/store'
 import { supabase } from '../lib/supabase'
 
 export default function LoginScreen() {
@@ -13,10 +14,23 @@ export default function LoginScreen() {
   async function handleLogin() {
     setLoading(true)
     setError('')
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) {
       setError(error.message)
     } else {
+      if (data.user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('name')
+          .eq('id', data.user.id)
+          .single()
+        if (!profile?.name) {
+          const onboardingName = getOnboardingData().incomeSources?.[0]?.label
+          if (onboardingName) {
+            await supabase.from('profiles').upsert({ id: data.user.id, name: onboardingName })
+          }
+        }
+      }
       router.replace('/dashboard')
     }
     setLoading(false)
