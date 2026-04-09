@@ -1,6 +1,7 @@
 import { router, useFocusEffect } from 'expo-router'
 import { useCallback, useState } from 'react'
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import QuickAddSheet from '../components/QuickAddSheet.tsx'
 import { Colors } from '../constants/colors'
 import { calculateBudgetStatus, getPayPeriodDates, toMonthly } from '../lib/store'
 import { supabase } from '../lib/supabase'
@@ -19,6 +20,9 @@ export default function DashboardScreen() {
   const [payPeriodStart, setPayPeriodStart] = useState<Date | null>(null)
   const [payPeriodEnd, setPayPeriodEnd] = useState<Date | null>(null)
   const [summaryView, setSummaryView] = useState<'cycle' | 'monthly'>('cycle')
+  const [quickAddCategory, setQuickAddCategory] = useState<{ id: string, label: string, icon: string } | null>(null)
+  const [categoryDefaults, setCategoryDefaults] = useState<{ [categoryId: string]: string }>({})
+  const [globalDefaultAccountId, setGlobalDefaultAccountId] = useState<string | null>(null)
 
   useFocusEffect(
     useCallback(() => {
@@ -36,7 +40,7 @@ export default function DashboardScreen() {
 
       const { data: profile } = await supabase
         .from('profiles')
-        .select('name, budget_cycle')
+        .select('name, budget_cycle, default_account_id')
         .eq('id', user.id)
         .single()
 
@@ -129,6 +133,16 @@ export default function DashboardScreen() {
 
       if (accs) setAccounts(accs)
 
+      const { data: profileDefaults } = await supabase.from('profiles').select('default_account_id').eq('id', user.id).single()
+      if (profileDefaults?.default_account_id) setGlobalDefaultAccountId(profileDefaults.default_account_id)
+
+      const { data: catDefaults } = await supabase.from('category_account_defaults').select('category_id, account_id').eq('user_id', user.id)
+      if (catDefaults) {
+        const map: { [key: string]: string } = {}
+        catDefaults.forEach((d: any) => { map[d.category_id] = d.account_id })
+        setCategoryDefaults(map)
+      }
+
     } catch (err: any) {
       setError(err.message)
     }
@@ -181,6 +195,7 @@ export default function DashboardScreen() {
   }
 
   return (
+    <>
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
 
       <View style={styles.header}>
@@ -315,7 +330,7 @@ export default function DashboardScreen() {
                 const displayAmount = summaryView === 'monthly' ? monthlyAmount : periodAmount
                 const displayLabel = summaryView === 'monthly' ? '/mo' : budgetCycle === 'paycycle' ? '/period' : '/mo'
                 return (
-                  <TouchableOpacity key={cat.id} style={styles.categoryCard} onPress={() => router.push({ pathname: '/add-transaction', params: { categoryId: cat.id, categoryLabel: cat.label, categoryIcon: cat.icon } })}>
+                  <TouchableOpacity key={cat.id} style={styles.categoryCard} onPress={() => setQuickAddCategory({ id: cat.id, label: cat.label, icon: cat.icon })}>
                     <View style={styles.categoryHeader}>
                       <View style={styles.categoryLeft}>
                         <Text style={styles.categoryIcon}>{cat.icon}</Text>
@@ -385,6 +400,16 @@ export default function DashboardScreen() {
       </View>
 
     </ScrollView>
+    <QuickAddSheet
+      visible={!!quickAddCategory}
+      category={quickAddCategory}
+      accounts={accounts}
+      categoryDefaults={categoryDefaults}
+      globalDefaultAccountId={globalDefaultAccountId}
+      onClose={() => setQuickAddCategory(null)}
+      onSaved={() => { setQuickAddCategory(null); loadDashboard() }}
+    />
+    </>
   )
 }
 
