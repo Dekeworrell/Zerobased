@@ -56,6 +56,7 @@ export default function TransactionsScreen() {
       `)
       .eq('user_id', user.id)
       .order('date', { ascending: false })
+      .limit(500)
 
     if (data) setTransactions(data as any)
     setLoading(false)

@@ -10,6 +10,8 @@ export default function WelcomeScreen() {
   }, [])
 
   async function checkSession() {
+    // Warm up the Supabase connection immediately on app open
+    supabase.from('profiles').select('id').limit(1)
     const { data: { session } } = await supabase.auth.getSession()
     if (session) {
       router.replace('/dashboard')

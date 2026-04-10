@@ -38,27 +38,44 @@ export default function DashboardScreen() {
         return
       }
 
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('name, budget_cycle, default_account_id')
-        .eq('id', user.id)
-        .single()
+      // Fire all independent queries in parallel
+      const [
+        { data: profile },
+        { data: income },
+        { data: cats },
+        { data: accs },
+        { data: catDefaults },
+      ] = await Promise.all([
+        supabase.from('profiles').select('name, budget_cycle, default_account_id').eq('id', user.id).single(),
+        supabase.from('income_sources').select('*').eq('user_id', user.id),
+        supabase.from('budget_categories').select('*').eq('user_id', user.id),
+        supabase.from('accounts').select('*').eq('user_id', user.id),
+        supabase.from('category_account_defaults').select('category_id, account_id').eq('user_id', user.id),
+      ])
 
+      // Profile
       setName(profile?.name || 'there')
-
       const cycle = profile?.budget_cycle || 'monthly'
       setBudgetCycle(cycle)
+      if (profile?.default_account_id) setGlobalDefaultAccountId(profile.default_account_id)
 
-      const { data: income } = await supabase
-        .from('income_sources')
-        .select('*')
-        .eq('user_id', user.id)
+      // Accounts
+      if (accs) setAccounts(accs)
 
+      // Category defaults
+      if (catDefaults) {
+        const map: { [key: string]: string } = {}
+        catDefaults.forEach((d: any) => { map[d.category_id] = d.account_id })
+        setCategoryDefaults(map)
+      }
+
+      // Income + pay period dates
       let periodStart: Date | null = null
       let periodEnd: Date | null = null
 
       if (income) {
-        const total = income.reduce((sum: number, s: any) => sum + toMonthly(s.amount.toString(), s.frequency), 0)
+        const total = income.reduce((sum: number, s: any) =>
+          sum + toMonthly(s.amount.toString(), s.frequency), 0)
         setMonthlyIncome(total)
 
         if (cycle === 'paycycle') {
@@ -69,7 +86,6 @@ export default function DashboardScreen() {
             periodEnd = end
             setPayPeriodStart(start)
             setPayPeriodEnd(end)
-
             const startStr = start.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })
             const endStr = end.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })
             setPayPeriodLabel(`${startStr} – ${endStr}`)
@@ -82,11 +98,7 @@ export default function DashboardScreen() {
         }
       }
 
-      const { data: cats } = await supabase
-        .from('budget_categories')
-        .select('*')
-        .eq('user_id', user.id)
-
+      // Transactions — depends on pay period so runs after
       if (cats) {
         let txnQuery = supabase
           .from('transactions')
@@ -105,17 +117,15 @@ export default function DashboardScreen() {
         const TYPE_ORDER: { [key: string]: number } = { fixed: 0, variable: 1, priority: 2 }
         const catsWithSpent = cats.map((cat: any) => {
           const spent = txns
-            ? txns
-                .filter((t: any) => t.category_id === cat.id)
-                .reduce((sum: number, t: any) => sum + t.amount, 0)
+            ? txns.filter((t: any) => t.category_id === cat.id)
+                  .reduce((sum: number, t: any) => sum + t.amount, 0)
             : 0
           return { ...cat, spent }
         })
 
         const unexpectedTotal = txns
-          ? txns
-              .filter((t: any) => t.is_unexpected)
-              .reduce((sum: number, t: any) => sum + t.amount, 0)
+          ? txns.filter((t: any) => t.is_unexpected)
+                .reduce((sum: number, t: any) => sum + t.amount, 0)
           : 0
 
         setCategories(catsWithSpent.sort((a: any, b: any) =>
@@ -124,23 +134,6 @@ export default function DashboardScreen() {
         setTotalSpent(
           catsWithSpent.reduce((sum: number, c: any) => sum + c.spent, 0) + unexpectedTotal
         )
-      }
-
-      const { data: accs } = await supabase
-        .from('accounts')
-        .select('*')
-        .eq('user_id', user.id)
-
-      if (accs) setAccounts(accs)
-
-      const { data: profileDefaults } = await supabase.from('profiles').select('default_account_id').eq('id', user.id).single()
-      if (profileDefaults?.default_account_id) setGlobalDefaultAccountId(profileDefaults.default_account_id)
-
-      const { data: catDefaults } = await supabase.from('category_account_defaults').select('category_id, account_id').eq('user_id', user.id)
-      if (catDefaults) {
-        const map: { [key: string]: string } = {}
-        catDefaults.forEach((d: any) => { map[d.category_id] = d.account_id })
-        setCategoryDefaults(map)
       }
 
     } catch (err: any) {

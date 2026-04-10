@@ -94,24 +94,42 @@ export default function ReportsScreen() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.replace('/'); return }
 
-      // Profile — goals
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('goals, primary_goal')
-        .eq('id', user.id)
-        .single()
+      const twelveMonthsAgo = new Date()
+      twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 11)
+      const fromDate = twelveMonthsAgo.toISOString().slice(0, 7) + '-01'
 
+      // Fire all independent queries in parallel
+      const [
+        { data: profile },
+        { data: income },
+        { data: accounts },
+        { data: txns },
+        { data: cats },
+        { data: snaps },
+      ] = await Promise.all([
+        supabase.from('profiles').select('goals, primary_goal').eq('id', user.id).single(),
+        supabase.from('income_sources').select('*').eq('user_id', user.id),
+        supabase.from('accounts').select('*').eq('user_id', user.id),
+        supabase.from('transactions')
+          .select('amount, date, type, is_unexpected, category:budget_categories(label, icon)')
+          .eq('user_id', user.id)
+          .gte('date', fromDate)
+          .order('date', { ascending: false }),
+        supabase.from('budget_categories').select('*').eq('user_id', user.id),
+        supabase.from('monthly_snapshots')
+          .select('month, net_worth, total_assets, total_liabilities')
+          .eq('user_id', user.id)
+          .order('month', { ascending: true })
+          .limit(12),
+      ])
+
+      // Profile
       if (profile) {
         setGoals(profile.goals || [])
         setPrimaryGoal(profile.primary_goal || '')
       }
 
       // Income
-      const { data: income } = await supabase
-        .from('income_sources')
-        .select('*')
-        .eq('user_id', user.id)
-
       let totalMonthlyIncome = 0
       if (income) {
         totalMonthlyIncome = income.reduce((sum: number, s: any) =>
@@ -119,12 +137,7 @@ export default function ReportsScreen() {
         setMonthlyIncome(totalMonthlyIncome)
       }
 
-      // Accounts — current net worth
-      const { data: accounts } = await supabase
-        .from('accounts')
-        .select('*')
-        .eq('user_id', user.id)
-
+      // Accounts — net worth
       let netWorth = 0
       let totalAssets = 0
       let totalLiabilities = 0
@@ -139,18 +152,10 @@ export default function ReportsScreen() {
         setCurrentLiabilities(totalLiabilities)
       }
 
-      // Transactions — last 12 months
-      const twelveMonthsAgo = new Date()
-      twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 11)
-      const fromDate = twelveMonthsAgo.toISOString().slice(0, 7) + '-01'
+      // Snapshots
+      if (snaps) setSnapshots(snaps)
 
-      const { data: txns } = await supabase
-        .from('transactions')
-        .select('amount, date, type, is_unexpected, category:budget_categories(label, icon)')
-        .eq('user_id', user.id)
-        .gte('date', fromDate)
-        .order('date', { ascending: false })
-
+      // Transactions — build month summaries
       if (txns) {
         const monthMap: { [key: string]: MonthSummary } = {}
         txns.forEach((t: any) => {
@@ -179,12 +184,7 @@ export default function ReportsScreen() {
         setMonthSummaries(sorted)
         if (sorted.length > 0) setSelectedMonth(sorted[0].month)
 
-        // Category breakdown for most recent month
-        const { data: cats } = await supabase
-          .from('budget_categories')
-          .select('*')
-          .eq('user_id', user.id)
-
+        // Category breakdown — cats already loaded, no extra query needed
         if (cats && sorted.length > 0) {
           const currentMonthStr = sorted[0].month
           const currentTxns = txns.filter((t: any) =>
@@ -205,24 +205,12 @@ export default function ReportsScreen() {
         }
       }
 
-      // Snapshots
-      const { data: snaps } = await supabase
-        .from('monthly_snapshots')
-        .select('month, net_worth, total_assets, total_liabilities')
-        .eq('user_id', user.id)
-        .order('month', { ascending: true })
-        .limit(12)
-
-      if (snaps) setSnapshots(snaps)
-
-      // Save / update this month's snapshot
+      // Save / update this month's snapshot (fire and forget — don't await)
       const currentMonth = new Date().toISOString().slice(0, 7)
-      await supabase
-        .from('monthly_snapshots')
-        .upsert(
-          { user_id: user.id, month: currentMonth, net_worth: netWorth, total_assets: totalAssets, total_liabilities: totalLiabilities },
-          { onConflict: 'user_id,month' }
-        )
+      supabase.from('monthly_snapshots').upsert(
+        { user_id: user.id, month: currentMonth, net_worth: netWorth, total_assets: totalAssets, total_liabilities: totalLiabilities },
+        { onConflict: 'user_id,month' }
+      )
 
     } catch (err: any) {
       console.error(err.message)
