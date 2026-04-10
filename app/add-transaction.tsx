@@ -277,12 +277,12 @@ export default function AddTransactionScreen() {
               <Text style={styles.dateButtonText}>📅  {formatDateDisplay(date)}</Text>
             </TouchableOpacity>
             {showDatePicker && (
-              <>
+              <View style={{ backgroundColor: '#ffffff', borderRadius: 16, borderWidth: 1, borderColor: '#e3e8e3', overflow: 'hidden', marginTop: 8 }}>
                 <DateTimePicker
                   value={date}
                   mode="date"
                   display="spinner"
-                  themeVariant="dark"
+                  themeVariant="light"
                   onChange={(event, selectedDate) => {
                     if (selectedDate) setDate(selectedDate)
                     if (Platform.OS === 'android') setShowDatePicker(false)
@@ -292,7 +292,7 @@ export default function AddTransactionScreen() {
                 <TouchableOpacity style={styles.datePickerDoneBtn} onPress={() => setShowDatePicker(false)}>
                   <Text style={styles.datePickerDoneBtnText}>Done</Text>
                 </TouchableOpacity>
-              </>
+              </View>
             )}
           </>
         )}

@@ -199,11 +199,12 @@ export default function TransactionsScreen() {
       </View>
 
       {showStartPicker && (
-        <View>
+        <View style={{ backgroundColor: '#ffffff', borderRadius: 16, borderWidth: 1, borderColor: '#e3e8e3', overflow: 'hidden' }}>
           <DateTimePicker
             value={startDate || new Date()}
             mode="date"
             display="spinner"
+            themeVariant="light"
             onChange={(event, date) => {
               if (date) setStartDate(date)
             }}
@@ -218,11 +219,12 @@ export default function TransactionsScreen() {
       )}
 
       {showEndPicker && (
-        <View>
+        <View style={{ backgroundColor: '#ffffff', borderRadius: 16, borderWidth: 1, borderColor: '#e3e8e3', overflow: 'hidden' }}>
           <DateTimePicker
             value={endDate || new Date()}
             mode="date"
             display="spinner"
+            themeVariant="light"
             onChange={(event, date) => {
               if (date) setEndDate(date)
             }}

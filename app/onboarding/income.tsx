@@ -241,12 +241,12 @@ export default function IncomeScreen() {
               </TouchableOpacity>
             )}
             {showPaydayPicker === index && (
-              <View>
+              <View style={{ backgroundColor: '#ffffff', borderRadius: 16, borderWidth: 1, borderColor: '#e3e8e3', overflow: 'hidden' }}>
                 <DateTimePicker
                   value={source.next_payday ? new Date(source.next_payday + 'T12:00:00') : new Date()}
                   mode="date"
                   display="spinner"
-                  themeVariant="dark"
+                  themeVariant="light"
                   minimumDate={new Date()}
                   onChange={(event, selectedDate) => {
                     if (selectedDate) {
@@ -297,12 +297,12 @@ export default function IncomeScreen() {
                   </TouchableOpacity>
                 )}
                 {showSecondPaydayPicker === index && (
-                  <View>
+                  <View style={{ backgroundColor: '#ffffff', borderRadius: 16, borderWidth: 1, borderColor: '#e3e8e3', overflow: 'hidden' }}>
                     <DateTimePicker
                       value={source.second_payday ? new Date(source.second_payday + 'T12:00:00') : new Date()}
                       mode="date"
                       display="spinner"
-                      themeVariant="dark"
+                      themeVariant="light"
                       minimumDate={new Date()}
                       onChange={(event, selectedDate) => {
                         if (selectedDate) {
