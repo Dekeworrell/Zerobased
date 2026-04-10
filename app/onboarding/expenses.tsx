@@ -110,7 +110,12 @@ export default function ExpensesScreen() {
       <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
         <Text style={styles.backText}>← Back</Text>
       </TouchableOpacity>
-      <Text style={styles.step}>Step 4 of 5</Text>
+      <View style={styles.progressWrap}>
+        <View style={styles.progressTrack}>
+          <View style={[styles.progressFill, { width: '88%' }]} />
+        </View>
+        <Text style={styles.progressLabel}>Step 8 of 9</Text>
+      </View>
       <Text style={styles.title}>What are your regular expenses?</Text>
       <Text style={styles.subtitle}>Start with your biggest bills — you can always add more later.</Text>
       <View style={styles.masterToggle}>
@@ -202,7 +207,7 @@ export default function ExpensesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: '#f2f4f2',
   },
   content: {
     paddingHorizontal: 32,
@@ -241,9 +246,9 @@ backButton: {
     marginBottom: 32,
   },
   expenseRow: {
-    backgroundColor: Colors.card,
+    backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: '#e3e8e3',
     borderRadius: 12,
     padding: 16,
     flexDirection: 'row',
@@ -294,9 +299,9 @@ backButton: {
     fontWeight: '600',
   },
   amountInput: {
-    backgroundColor: Colors.background,
+    backgroundColor: '#f2f4f2',
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: '#e3e8e3',
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -322,9 +327,9 @@ backButton: {
     marginBottom: 40,
   },
   typeChip: {
-    backgroundColor: Colors.card,
+    backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: '#e3e8e3',
     borderRadius: 20,
     paddingHorizontal: 14,
     paddingVertical: 8,
@@ -384,4 +389,8 @@ backButton: {
     fontSize: 14,
     opacity: 0.4,
   },
+  progressWrap: { marginBottom: 20 },
+  progressTrack: { height: 3, backgroundColor: '#e3e8e3', borderRadius: 2, overflow: 'hidden', marginBottom: 6 },
+  progressFill: { height: 3, backgroundColor: '#3db870', borderRadius: 2 },
+  progressLabel: { fontSize: 11, color: '#3db870', fontWeight: '600' },
 })

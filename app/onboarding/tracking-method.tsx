@@ -26,7 +26,12 @@ export default function TrackingMethodScreen() {
           <TouchableOpacity onPress={() => setStep('tracking')} style={styles.backButton}>
             <Text style={styles.backText}>← Back</Text>
           </TouchableOpacity>
-          <Text style={styles.step}>Step 1 of 5</Text>
+          <View style={styles.progressWrap}>
+          <View style={styles.progressTrack}>
+            <View style={[styles.progressFill, { width: '11%' }]} />
+          </View>
+          <Text style={styles.progressLabel}>Step 1 of 9</Text>
+        </View>
           <Text style={styles.title}>How do you want to budget?</Text>
           <Text style={styles.subtitle}>This affects how your budget resets and how spending is tracked</Text>
 
@@ -65,7 +70,12 @@ export default function TrackingMethodScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Text style={styles.backText}>← Back</Text>
         </TouchableOpacity>
-        <Text style={styles.step}>Step 1 of 5</Text>
+        <View style={styles.progressWrap}>
+          <View style={styles.progressTrack}>
+            <View style={[styles.progressFill, { width: '11%' }]} />
+          </View>
+          <Text style={styles.progressLabel}>Step 1 of 9</Text>
+        </View>
         <Text style={styles.title}>How would you like to track your money?</Text>
         <Text style={styles.subtitle}>You can change this anytime in settings</Text>
 
@@ -101,7 +111,7 @@ export default function TrackingMethodScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: '#f2f4f2',
   },
   inner: {
     flex: 1,
@@ -110,12 +120,6 @@ const styles = StyleSheet.create({
     maxWidth: 500,
     alignSelf: 'center',
     width: '100%',
-  },
-  step: {
-    fontSize: 14,
-    color: Colors.primary,
-    fontWeight: '600',
-    marginBottom: 12,
   },
   title: {
     fontSize: 28,
@@ -140,9 +144,9 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   optionCard: {
-    backgroundColor: Colors.card,
+    backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: '#e3e8e3',
     borderRadius: 16,
     padding: 24,
   },
@@ -167,5 +171,25 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     fontWeight: '600',
     marginTop: 4,
+  },
+  progressWrap: {
+    marginBottom: 20,
+  },
+  progressTrack: {
+    height: 3,
+    backgroundColor: '#e3e8e3',
+    borderRadius: 2,
+    overflow: 'hidden',
+    marginBottom: 6,
+  },
+  progressFill: {
+    height: 3,
+    backgroundColor: '#3db870',
+    borderRadius: 2,
+  },
+  progressLabel: {
+    fontSize: 11,
+    color: '#3db870',
+    fontWeight: '600',
   },
 })

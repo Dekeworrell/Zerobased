@@ -90,7 +90,12 @@ export default function GoalsScreen() {
         <Text style={styles.backText}>← Back</Text>
       </TouchableOpacity>
 
-      <Text style={styles.step}>Step 6 of 9</Text>
+      <View style={styles.progressWrap}>
+        <View style={styles.progressTrack}>
+          <View style={[styles.progressFill, { width: '66%' }]} />
+        </View>
+        <Text style={styles.progressLabel}>Step 6 of 9</Text>
+      </View>
       <Text style={styles.title}>What are you working toward?</Text>
       <Text style={styles.subtitle}>
         Pick everything that applies — your budget will be built around making these happen.
@@ -240,7 +245,7 @@ export default function GoalsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: '#f2f4f2',
   },
   content: {
     paddingHorizontal: 32,
@@ -284,9 +289,9 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   chip: {
-    backgroundColor: Colors.card,
+    backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: '#e3e8e3',
     borderRadius: 20,
     paddingHorizontal: 14,
     paddingVertical: 10,
@@ -315,9 +320,9 @@ const styles = StyleSheet.create({
   },
   yesNoBtn: {
     flex: 1,
-    backgroundColor: Colors.card,
+    backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: '#e3e8e3',
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
@@ -335,9 +340,9 @@ const styles = StyleSheet.create({
     color: Colors.text,
   },
   input: {
-    backgroundColor: Colors.card,
+    backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: '#e3e8e3',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -345,9 +350,9 @@ const styles = StyleSheet.create({
     color: Colors.text,
   },
   disclaimerBox: {
-    backgroundColor: Colors.card,
+    backgroundColor: '#edf7f1',
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: '#b6dfc0',
     borderRadius: 12,
     padding: 16,
     marginTop: 8,
@@ -379,4 +384,8 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     fontSize: 14,
   },
+  progressWrap: { marginBottom: 20 },
+  progressTrack: { height: 3, backgroundColor: '#e3e8e3', borderRadius: 2, overflow: 'hidden', marginBottom: 6 },
+  progressFill: { height: 3, backgroundColor: '#3db870', borderRadius: 2 },
+  progressLabel: { fontSize: 11, color: '#3db870', fontWeight: '600' },
 })

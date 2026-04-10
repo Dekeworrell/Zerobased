@@ -64,7 +64,12 @@ export default function AccountsScreen() {
       <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
         <Text style={styles.backText}>← Back</Text>
       </TouchableOpacity>
-      <Text style={styles.step}>Step 2 of 5</Text>
+      <View style={styles.progressWrap}>
+        <View style={styles.progressTrack}>
+          <View style={[styles.progressFill, { width: '22%' }]} />
+        </View>
+        <Text style={styles.progressLabel}>Step 2 of 9</Text>
+      </View>
       <Text style={styles.title}>Your accounts</Text>
       <Text style={styles.subtitle}>Add your accounts and current balances</Text>
 
@@ -130,7 +135,7 @@ export default function AccountsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: '#f2f4f2',
   },
   content: {
     paddingHorizontal: 32,
@@ -170,9 +175,9 @@ backButton: {
     marginBottom: 32,
   },
   accountRow: {
-    backgroundColor: Colors.card,
+    backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: '#e3e8e3',
     borderRadius: 12,
     padding: 16,
     flexDirection: 'row',
@@ -198,9 +203,9 @@ backButton: {
     gap: 12,
   },
   balanceInput: {
-    backgroundColor: Colors.background,
+    backgroundColor: '#f2f4f2',
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: '#e3e8e3',
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -226,9 +231,9 @@ backButton: {
     marginBottom: 40,
   },
   typeChip: {
-    backgroundColor: Colors.card,
+    backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: '#e3e8e3',
     borderRadius: 20,
     paddingHorizontal: 14,
     paddingVertical: 8,
@@ -254,4 +259,8 @@ backButton: {
     fontSize: 16,
     fontWeight: '600',
   },
+  progressWrap: { marginBottom: 20 },
+  progressTrack: { height: 3, backgroundColor: '#e3e8e3', borderRadius: 2, overflow: 'hidden', marginBottom: 6 },
+  progressFill: { height: 3, backgroundColor: '#3db870', borderRadius: 2 },
+  progressLabel: { fontSize: 11, color: '#3db870', fontWeight: '600' },
 })

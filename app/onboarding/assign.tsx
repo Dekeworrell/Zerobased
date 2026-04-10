@@ -233,7 +233,12 @@ export default function AssignScreen() {
         <Text style={styles.backText}>← Back</Text>
       </TouchableOpacity>
 
-      <Text style={styles.step}>Step 5 of 5</Text>
+      <View style={styles.progressWrap}>
+        <View style={styles.progressTrack}>
+          <View style={[styles.progressFill, { width: '100%' }]} />
+        </View>
+        <Text style={[styles.progressLabel, { color: '#1f7a45' }]}>Almost done!</Text>
+      </View>
       <Text style={styles.title}>Assign every dollar</Text>
       <Text style={styles.subtitle}>Every dollar needs a job — start with fixed bills, then variable spending, then invest the rest</Text>
 
@@ -402,7 +407,7 @@ export default function AssignScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: '#f2f4f2',
   },
   content: {
     paddingHorizontal: 32,
@@ -461,9 +466,9 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
   },
   section: {
-    backgroundColor: Colors.card,
+    backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: '#e3e8e3',
     borderRadius: 16,
     padding: 16,
     gap: 12,
@@ -533,9 +538,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   amountInput: {
-    backgroundColor: Colors.background,
+    backgroundColor: '#f2f4f2',
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: '#e3e8e3',
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 6,
@@ -595,7 +600,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   priorityChip: {
-    backgroundColor: Colors.background,
+    backgroundColor: '#ffffff',
     borderWidth: 1,
     borderColor: '#4FC3F7',
     borderRadius: 20,
@@ -637,10 +642,10 @@ const styles = StyleSheet.create({
   addChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.background,
+    backgroundColor: '#ffffff',
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: '#e3e8e3',
     paddingHorizontal: 12,
     paddingVertical: 6,
   },
@@ -652,4 +657,8 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.textSecondary,
   },
+  progressWrap: { marginBottom: 20 },
+  progressTrack: { height: 3, backgroundColor: '#e3e8e3', borderRadius: 2, overflow: 'hidden', marginBottom: 6 },
+  progressFill: { height: 3, backgroundColor: '#3db870', borderRadius: 2 },
+  progressLabel: { fontSize: 11, color: '#3db870', fontWeight: '600' },
 })

@@ -71,7 +71,12 @@ export default function AccountsDebtScreen() {
         <Text style={styles.backText}>← Back</Text>
       </TouchableOpacity>
 
-      <Text style={styles.step}>Step 3 of 9</Text>
+      <View style={styles.progressWrap}>
+        <View style={styles.progressTrack}>
+          <View style={[styles.progressFill, { width: '33%' }]} />
+        </View>
+        <Text style={styles.progressLabel}>Step 3 of 9</Text>
+      </View>
       <Text style={styles.title}>What do you currently owe?</Text>
       <Text style={styles.subtitle}>
         Include mortgages, credit cards, and loans — knowing your debts is the first step to crushing them.
@@ -140,7 +145,7 @@ export default function AccountsDebtScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: '#f2f4f2',
   },
   content: {
     paddingHorizontal: 32,
@@ -178,9 +183,9 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   chip: {
-    backgroundColor: Colors.card,
+    backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: '#e3e8e3',
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 10,
@@ -207,9 +212,9 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   accountCard: {
-    backgroundColor: Colors.card,
+    backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: '#e3e8e3',
     borderRadius: 12,
     padding: 16,
     gap: 10,
@@ -229,9 +234,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   balanceInput: {
-    backgroundColor: Colors.background,
+    backgroundColor: '#f2f4f2',
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: '#e3e8e3',
     borderRadius: 8,
     paddingHorizontal: 14,
     paddingVertical: 12,
@@ -239,9 +244,9 @@ const styles = StyleSheet.create({
     color: Colors.text,
   },
   infoBox: {
-    backgroundColor: Colors.card,
+    backgroundColor: '#edf7f1',
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: '#b6dfc0',
     borderRadius: 12,
     padding: 16,
   },
@@ -274,4 +279,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     paddingLeft: 8,
   },
+  progressWrap: { marginBottom: 20 },
+  progressTrack: { height: 3, backgroundColor: '#e3e8e3', borderRadius: 2, overflow: 'hidden', marginBottom: 6 },
+  progressFill: { height: 3, backgroundColor: '#3db870', borderRadius: 2 },
+  progressLabel: { fontSize: 11, color: '#3db870', fontWeight: '600' },
 })

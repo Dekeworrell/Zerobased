@@ -156,7 +156,15 @@ export default function IncomeScreen() {
       <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
         <Text style={styles.backText}>← Back</Text>
       </TouchableOpacity>
-      <Text style={styles.step}>{isEditing ? 'Edit income' : 'Step 3 of 5'}</Text>
+      {!isEditing && (
+        <View style={styles.progressWrap}>
+          <View style={styles.progressTrack}>
+            <View style={[styles.progressFill, { width: '77%' }]} />
+          </View>
+          <Text style={styles.progressLabel}>Step 7 of 9</Text>
+        </View>
+      )}
+      {isEditing && <Text style={styles.step}>Edit income</Text>}
       <Text style={styles.title}>How much do you bring home?</Text>
       <Text style={styles.subtitle}>Enter your take-home pay after tax. Add multiple sources if you have them.</Text>
 
@@ -360,13 +368,13 @@ export default function IncomeScreen() {
 const styles = StyleSheet.create({
   loadingContainer: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: '#f2f4f2',
     alignItems: 'center',
     justifyContent: 'center',
   },
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: '#f2f4f2',
   },
   content: {
     paddingHorizontal: 32,
@@ -404,9 +412,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   sourceCard: {
-    backgroundColor: Colors.card,
+    backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: '#e3e8e3',
     borderRadius: 16,
     padding: 20,
     gap: 8,
@@ -433,9 +441,9 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   input: {
-    backgroundColor: Colors.background,
+    backgroundColor: '#f2f4f2',
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: '#e3e8e3',
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -533,4 +541,8 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textAlign: 'center',
   },
+  progressWrap: { marginBottom: 20 },
+  progressTrack: { height: 3, backgroundColor: '#e3e8e3', borderRadius: 2, overflow: 'hidden', marginBottom: 6 },
+  progressFill: { height: 3, backgroundColor: '#3db870', borderRadius: 2 },
+  progressLabel: { fontSize: 11, color: '#3db870', fontWeight: '600' },
 })
