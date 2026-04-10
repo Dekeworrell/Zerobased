@@ -311,13 +311,13 @@ export default function BudgetScreen() {
 const styles = StyleSheet.create({
   loadingContainer: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: '#f2f4f2',
     alignItems: 'center',
     justifyContent: 'center',
   },
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: '#f2f4f2',
   },
   content: {
     paddingHorizontal: 24,
@@ -368,9 +368,9 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   categoryRow: {
-    backgroundColor: Colors.card,
+    backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: '#e3e8e3',
     borderRadius: 12,
     padding: 14,
     flexDirection: 'row',
@@ -421,9 +421,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   amountInput: {
-    backgroundColor: Colors.background,
+    backgroundColor: '#f2f4f2',
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: '#e3e8e3',
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 6,
@@ -447,9 +447,9 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   typeChip: {
-    backgroundColor: Colors.card,
+    backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: '#e3e8e3',
     borderRadius: 20,
     paddingHorizontal: 14,
     paddingVertical: 8,

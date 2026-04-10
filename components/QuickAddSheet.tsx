@@ -108,6 +108,36 @@ export default function QuickAddSheet({ visible, category, accounts, categoryDef
     setSaving(false)
   }
 
+  const ACCOUNT_ORDER: { [key: string]: number } = {
+    chequing: 0,
+    savings: 1,
+    creditcard: 2, credit_card: 2, credit: 2,
+    heloc: 3,
+    loc: 3, line_of_credit: 3,
+    carloan: 4, car_loan: 4,
+    studentloan: 5, student_loan: 5,
+    mortgage: 6,
+    other_liability: 7,
+    rrsp: 8,
+    tfsa: 9,
+    fhsa: 10,
+    resp: 11,
+    pension: 12,
+    other: 13,
+  }
+
+  function getAccountOrder(type: string): number {
+    const t = type.toLowerCase()
+    for (const key of Object.keys(ACCOUNT_ORDER)) {
+      if (t === key || t.startsWith(key) || t.includes(key)) return ACCOUNT_ORDER[key]
+    }
+    return 99
+  }
+
+  const sortedAccounts = [...accounts].sort((a, b) =>
+    getAccountOrder(a.type) - getAccountOrder(b.type)
+  )
+
   const currentAccount = getAccount()
 
   return (
@@ -136,7 +166,7 @@ export default function QuickAddSheet({ visible, category, accounts, categoryDef
 
         <Text style={styles.fieldLabel}>Account</Text>
         <View style={styles.accountRow}>
-          {accounts.map(acc => (
+          {sortedAccounts.map(acc => (
             <TouchableOpacity
               key={acc.id}
               style={[styles.accountChip, (selectedAccount?.id === acc.id || (!selectedAccount && currentAccount?.id === acc.id)) && styles.accountChipActive]}

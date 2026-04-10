@@ -301,7 +301,7 @@ export default function DashboardScreen() {
             <View style={styles.progressBar}>
               <View style={[styles.progressFill, {
                 width: `${Math.min((totalSpent / displayBudgeted) * 100, 100)}%` as any,
-                backgroundColor: totalSpent >= displayBudgeted ? Colors.danger : totalSpent >= displayBudgeted * 0.8 ? Colors.warning : Colors.primary
+                backgroundColor: totalSpent > displayBudgeted ? Colors.danger : totalSpent >= displayBudgeted * 0.8 ? Colors.warning : Colors.primary
               }]} />
             </View>
             <View style={styles.budgetSummaryFooter}>
@@ -345,7 +345,7 @@ export default function DashboardScreen() {
                     <View style={styles.categoryProgressBar}>
                       <View style={[styles.categoryProgressFill, {
                         width: `${Math.min((cat.spent / displayAmount) * 100, 100)}%` as any,
-                        backgroundColor: cat.spent >= displayAmount ? Colors.danger : cat.spent >= displayAmount * 0.8 ? Colors.warning : Colors.success
+                        backgroundColor: cat.spent > displayAmount ? Colors.danger : cat.spent >= displayAmount * 0.8 ? Colors.warning : Colors.success
                       }]} />
                     </View>
                     <View style={styles.categorySpentRow}>
@@ -427,7 +427,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: '#f2f4f2',
   },
   content: {
     paddingHorizontal: 24,
@@ -488,9 +488,9 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    backgroundColor: Colors.card,
+    backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: '#e3e8e3',
     borderRadius: 16,
     padding: 16,
   },
@@ -567,9 +567,9 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
   },
   emptyCard: {
-    backgroundColor: Colors.card,
+    backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: '#e3e8e3',
     borderRadius: 16,
     padding: 32,
     alignItems: 'center',
@@ -624,9 +624,9 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   budgetSummaryCard: {
-    backgroundColor: Colors.card,
+    backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: '#e3e8e3',
     borderRadius: 16,
     padding: 16,
     gap: 10,

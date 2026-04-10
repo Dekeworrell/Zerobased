@@ -330,13 +330,13 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   loadingContainer: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: '#f2f4f2',
     alignItems: 'center',
     justifyContent: 'center',
   },
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: '#f2f4f2',
   },
   content: {
     paddingHorizontal: 24,
@@ -359,9 +359,9 @@ const styles = StyleSheet.create({
     color: Colors.text,
   },
   section: {
-    backgroundColor: Colors.card,
+    backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: '#e3e8e3',
     borderRadius: 16,
     padding: 20,
     gap: 14,
@@ -380,9 +380,9 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
   },
   input: {
-    backgroundColor: Colors.background,
+    backgroundColor: '#f2f4f2',
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: '#e3e8e3',
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
@@ -398,9 +398,9 @@ const styles = StyleSheet.create({
   },
   methodBtn: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: '#f2f4f2',
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: '#e3e8e3',
     borderRadius: 10,
     paddingVertical: 12,
     alignItems: 'center',
@@ -418,9 +418,9 @@ const styles = StyleSheet.create({
     color: Colors.text,
   },
   infoBox: {
-    backgroundColor: Colors.background,
+    backgroundColor: '#f2f4f2',
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: '#e3e8e3',
     borderRadius: 10,
     padding: 14,
   },
@@ -544,11 +544,11 @@ const styles = StyleSheet.create({
   },
   thresholdBtn: {
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: '#e3e8e3',
     borderRadius: 20,
     paddingHorizontal: 12,
     paddingVertical: 6,
-    backgroundColor: Colors.background,
+    backgroundColor: '#f2f4f2',
   },
   thresholdBtnActive: {
     backgroundColor: Colors.primary,

@@ -318,13 +318,13 @@ export default function AccountsScreen() {
 const styles = StyleSheet.create({
   loadingContainer: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: '#f2f4f2',
     alignItems: 'center',
     justifyContent: 'center',
   },
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: '#f2f4f2',
   },
   content: {
     paddingHorizontal: 24,
@@ -340,20 +340,23 @@ const styles = StyleSheet.create({
     color: Colors.text,
   },
   netWorthCard: {
-    backgroundColor: Colors.primary,
+    backgroundColor: '#edf7f1',
     borderRadius: 20,
     padding: 24,
     alignItems: 'center',
     gap: 8,
+    borderWidth: 1.5,
+    borderColor: '#b6dfc0',
   },
   netWorthLabel: {
     fontSize: 14,
-    color: 'rgba(255,255,255,0.7)',
+    color: '#1f7a45',
+    fontWeight: '600',
   },
   netWorthAmount: {
     fontSize: 40,
     fontWeight: 'bold',
-    color: Colors.text,
+    color: '#0A2A1A',
   },
   netWorthRow: {
     flexDirection: 'row',
@@ -361,7 +364,7 @@ const styles = StyleSheet.create({
   },
   netWorthSub: {
     fontSize: 13,
-    color: 'rgba(255,255,255,0.7)',
+    color: '#1f7a45',
   },
   sectionTitle: {
     fontSize: 16,
@@ -372,9 +375,9 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   accountRow: {
-    backgroundColor: Colors.card,
+    backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: '#e3e8e3',
     borderRadius: 12,
     padding: 14,
     flexDirection: 'row',
@@ -415,9 +418,9 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   balanceInput: {
-    backgroundColor: Colors.background,
+    backgroundColor: '#f2f4f2',
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: '#e3e8e3',
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 8,
@@ -451,9 +454,9 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   typeChip: {
-    backgroundColor: Colors.card,
+    backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: '#e3e8e3',
     borderRadius: 20,
     paddingHorizontal: 14,
     paddingVertical: 8,
