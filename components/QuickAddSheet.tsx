@@ -1,6 +1,6 @@
 import { router } from 'expo-router'
 import { useState } from 'react'
-import { ActivityIndicator, Modal, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { ActivityIndicator, Keyboard, KeyboardAvoidingView, Modal, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { Colors } from '../constants/colors'
 import { supabase } from '../lib/supabase'
 import CurrencyInput from './CurrencyInput'
@@ -142,7 +142,9 @@ export default function QuickAddSheet({ visible, category, accounts, categoryDef
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={onClose} />
+      <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={() => { Keyboard.dismiss(); onClose() }} />
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <TouchableOpacity activeOpacity={1} onPress={Keyboard.dismiss}>
       <View style={styles.sheet}>
         <View style={styles.handle} />
 
@@ -210,6 +212,8 @@ export default function QuickAddSheet({ visible, category, accounts, categoryDef
           <Text style={styles.moreOptionsBtnText}>Need more options? Open full form →</Text>
         </TouchableOpacity>
       </View>
+      </TouchableOpacity>
+      </KeyboardAvoidingView>
     </Modal>
   )
 }

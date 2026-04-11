@@ -1,7 +1,7 @@
 import { router, useFocusEffect } from 'expo-router'
 import { useCallback, useState } from 'react'
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import QuickAddSheet from '../components/QuickAddSheet.tsx'
+import QuickAddSheet from '../components/QuickAddSheet'
 import { Colors } from '../constants/colors'
 import { calculateBudgetStatus, getPayPeriodDates, toMonthly } from '../lib/store'
 import { supabase } from '../lib/supabase'
