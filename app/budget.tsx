@@ -40,6 +40,7 @@ const EXPENSE_CATEGORIES = [
   { id: 'fhsa', label: 'FHSA', icon: '🏠', type: 'priority' },
   { id: 'mortgage_extra', label: 'Mortgage overpayment', icon: '🏦', type: 'priority' },
   { id: 'emergency_fund', label: 'Emergency fund', icon: '🆘', type: 'priority' },
+  { id: 'recreation_vehicles', label: 'Recreation vehicles', icon: '🚤', type: 'fixed' },
   { id: 'other', label: 'Other', icon: '➕', type: 'variable' },
 ]
 

@@ -42,6 +42,7 @@ const EXPENSE_CATEGORIES = [
   { id: 'emergency_fund', label: 'Emergency fund', icon: '🆘', type: 'priority' },
   { id: 'pets', label: 'Pets', icon: '🐾', type: 'variable' },
   { id: 'sports', label: 'Sports', icon: '⚽', type: 'variable' },
+  { id: 'recreation_vehicles', label: 'Recreation vehicles', icon: '🚤', type: 'fixed' },
   { id: 'other', label: 'Other', icon: '➕', type: 'variable', permanent: true },
 ]
 
