@@ -143,6 +143,75 @@ export default function QuickAddSheet({ visible, category, accounts, categoryDef
 
   const currentAccount = getAccount()
 
+  const ACCOUNT_ICONS: { [key: string]: string } = {
+    chequing: '💳', savings: '🏦', cash: '💵',
+    credit_card: '💳', creditcard: '💳', credit: '💳',
+    heloc: '🏠', loc: '💸', line_of_credit: '💸',
+    car_loan: '🚗', carloan: '🚗',
+    student_loan: '🎓', studentloan: '🎓',
+    mortgage: '🏦', rrsp: '📈', tfsa: '🌱',
+    fhsa: '🏡', resp: '🎓', pension: '👴',
+    other: '➕', other_liability: '📋',
+  }
+
+  function getAccountIcon(type: string): string {
+    const t = type.toLowerCase().replace(/[\s-]/g, '_')
+    for (const key of Object.keys(ACCOUNT_ICONS)) {
+      if (t === key || t.includes(key)) return ACCOUNT_ICONS[key]
+    }
+    return '🏦'
+  }
+
+  if (Platform.OS === 'web') {
+    if (!visible) return null
+    return (
+      <View style={styles.webOverlay}>
+        <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={onClose} />
+        <View style={styles.webSheet}>
+          <View style={styles.handle} />
+          <View style={styles.header}>
+            <Text style={styles.categoryLabel}>{category?.icon} {category?.label}</Text>
+            <TouchableOpacity onPress={onClose}>
+              <Text style={styles.closeBtn}>✕</Text>
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.fieldLabel}>Amount</Text>
+          <CurrencyInput style={styles.amountInput} placeholder="$0.00" value={amount} onChangeText={setAmount} autoFocus />
+          <Text style={styles.fieldLabel}>Account</Text>
+          <View style={styles.accountRow}>
+            {sortedAccounts.map(acc => (
+              <TouchableOpacity
+                key={acc.id}
+                style={[styles.accountChip, (selectedAccount?.id === acc.id || (!selectedAccount && currentAccount?.id === acc.id)) && styles.accountChipActive]}
+                onPress={() => setSelectedAccount(acc)}
+              >
+                <Text style={styles.accountChipIcon}>{getAccountIcon(acc.type)}</Text>
+                <Text style={[styles.accountChipText, (selectedAccount?.id === acc.id || (!selectedAccount && currentAccount?.id === acc.id)) && styles.accountChipTextActive]}>
+                  {acc.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          {currentAccount && (
+            <TouchableOpacity style={styles.defaultToggle} onPress={() => setSetAsDefault(!setAsDefault)}>
+              <View style={[styles.checkbox, setAsDefault && styles.checkboxActive]}>
+                {setAsDefault && <Text style={styles.checkboxCheck}>✓</Text>}
+              </View>
+              <Text style={styles.defaultToggleText}>Always use {currentAccount.label} for {category?.label}</Text>
+            </TouchableOpacity>
+          )}
+          {error ? <Text style={styles.error}>{error}</Text> : null}
+          <TouchableOpacity style={[styles.saveBtn, saving && styles.disabled]} onPress={handleSave} disabled={saving}>
+            {saving ? <ActivityIndicator color={Colors.text} /> : <Text style={styles.saveBtnText}>Save</Text>}
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.moreOptionsBtn} onPress={() => { onClose(); router.push({ pathname: '/add-transaction', params: { categoryId: category?.id, categoryLabel: category?.label, categoryIcon: category?.icon } }) }}>
+            <Text style={styles.moreOptionsBtnText}>Need more options? Open full form →</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    )
+  }
+
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={() => { Keyboard.dismiss(); onClose() }} />
@@ -177,6 +246,7 @@ export default function QuickAddSheet({ visible, category, accounts, categoryDef
               style={[styles.accountChip, (selectedAccount?.id === acc.id || (!selectedAccount && currentAccount?.id === acc.id)) && styles.accountChipActive]}
               onPress={() => setSelectedAccount(acc)}
             >
+              <Text style={styles.accountChipIcon}>{getAccountIcon(acc.type)}</Text>
               <Text style={[styles.accountChipText, (selectedAccount?.id === acc.id || (!selectedAccount && currentAccount?.id === acc.id)) && styles.accountChipTextActive]}>
                 {acc.label}
               </Text>
@@ -223,6 +293,19 @@ export default function QuickAddSheet({ visible, category, accounts, categoryDef
 
 const styles = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
+  webOverlay: { position: 'absolute' as any, top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'flex-end', zIndex: 1000 },
+  webSheet: {
+    backgroundColor: Colors.background,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    paddingBottom: 32,
+    gap: 12,
+    maxWidth: 600,
+    width: '100%',
+    alignSelf: 'center',
+  },
+  accountChipIcon: { fontSize: 14 },
   sheet: {
     backgroundColor: Colors.background,
     borderTopLeftRadius: 24,

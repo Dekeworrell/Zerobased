@@ -2,8 +2,8 @@ import DateTimePicker from '@react-native-community/datetimepicker'
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router'
 import { useCallback, useEffect, useState } from 'react'
 import { ActivityIndicator, Alert, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view'
 import CurrencyInput from '../components/CurrencyInput'
+import KeyboardScrollView from '../components/KeyboardScrollView'
 import TransactionEditSheet from '../components/TransactionEditSheet'
 import { Colors } from '../constants/colors'
 import { checkBudgetAndNotify, schedulePaydayReminder } from '../lib/notifications'
@@ -346,7 +346,7 @@ export default function AddTransactionScreen() {
 
   return (
     <>
-      <KeyboardAwareScrollView style={styles.container} contentContainerStyle={styles.content} enableOnAndroid extraScrollHeight={20} keyboardShouldPersistTaps="handled">
+      <KeyboardScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <TouchableOpacity onPress={() => router.push('/dashboard')} style={styles.backButton}>
           <Text style={styles.backText}>← Back</Text>
         </TouchableOpacity>
@@ -654,7 +654,7 @@ export default function AddTransactionScreen() {
         )}
 
         <View style={{ height: 80 }} />
-      </KeyboardAwareScrollView>
+      </KeyboardScrollView>
 
       {activeTab === 'log' && (
         <View style={styles.floatingButton}>
@@ -668,20 +668,22 @@ export default function AddTransactionScreen() {
         </View>
       )}
 
-      <TransactionEditSheet
-        visible={!!editingTransaction}
-        transaction={editingTransaction}
-        categories={categories}
-        onClose={() => setEditingTransaction(null)}
-        onSaved={() => {
-          setEditingTransaction(null)
-          if (selectedCategory) loadHistory(selectedCategory.id, historyView)
-        }}
-        onDeleted={() => {
-          setEditingTransaction(null)
-          if (selectedCategory) loadHistory(selectedCategory.id, historyView)
-        }}
-      />
+      {!!editingTransaction && (
+        <TransactionEditSheet
+          visible={!!editingTransaction}
+          transaction={editingTransaction}
+          categories={categories}
+          onClose={() => setEditingTransaction(null)}
+          onSaved={() => {
+            setEditingTransaction(null)
+            if (selectedCategory) loadHistory(selectedCategory.id, historyView)
+          }}
+          onDeleted={() => {
+            setEditingTransaction(null)
+            if (selectedCategory) loadHistory(selectedCategory.id, historyView)
+          }}
+        />
+      )}
     </>
   )
 }

@@ -362,10 +362,17 @@ export default function IncomeScreen() {
                 </Text>
               </TouchableOpacity>
             </View>
+            {source.income_type === 'fixed' && (
+              <View style={styles.infoBox}>
+                <Text style={styles.infoBoxText}>
+                  📅 Fixed income is for salaried employees or anyone who receives the same amount every payday. We'll automatically log your paycheque on payday and ask you to confirm — with the option to adjust for bonuses or one-time payments.
+                </Text>
+              </View>
+            )}
             {source.income_type === 'variable' && (
               <View style={styles.infoBox}>
                 <Text style={styles.infoBoxText}>
-                  📊 On payday we'll ask how much you earned so your budget reflects your actual take-home pay.
+                  📊 Variable income is for hourly workers, freelancers, or anyone whose pay changes each cycle. On payday we'll ask how much you earned so your budget reflects your actual take-home pay.
                 </Text>
               </View>
             )}

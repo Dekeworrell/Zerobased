@@ -187,7 +187,6 @@ export default function AccountsScreen() {
               onChangeText={(val) => updateLabel(account.id, val)}
               autoFocus
               onBlur={() => setEditingId(null)}
-              selectTextOnFocus
             />
           ) : (
             <TouchableOpacity onPress={() => setEditingId(account.id)} style={{ flex: 1 }}>
@@ -221,23 +220,8 @@ export default function AccountsScreen() {
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <Text style={styles.title}>Accounts</Text>
-
-      <View style={styles.netWorthCard}>
-        <Text style={styles.netWorthLabel}>Net worth</Text>
-        <Text style={styles.netWorthAmount}>
-          ${netWorth.toLocaleString('en-CA', { maximumFractionDigits: 0 })}
-        </Text>
-        <View style={styles.netWorthRow}>
-          <Text style={styles.netWorthSub}>
-            Assets: ${totalAssets.toLocaleString('en-CA', { maximumFractionDigits: 0 })}
-          </Text>
-          <Text style={styles.netWorthSub}>
-            Liabilities: ${totalLiabilities.toLocaleString('en-CA', { maximumFractionDigits: 0 })}
-          </Text>
-        </View>
-      </View>
 
       <Text style={styles.sectionTitle}>Assets</Text>
       {assets.length > 0 && (

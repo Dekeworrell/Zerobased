@@ -228,14 +228,6 @@ export default function DashboardScreen() {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.netWorthCard}>
-        <Text style={styles.netWorthLabel}>Net Worth</Text>
-        <Text style={styles.netWorthAmount}>
-          ${netWorth.toLocaleString('en-CA', { maximumFractionDigits: 0 })}
-        </Text>
-        <Text style={styles.netWorthSub}>Based on your account balances</Text>
-      </View>
-
       <View style={styles.row}>
         <View style={styles.statCard}>
           <View style={styles.statCardHeader}>
@@ -421,20 +413,24 @@ export default function DashboardScreen() {
       </View>
 
     </ScrollView>
-    <PaydayModal
-      visible={showPaydayModal}
-      incomeSources={paydayIncomeSources}
-      onComplete={() => { setShowPaydayModal(false); loadDashboard() }}
-    />
-    <QuickAddSheet
-      visible={!!quickAddCategory}
-      category={quickAddCategory}
-      accounts={accounts}
-      categoryDefaults={categoryDefaults}
-      globalDefaultAccountId={globalDefaultAccountId}
-      onClose={() => setQuickAddCategory(null)}
-      onSaved={() => { setQuickAddCategory(null); loadDashboard() }}
-    />
+    {showPaydayModal && (
+      <PaydayModal
+        visible={showPaydayModal}
+        incomeSources={paydayIncomeSources}
+        onComplete={() => { setShowPaydayModal(false); loadDashboard() }}
+      />
+    )}
+    {!!quickAddCategory && (
+      <QuickAddSheet
+        visible={!!quickAddCategory}
+        category={quickAddCategory}
+        accounts={accounts}
+        categoryDefaults={categoryDefaults}
+        globalDefaultAccountId={globalDefaultAccountId}
+        onClose={() => setQuickAddCategory(null)}
+        onSaved={() => { setQuickAddCategory(null); loadDashboard() }}
+      />
+    )}
     </>
   )
 }

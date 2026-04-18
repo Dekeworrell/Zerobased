@@ -36,9 +36,6 @@ export default function CurrencyInput({ value, onChangeText, style, ...props }: 
 
   function handleBlur() {
     setIsFocused(false)
-    if (!value || value === '') {
-      onChangeText('0')
-    }
   }
 
   return (
@@ -49,6 +46,7 @@ export default function CurrencyInput({ value, onChangeText, style, ...props }: 
       onFocus={handleFocus}
       onBlur={handleBlur}
       keyboardType="decimal-pad"
+      inputMode="decimal"
       selectTextOnFocus
       placeholderTextColor={Colors.textSecondary}
       placeholder="$0"

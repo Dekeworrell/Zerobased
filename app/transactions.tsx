@@ -145,6 +145,7 @@ export default function TransactionsScreen() {
   }
 
   return (
+    <>
     <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
 
       <View style={styles.headerRow}>
@@ -319,7 +320,9 @@ export default function TransactionsScreen() {
           </View>
         </View>
       ))}
-    <TransactionEditSheet
+    </ScrollView>
+    {!!selectedTransaction && (
+      <TransactionEditSheet
         visible={!!selectedTransaction}
         transaction={selectedTransaction}
         categories={allCategories}
@@ -327,7 +330,8 @@ export default function TransactionsScreen() {
         onSaved={() => { setSelectedTransaction(null); loadTransactions() }}
         onDeleted={() => { setSelectedTransaction(null); loadTransactions() }}
       />
-    </ScrollView>
+    )}
+    </>
   )
 }
 

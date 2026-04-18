@@ -30,12 +30,15 @@ export default function WelcomeScreen() {
         <Text style={styles.tagline}>Budget every dollar.{'\n'}Build real wealth.</Text>
         <View style={styles.chartContainer}>
           <View style={styles.chartLine}>
-            {[60,52,46,38,20,8].map((top, i) => (
-              <View key={i} style={[styles.chartDot, { marginTop: top, opacity: i === 5 ? 1 : 0.3 }]} />
+            {[60,52,46,38,20].map((top, i) => (
+              <View key={i} style={[styles.chartDot, { marginTop: top, opacity: 0.3 }]} />
             ))}
-          </View>
-          <View style={styles.chartBadge}>
-            <Text style={styles.chartBadgeText}>+$48,210</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 }}>
+              <View style={[styles.chartDot, { opacity: 1 }]} />
+              <View style={styles.chartBadge}>
+                <Text style={styles.chartBadgeText}>+$48,210</Text>
+              </View>
+            </View>
           </View>
         </View>
       </View>
@@ -111,19 +114,17 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   chartContainer: {
-    width: '100%',
     height: 80,
-    alignItems: 'flex-end',
+    alignItems: 'center',
     justifyContent: 'flex-start',
-    position: 'relative',
     marginBottom: 8,
   },
   chartLine: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 28,
-    width: '100%',
     justifyContent: 'center',
+    flexWrap: 'nowrap',
   },
   chartDot: {
     width: 8,
@@ -132,9 +133,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#3db870',
   },
   chartBadge: {
-    position: 'absolute',
-    right: 16,
-    top: 0,
     backgroundColor: '#edf7f1',
     borderWidth: 1,
     borderColor: '#b6dfc0',

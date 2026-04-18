@@ -1,8 +1,8 @@
 import { router } from 'expo-router'
 import { useEffect, useState } from 'react'
 import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view'
 import CurrencyInput from '../components/CurrencyInput'
+import KeyboardScrollView from '../components/KeyboardScrollView'
 import { Colors } from '../constants/colors'
 import { calculateBudgetStatus, toMonthly } from '../lib/store'
 import { supabase } from '../lib/supabase'
@@ -209,7 +209,7 @@ export default function BudgetScreen() {
 
   return (
     <>
-      <KeyboardAwareScrollView style={styles.container} contentContainerStyle={styles.content} enableOnAndroid extraScrollHeight={20} keyboardShouldPersistTaps="handled">
+      <KeyboardScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
 
       <Text style={styles.title}>Edit budget</Text>
       <Text style={styles.subtitle}>Adjust your monthly budget categories</Text>
@@ -244,7 +244,6 @@ export default function BudgetScreen() {
                   value={cat.label}
                   onChangeText={(val) => updateLabel(cat.id, val)}
                   placeholderTextColor={Colors.textSecondary}
-                  selectTextOnFocus
                 />
             </View>
             <View style={styles.categoryRight}>
@@ -293,7 +292,7 @@ export default function BudgetScreen() {
       {error ? <Text style={styles.error}>{error}</Text> : null}
       {success ? <Text style={styles.successText}>✅ Budget saved!</Text> : null}
       <View style={{ height: 80 }} />
-    </KeyboardAwareScrollView>
+    </KeyboardScrollView>
   <View style={styles.floatingButton}>
         <TouchableOpacity
           style={[styles.primaryButton, saving && styles.disabled]}

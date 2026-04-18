@@ -1,8 +1,8 @@
 import { router } from 'expo-router'
 import { useState } from 'react'
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view'
 import CurrencyInput from '../../components/CurrencyInput'
+import KeyboardScrollView from '../../components/KeyboardScrollView'
 import { Colors } from '../../constants/colors'
 import { getOnboardingData, setExpenses as saveExpensesToStore } from '../../lib/store'
 
@@ -109,7 +109,7 @@ export default function ExpensesScreen() {
 
   return (
     <>
-      <KeyboardAwareScrollView style={styles.container} contentContainerStyle={styles.content} enableOnAndroid extraScrollHeight={20} keyboardShouldPersistTaps="handled">
+      <KeyboardScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
         <Text style={styles.backText}>← Back</Text>
       </TouchableOpacity>
@@ -146,7 +146,6 @@ export default function ExpensesScreen() {
                 value={expense.label}
                 onChangeText={(val) => updateLabel(expense.id, val)}
                 placeholderTextColor={Colors.textSecondary}
-                selectTextOnFocus
               />
             </View>
             <View style={styles.expenseRight}>
@@ -200,7 +199,7 @@ export default function ExpensesScreen() {
       </View>
 
       <View style={{ height: 80 }} />
-    </KeyboardAwareScrollView>
+    </KeyboardScrollView>
     <View style={styles.floatingButton}>
       <TouchableOpacity style={styles.primaryButton} onPress={handleContinue}>
         <Text style={styles.primaryButtonText}>Continue</Text>
