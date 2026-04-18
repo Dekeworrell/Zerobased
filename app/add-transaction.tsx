@@ -18,6 +18,13 @@ type HistoryTransaction = {
   account_id: string | null; category: { label: string; icon: string } | null
 }
 
+const LIABILITY_TYPES = ['mortgage', 'heloc', 'line_of_credit', 'credit_card', 'car_loan', 'student_loan', 'personal_loan', 'other_liability']
+
+function isLiability(type: string): boolean {
+  const t = type.toLowerCase().replace(/[\s-]/g, '_')
+  return LIABILITY_TYPES.some(l => t === l || t.includes(l))
+}
+
 export default function AddTransactionScreen() {
   const { categoryId, categoryLabel, categoryIcon } = useLocalSearchParams<{ categoryId?: string, categoryLabel?: string, categoryIcon?: string }>()
 
@@ -34,12 +41,13 @@ export default function AddTransactionScreen() {
     return new Date(now.getTime() - now.getTimezoneOffset() * 60 * 1000)
   })
   const [showDatePicker, setShowDatePicker] = useState(false)
-  const [type, setType] = useState<'expense' | 'income' | 'unexpected'>('expense')
+  const [type, setType] = useState<'expense' | 'income' | 'unexpected' | 'transfer'>('expense')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [setAsDefault, setSetAsDefault] = useState(false)
   const [categoriesExpanded, setCategoriesExpanded] = useState(!categoryId)
+  const [toAccount, setToAccount] = useState<Account | null>(null)
 
   // History tab
   const [activeTab, setActiveTab] = useState<'log' | 'history'>('log')
@@ -63,6 +71,7 @@ export default function AddTransactionScreen() {
       setSetAsDefault(false)
       setActiveTab('log')
       setCategoryHistory([])
+      setToAccount(null)
       setDate(new Date(now.getTime() - now.getTimezoneOffset() * 60 * 1000))
       if (categoryId && categoryLabel && categoryIcon) {
         setSelectedCategory({ id: categoryId, label: categoryLabel, icon: categoryIcon })
@@ -215,7 +224,13 @@ export default function AddTransactionScreen() {
 
   async function handleSave() {
     if (!amount) { Alert.alert('Missing amount', 'Please enter a transaction amount before saving.'); return }
-    if (!selectedAccount) { Alert.alert('No account selected', 'Please select an account to log this transaction against.'); return }
+    if (type === 'transfer') {
+      if (!selectedAccount) { Alert.alert('Missing account', 'Please select the From account.'); return }
+      if (!toAccount) { Alert.alert('Missing account', 'Please select the To account.'); return }
+      if (selectedAccount.id === toAccount.id) { Alert.alert('Same account', 'From and To accounts must be different.'); return }
+    } else {
+      if (!selectedAccount) { Alert.alert('No account selected', 'Please select an account to log this transaction against.'); return }
+    }
 
     setSaving(true)
     setError('')
@@ -225,23 +240,66 @@ export default function AddTransactionScreen() {
 
       const parsedAmount = parseFloat(amount)
 
-      await supabase.from('transactions').insert({
-        user_id: user.id,
-        category_id: type === 'unexpected' ? null : selectedCategory?.id || null,
-        account_id: selectedAccount.id,
-        label: label || selectedCategory?.label || 'Transaction',
-        amount: parsedAmount,
-        date: formatDateForDB(date),
-        type: type === 'unexpected' ? 'expense' : type,
-        is_unexpected: type === 'unexpected',
-      })
+      if (type === 'transfer') {
+        // Store transfer as single transaction
+        await supabase.from('transactions').insert({
+          user_id: user.id,
+          account_id: selectedAccount.id,
+          from_account_id: selectedAccount.id,
+          to_account_id: toAccount!.id,
+          label: label || `Transfer → ${toAccount!.label}`,
+          amount: parsedAmount,
+          date: formatDateForDB(date),
+          type: 'transfer',
+          is_unexpected: false,
+          category_id: null,
+        })
 
-      const { data: currentAccount } = await supabase
-        .from('accounts').select('balance').eq('id', selectedAccount.id).single()
-      if (currentAccount) {
-        const current = parseFloat(currentAccount.balance) || 0
-        const newBalance = type === 'income' ? current + parsedAmount : current - parsedAmount
-        await supabase.from('accounts').update({ balance: newBalance }).eq('id', selectedAccount.id)
+        // From account balance logic
+        const { data: fromAcc } = await supabase.from('accounts').select('balance').eq('id', selectedAccount.id).single()
+        if (fromAcc) {
+          const current = parseFloat(fromAcc.balance) || 0
+          // Liability as source = cash advance, balance goes UP (more debt)
+          // Asset as source = sending money out, balance goes DOWN
+          const newBalance = isLiability(selectedAccount.type) ? current + parsedAmount : current - parsedAmount
+          await supabase.from('accounts').update({ balance: newBalance }).eq('id', selectedAccount.id)
+        }
+
+        // To account balance logic
+        const { data: toAcc } = await supabase.from('accounts').select('balance').eq('id', toAccount!.id).single()
+        if (toAcc) {
+          const current = parseFloat(toAcc.balance) || 0
+          // Liability as destination = paying it off, balance goes DOWN
+          // Asset as destination = receiving money, balance goes UP
+          const newBalance = isLiability(toAccount!.type) ? current - parsedAmount : current + parsedAmount
+          await supabase.from('accounts').update({ balance: newBalance }).eq('id', toAccount!.id)
+        }
+
+      } else {
+        await supabase.from('transactions').insert({
+          user_id: user.id,
+          category_id: type === 'unexpected' ? null : selectedCategory?.id || null,
+          account_id: selectedAccount.id,
+          label: label || selectedCategory?.label || 'Transaction',
+          amount: parsedAmount,
+          date: formatDateForDB(date),
+          type: type === 'unexpected' ? 'expense' : type,
+          is_unexpected: type === 'unexpected',
+        })
+
+        const { data: currentAccount } = await supabase
+          .from('accounts').select('balance').eq('id', selectedAccount.id).single()
+        if (currentAccount) {
+          const current = parseFloat(currentAccount.balance) || 0
+          let newBalance: number
+          if (type === 'income') {
+            newBalance = isLiability(selectedAccount.type) ? current - parsedAmount : current + parsedAmount
+          } else {
+            // expense or unexpected
+            newBalance = isLiability(selectedAccount.type) ? current + parsedAmount : current - parsedAmount
+          }
+          await supabase.from('accounts').update({ balance: newBalance }).eq('id', selectedAccount.id)
+        }
       }
 
       if (setAsDefault && selectedCategory) {
@@ -296,16 +354,55 @@ export default function AddTransactionScreen() {
         <Text style={styles.title}>Add transaction</Text>
 
         <View style={styles.typeToggle}>
-          <TouchableOpacity style={[styles.typeBtn, type === 'expense' && styles.typeBtnActive]} onPress={() => { setType('expense'); setSelectedCategory(null); setCategoriesExpanded(true); setActiveTab('log') }}>
+          <TouchableOpacity style={[styles.typeBtn, type === 'expense' && styles.typeBtnActive]} onPress={() => { setType('expense'); setSelectedCategory(null); setCategoriesExpanded(true); setActiveTab('log'); setToAccount(null) }}>
             <Text style={[styles.typeBtnText, type === 'expense' && styles.typeBtnTextActive]}>Expense</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.typeBtn, type === 'income' && styles.typeBtnActive]} onPress={() => { setType('income'); setSelectedCategory(null); setCategoriesExpanded(false); setActiveTab('log') }}>
+          <TouchableOpacity style={[styles.typeBtn, type === 'income' && styles.typeBtnActive]} onPress={() => { setType('income'); setSelectedCategory(null); setCategoriesExpanded(false); setActiveTab('log'); setToAccount(null) }}>
             <Text style={[styles.typeBtnText, type === 'income' && styles.typeBtnTextActive]}>Income</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.typeBtn, type === 'unexpected' && styles.typeBtnUnexpectedActive]} onPress={() => { setType('unexpected'); setSelectedCategory(null); setCategoriesExpanded(false); setActiveTab('log') }}>
+          <TouchableOpacity style={[styles.typeBtn, type === 'unexpected' && styles.typeBtnUnexpectedActive]} onPress={() => { setType('unexpected'); setSelectedCategory(null); setCategoriesExpanded(false); setActiveTab('log'); setToAccount(null) }}>
             <Text style={[styles.typeBtnText, type === 'unexpected' && styles.typeBtnTextActive]}>⚠️ Unexpected</Text>
           </TouchableOpacity>
+          <TouchableOpacity style={[styles.typeBtn, type === 'transfer' && styles.typeBtnTransferActive]} onPress={() => { setType('transfer' as any); setSelectedCategory(null); setCategoriesExpanded(false); setActiveTab('log') }}>
+            <Text style={[styles.typeBtnText, type === 'transfer' && styles.typeBtnTextActive]}>⇄ Transfer</Text>
+          </TouchableOpacity>
         </View>
+
+        {/* Transfer UI */}
+        {type === 'transfer' && (
+          <View style={styles.accountSection}>
+            <Text style={styles.fieldLabel}>From account</Text>
+            <View style={styles.accountList}>
+              {accounts.map(acc => (
+                <TouchableOpacity
+                  key={acc.id}
+                  style={[styles.accountRow, selectedAccount?.id === acc.id && styles.accountRowActive]}
+                  onPress={() => setSelectedAccount(acc)}
+                >
+                  <Text style={[styles.accountRowText, selectedAccount?.id === acc.id && styles.accountRowTextActive]}>
+                    🏦 {acc.label}
+                  </Text>
+                  {selectedAccount?.id === acc.id && <Text style={styles.accountRowCheck}>✓</Text>}
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Text style={[styles.fieldLabel, { marginTop: 12 }]}>To account</Text>
+            <View style={styles.accountList}>
+              {accounts.filter(a => a.id !== selectedAccount?.id).map(acc => (
+                <TouchableOpacity
+                  key={acc.id}
+                  style={[styles.accountRow, toAccount?.id === acc.id && styles.accountRowActive]}
+                  onPress={() => setToAccount(acc)}
+                >
+                  <Text style={[styles.accountRowText, toAccount?.id === acc.id && styles.accountRowTextActive]}>
+                    🏦 {acc.label}
+                  </Text>
+                  {toAccount?.id === acc.id && <Text style={styles.accountRowCheck}>✓</Text>}
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
 
         {/* Log / History tab toggle — only when expense category is selected */}
         {selectedCategory && (type === 'expense') && (
@@ -600,6 +697,7 @@ const styles = StyleSheet.create({
   typeBtn: { flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: 'center' },
   typeBtnActive: { backgroundColor: Colors.primary },
   typeBtnUnexpectedActive: { backgroundColor: Colors.warning },
+  typeBtnTransferActive: { backgroundColor: Colors.info },
   typeBtnText: { fontSize: 13, color: Colors.textSecondary, fontWeight: '500' },
   typeBtnTextActive: { color: Colors.text },
   tabToggle: { flexDirection: 'row', backgroundColor: '#ffffff', borderRadius: 12, padding: 4, gap: 4, borderWidth: 1, borderColor: '#e3e8e3' },

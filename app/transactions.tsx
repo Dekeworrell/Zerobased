@@ -15,7 +15,11 @@ type Transaction = {
   is_unexpected: boolean
   category_id: string | null
   account_id: string | null
+  from_account_id: string | null
+  to_account_id: string | null
   category: { label: string; icon: string } | null
+  from_account: { label: string } | null
+  to_account: { label: string } | null
 }
 
 export default function TransactionsScreen() {
@@ -57,7 +61,11 @@ export default function TransactionsScreen() {
           is_unexpected,
           category_id,
           account_id,
-          category:budget_categories(label, icon)
+          from_account_id,
+          to_account_id,
+          category:budget_categories(label, icon),
+          from_account:accounts!from_account_id(label),
+          to_account:accounts!to_account_id(label)
         `)
         .eq('user_id', user.id)
         .order('date', { ascending: false })
@@ -286,15 +294,17 @@ export default function TransactionsScreen() {
               <TouchableOpacity key={transaction.id} style={styles.transactionRow} onPress={() => setSelectedTransaction(transaction)}>
                 <View style={styles.transactionIcon}>
                   <Text style={styles.transactionIconText}>
-                    {transaction.is_unexpected ? '⚠️' : transaction.category?.icon || '💳'}
+                    {transaction.type === 'transfer' ? '⇄' : transaction.is_unexpected ? '⚠️' : transaction.category?.icon || '💳'}
                   </Text>
                 </View>
                 <View style={styles.transactionInfo}>
                   <Text style={styles.transactionLabel}>{transaction.label}</Text>
                   <Text style={styles.transactionCategory}>
-                    {transaction.is_unexpected
-                      ? 'Unexpected expense'
-                      : transaction.category?.label || 'Uncategorized'}
+                    {transaction.type === 'transfer'
+                      ? 'Transfer'
+                      : transaction.is_unexpected
+                        ? 'Unexpected expense'
+                        : transaction.category?.label || 'Uncategorized'}
                   </Text>
                 </View>
                 <Text style={[

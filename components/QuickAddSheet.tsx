@@ -83,10 +83,13 @@ export default function QuickAddSheet({ visible, category, accounts, categoryDef
         is_unexpected: false,
       })
 
+      const LIABILITY_TYPES = ['mortgage', 'heloc', 'line_of_credit', 'credit_card', 'car_loan', 'student_loan', 'personal_loan', 'other_liability']
+      const accountIsLiability = LIABILITY_TYPES.some(l => account.type.toLowerCase().replace(/[\s-]/g, '_').includes(l))
       const { data: currentAccount } = await supabase
         .from('accounts').select('balance').eq('id', account.id).single()
       if (currentAccount) {
-        const newBalance = (parseFloat(currentAccount.balance) || 0) - parsedAmount
+        const current = parseFloat(currentAccount.balance) || 0
+        const newBalance = accountIsLiability ? current + parsedAmount : current - parsedAmount
         await supabase.from('accounts').update({ balance: newBalance }).eq('id', account.id)
       }
 

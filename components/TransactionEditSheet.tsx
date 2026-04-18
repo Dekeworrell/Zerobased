@@ -80,12 +80,17 @@ export default function TransactionEditSheet({ visible, transaction, categories,
 
       if (transaction!.account_id && newAmount !== oldAmount) {
         const { data: acc } = await supabase
-          .from('accounts').select('balance').eq('id', transaction!.account_id).single()
+          .from('accounts').select('balance, type').eq('id', transaction!.account_id).single()
         if (acc) {
           const current = parseFloat(acc.balance) || 0
-          const newBalance = transaction!.type === 'income'
-            ? current - oldAmount + newAmount
-            : current + oldAmount - newAmount
+          const LIABILITY_TYPES = ['mortgage', 'heloc', 'line_of_credit', 'credit_card', 'car_loan', 'student_loan', 'personal_loan', 'other_liability']
+          const accIsLiability = LIABILITY_TYPES.some(l => acc.type.toLowerCase().replace(/[\s-]/g, '_').includes(l))
+          let newBalance: number
+          if (transaction!.type === 'income') {
+            newBalance = accIsLiability ? current + oldAmount - newAmount : current - oldAmount + newAmount
+          } else {
+            newBalance = accIsLiability ? current - oldAmount + newAmount : current + oldAmount - newAmount
+          }
           await supabase.from('accounts').update({ balance: newBalance }).eq('id', transaction!.account_id)
         }
       }
@@ -106,12 +111,17 @@ export default function TransactionEditSheet({ visible, transaction, categories,
           try {
             if (transaction!.account_id) {
               const { data: acc } = await supabase
-                .from('accounts').select('balance').eq('id', transaction!.account_id).single()
+                .from('accounts').select('balance, type').eq('id', transaction!.account_id).single()
               if (acc) {
                 const current = parseFloat(acc.balance) || 0
-                const newBalance = transaction!.type === 'income'
-                  ? current - transaction!.amount
-                  : current + transaction!.amount
+                const LIABILITY_TYPES = ['mortgage', 'heloc', 'line_of_credit', 'credit_card', 'car_loan', 'student_loan', 'personal_loan', 'other_liability']
+                const accIsLiability = LIABILITY_TYPES.some(l => acc.type.toLowerCase().replace(/[\s-]/g, '_').includes(l))
+                let newBalance: number
+                if (transaction!.type === 'income') {
+                  newBalance = accIsLiability ? current + transaction!.amount : current - transaction!.amount
+                } else {
+                  newBalance = accIsLiability ? current - transaction!.amount : current + transaction!.amount
+                }
                 await supabase.from('accounts').update({ balance: newBalance }).eq('id', transaction!.account_id)
               }
             }
