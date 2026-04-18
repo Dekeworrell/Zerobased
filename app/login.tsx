@@ -9,6 +9,7 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
 
   async function handleLogin() {
     setLoading(true)
@@ -51,14 +52,21 @@ export default function LoginScreen() {
           />
 
           <Text style={styles.label}>Password</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Your password"
-            placeholderTextColor={Colors.textSecondary}
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
+          <View style={styles.passwordContainer}>
+            <TextInput
+              style={styles.passwordInput}
+              placeholder="Your password"
+              placeholderTextColor={Colors.textSecondary}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+              autoCorrect={false}
+              contextMenuHidden={false}
+            />
+            <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPassword(!showPassword)}>
+              <Text style={styles.eyeText}>{showPassword ? 'Hide' : 'Show'}</Text>
+            </TouchableOpacity>
+          </View>
 
           <TouchableOpacity style={styles.forgotPassword}>
             <Text style={styles.forgotPasswordText}>Forgot password?</Text>
@@ -176,5 +184,29 @@ const styles = StyleSheet.create({
   },
   link: {
     color: Colors.primary,
+  },
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 12,
+  },
+  passwordInput: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+    color: Colors.text,
+  },
+  eyeBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  eyeText: {
+    fontSize: 14,
+    color: Colors.primary,
+    fontWeight: '500',
   },
 })

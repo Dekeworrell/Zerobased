@@ -13,6 +13,7 @@ export default function SignUpScreen() {
   const [error, setError] = useState('')
   const [emailSent, setEmailSent] = useState(false)
   const [country, setCountryState] = useState<'CA' | 'US'>('CA')
+  const [showPassword, setShowPassword] = useState(false)
   async function handleSignUp() {
     if (!name.trim()) {
       setError('Please enter your name')
@@ -139,14 +140,21 @@ export default function SignUpScreen() {
           </View>
 
           <Text style={styles.label}>Password</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Min. 8 characters"
-            placeholderTextColor={Colors.textSecondary}
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
+          <View style={styles.passwordContainer}>
+            <TextInput
+              style={styles.passwordInput}
+              placeholder="Min. 8 characters"
+              placeholderTextColor={Colors.textSecondary}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+              autoCorrect={false}
+              contextMenuHidden={false}
+            />
+            <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPassword(!showPassword)}>
+              <Text style={styles.eyeText}>{showPassword ? 'Hide' : 'Show'}</Text>
+            </TouchableOpacity>
+          </View>
 
           <TouchableOpacity
             style={[styles.primaryButton, loading && styles.disabled]}
@@ -250,5 +258,29 @@ const styles = StyleSheet.create({
   },
   link: {
     color: Colors.primary,
+  },
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 12,
+  },
+  passwordInput: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+    color: Colors.text,
+  },
+  eyeBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  eyeText: {
+    fontSize: 14,
+    color: Colors.primary,
+    fontWeight: '500',
   },
 })
