@@ -1,6 +1,7 @@
 import { router, useFocusEffect } from 'expo-router'
 import { useCallback, useState } from 'react'
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import PaydayModal from '../components/PaydayModal'
 import QuickAddSheet from '../components/QuickAddSheet'
 import { Colors } from '../constants/colors'
 import { calculateBudgetStatus, getPayPeriodDates, toMonthly } from '../lib/store'
@@ -23,6 +24,8 @@ export default function DashboardScreen() {
   const [quickAddCategory, setQuickAddCategory] = useState<{ id: string, label: string, icon: string } | null>(null)
   const [categoryDefaults, setCategoryDefaults] = useState<{ [categoryId: string]: string }>({})
   const [globalDefaultAccountId, setGlobalDefaultAccountId] = useState<string | null>(null)
+  const [showPaydayModal, setShowPaydayModal] = useState(false)
+  const [paydayIncomeSources, setPaydayIncomeSources] = useState<any[]>([])
 
   useFocusEffect(
     useCallback(() => {
@@ -46,7 +49,7 @@ export default function DashboardScreen() {
         { data: accs },
         { data: catDefaults },
       ] = await Promise.all([
-        supabase.from('profiles').select('name, budget_cycle, default_account_id').eq('id', user.id).single(),
+        supabase.from('profiles').select('name, budget_cycle, default_account_id, last_payday_check').eq('id', user.id).single(),
         supabase.from('income_sources').select('*').eq('user_id', user.id),
         supabase.from('budget_categories').select('*').eq('user_id', user.id),
         supabase.from('accounts').select('*').eq('user_id', user.id),
@@ -58,6 +61,24 @@ export default function DashboardScreen() {
       const cycle = profile?.budget_cycle || 'monthly'
       setBudgetCycle(cycle)
       if (profile?.default_account_id) setGlobalDefaultAccountId(profile.default_account_id)
+
+      // Payday check
+      const todayStr = new Date().toISOString().split('T')[0]
+      const lastCheck = profile?.last_payday_check || ''
+      if (lastCheck !== todayStr && income && income.length > 0) {
+        const isPayday = income.some((s: any) => {
+          if (!s.next_payday) return false
+          const paydays = s.next_payday.split('|')
+          return paydays.some((d: string) => d === todayStr)
+        })
+        if (isPayday) {
+          setPaydayIncomeSources(income.map((s: any) => ({
+            ...s,
+            income_type: s.income_type || 'fixed',
+          })))
+          setShowPaydayModal(true)
+        }
+      }
 
       // Accounts
       if (accs) setAccounts(accs)
@@ -400,6 +421,11 @@ export default function DashboardScreen() {
       </View>
 
     </ScrollView>
+    <PaydayModal
+      visible={showPaydayModal}
+      incomeSources={paydayIncomeSources}
+      onComplete={() => { setShowPaydayModal(false); loadDashboard() }}
+    />
     <QuickAddSheet
       visible={!!quickAddCategory}
       category={quickAddCategory}

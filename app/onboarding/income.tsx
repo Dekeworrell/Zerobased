@@ -28,6 +28,7 @@ type IncomeSource = {
   amount: string
   frequency: string
   type: string
+  income_type: 'fixed' | 'variable'
   next_payday: string
   second_payday: string
 }
@@ -41,7 +42,7 @@ export default function IncomeScreen() {
   const [showSecondPaydayPicker, setShowSecondPaydayPicker] = useState<number | null>(null)
   const [paydayError, setPaydayError] = useState('')
   const [sources, setSources] = useState<IncomeSource[]>([
-    { label: 'Primary income', amount: '', frequency: 'biweekly', type: 'employment', next_payday: '', second_payday: '' }
+    { label: 'Primary income', amount: '', frequency: 'biweekly', type: 'employment', income_type: 'fixed', next_payday: '', second_payday: '' }
   ])
 
   useEffect(() => {
@@ -73,6 +74,7 @@ export default function IncomeScreen() {
           amount: s.amount.toString(),
           frequency: s.frequency,
           type: s.type,
+          income_type: s.income_type || 'fixed',
           next_payday: dates[0] || '',
           second_payday: dates[1] || '',
         }
@@ -93,6 +95,7 @@ export default function IncomeScreen() {
       amount: '',
       frequency: 'monthly',
       type: 'other',
+      income_type: 'fixed',
       next_payday: '',
       second_payday: '',
     }])
@@ -123,6 +126,7 @@ export default function IncomeScreen() {
             amount: parseFloat(s.amount) || 0,
             frequency: s.frequency,
             type: s.type,
+            income_type: s.income_type || 'fixed',
             next_payday: s.frequency === 'semimonthly' && s.second_payday
               ? `${s.next_payday}|${s.second_payday}`
               : s.next_payday || null,
@@ -338,6 +342,33 @@ export default function IncomeScreen() {
                 </TouchableOpacity>
               ))}
             </View>
+
+            <Text style={styles.fieldLabel}>Pay amount</Text>
+            <View style={styles.chipRow}>
+              <TouchableOpacity
+                style={[styles.chip, source.income_type === 'fixed' && styles.chipActive]}
+                onPress={() => updateSource(index, 'income_type', 'fixed')}
+              >
+                <Text style={[styles.chipText, source.income_type === 'fixed' && styles.chipTextActive]}>
+                  📅 Fixed income
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.chip, source.income_type === 'variable' && styles.chipActive]}
+                onPress={() => updateSource(index, 'income_type', 'variable')}
+              >
+                <Text style={[styles.chipText, source.income_type === 'variable' && styles.chipTextActive]}>
+                  📊 Variable income
+                </Text>
+              </TouchableOpacity>
+            </View>
+            {source.income_type === 'variable' && (
+              <View style={styles.infoBox}>
+                <Text style={styles.infoBoxText}>
+                  📊 On payday we'll ask how much you earned so your budget reflects your actual take-home pay.
+                </Text>
+              </View>
+            )}
           </View>
         ))}
       </View>
@@ -550,6 +581,18 @@ const styles = StyleSheet.create({
   progressTrack: { height: 3, backgroundColor: '#e3e8e3', borderRadius: 2, overflow: 'hidden', marginBottom: 6 },
   progressFill: { height: 3, backgroundColor: '#3db870', borderRadius: 2 },
   progressLabel: { fontSize: 11, color: '#3db870', fontWeight: '600' },
+  infoBox: {
+    backgroundColor: Colors.primary + '22',
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    borderRadius: 12,
+    padding: 12,
+  },
+  infoBoxText: {
+    fontSize: 13,
+    color: Colors.text,
+    lineHeight: 20,
+  },
   floatingButton: {
     position: 'absolute',
     bottom: 0,
