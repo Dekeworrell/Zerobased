@@ -189,7 +189,7 @@ export default function DashboardScreen() {
 
   return (
     <>
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
 
       <View style={styles.header}>
         <View style={{ flex: 1, marginRight: 8 }}>
@@ -232,7 +232,14 @@ export default function DashboardScreen() {
         </View>
 
         <View style={styles.statCard}>
-          <Text style={styles.statLabel}>Unassigned</Text>
+          <View style={styles.statCardHeader}>
+            <Text style={styles.statLabel}>Unassigned</Text>
+            {unassigned > 0 && (
+              <TouchableOpacity onPress={() => router.push('/onboarding/assign')}>
+                <Text style={styles.editLink}>Assign</Text>
+              </TouchableOpacity>
+            )}
+          </View>
           <Text style={[styles.statValue, { color: unassigned < 0 ? Colors.danger : unassigned === 0 ? Colors.success : Colors.info }]}>
             {unassigned < 0 ? '-' : ''}${Math.abs(unassigned).toLocaleString('en-CA', { maximumFractionDigits: 0 })}
           </Text>

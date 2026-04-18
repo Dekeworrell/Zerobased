@@ -1,6 +1,7 @@
 import { router } from 'expo-router'
 import { useState } from 'react'
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view'
 import CurrencyInput from '../../components/CurrencyInput'
 import { Colors } from '../../constants/colors'
 import { getOnboardingData, setExpenses as saveExpensesToStore } from '../../lib/store'
@@ -43,6 +44,7 @@ const EXPENSE_CATEGORIES = [
   { id: 'pets', label: 'Pets', icon: '🐾', type: 'variable' },
   { id: 'sports', label: 'Sports', icon: '⚽', type: 'variable' },
   { id: 'recreation_vehicles', label: 'Recreation vehicles', icon: '🚤', type: 'fixed' },
+  { id: 'credit_card', label: 'Credit card', icon: '💳', type: 'fixed' },
   { id: 'other', label: 'Other', icon: '➕', type: 'variable', permanent: true },
 ]
 
@@ -106,8 +108,8 @@ export default function ExpensesScreen() {
   }
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <>
+      <KeyboardAwareScrollView style={styles.container} contentContainerStyle={styles.content} enableOnAndroid extraScrollHeight={20} keyboardShouldPersistTaps="handled">
       <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
         <Text style={styles.backText}>← Back</Text>
       </TouchableOpacity>
@@ -197,11 +199,14 @@ export default function ExpensesScreen() {
         ))}
       </View>
 
+      <View style={{ height: 80 }} />
+    </KeyboardAwareScrollView>
+    <View style={styles.floatingButton}>
       <TouchableOpacity style={styles.primaryButton} onPress={handleContinue}>
         <Text style={styles.primaryButtonText}>Continue</Text>
       </TouchableOpacity>
-    </ScrollView>
-    </KeyboardAvoidingView>
+    </View>
+    </>
   )
 }
 
@@ -394,4 +399,17 @@ backButton: {
   progressTrack: { height: 3, backgroundColor: '#e3e8e3', borderRadius: 2, overflow: 'hidden', marginBottom: 6 },
   progressFill: { height: 3, backgroundColor: '#3db870', borderRadius: 2 },
   progressLabel: { fontSize: 11, color: '#3db870', fontWeight: '600' },
+  floatingButton: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#f2f4f2',
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    paddingBottom: 32,
+    borderTopWidth: 1,
+    borderTopColor: '#e3e8e3',
+    alignItems: 'center',
+  },
 })

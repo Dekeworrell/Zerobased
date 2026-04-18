@@ -148,11 +148,12 @@ export default function IncomeScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+    <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
         <Text style={styles.backText}>← Back</Text>
       </TouchableOpacity>
@@ -241,7 +242,7 @@ export default function IncomeScreen() {
               </TouchableOpacity>
             )}
             {showPaydayPicker === index && (
-              <View style={{ backgroundColor: '#ffffff', borderRadius: 16, borderWidth: 1, borderColor: '#e3e8e3', overflow: 'hidden' }}>
+              <View style={{ backgroundColor: '#ffffff', borderRadius: 16, borderWidth: 1, borderColor: '#e3e8e3', overflow: 'hidden', marginHorizontal: 4 }}>
                 <DateTimePicker
                   value={source.next_payday ? new Date(source.next_payday + 'T12:00:00') : new Date()}
                   mode="date"
@@ -351,6 +352,10 @@ export default function IncomeScreen() {
         </View>
       ) : null}
 
+      <View style={{ height: 80 }} />
+    </ScrollView>
+    </KeyboardAvoidingView>
+      <View style={styles.floatingButton}>
       <TouchableOpacity
         style={[styles.primaryButton, saving && styles.disabled]}
         onPress={handleContinue}
@@ -360,8 +365,8 @@ export default function IncomeScreen() {
           {saving ? 'Saving...' : isEditing ? 'Save & return to dashboard' : 'Continue'}
         </Text>
       </TouchableOpacity>
-    </ScrollView>
-    </KeyboardAvoidingView>
+    </View>
+    </>
   )
 }
 
@@ -545,4 +550,17 @@ const styles = StyleSheet.create({
   progressTrack: { height: 3, backgroundColor: '#e3e8e3', borderRadius: 2, overflow: 'hidden', marginBottom: 6 },
   progressFill: { height: 3, backgroundColor: '#3db870', borderRadius: 2 },
   progressLabel: { fontSize: 11, color: '#3db870', fontWeight: '600' },
+  floatingButton: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#f2f4f2',
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    paddingBottom: 32,
+    borderTopWidth: 1,
+    borderTopColor: '#e3e8e3',
+    alignItems: 'center',
+  },
 })

@@ -2,6 +2,7 @@ import DateTimePicker from '@react-native-community/datetimepicker'
 import { router, useFocusEffect } from 'expo-router'
 import { useCallback, useEffect, useState } from 'react'
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import TransactionEditSheet from '../components/TransactionEditSheet'
 import { Colors } from '../constants/colors'
 import { supabase } from '../lib/supabase'
 
@@ -12,10 +13,9 @@ type Transaction = {
   date: string
   type: string
   is_unexpected: boolean
-  category: {
-    label: string
-    icon: string
-  } | null
+  category_id: string | null
+  account_id: string | null
+  category: { label: string; icon: string } | null
 }
 
 export default function TransactionsScreen() {
@@ -28,6 +28,8 @@ export default function TransactionsScreen() {
   const [endDate, setEndDate] = useState<Date | null>(null)
   const [showStartPicker, setShowStartPicker] = useState(false)
   const [showEndPicker, setShowEndPicker] = useState(false)
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null)
+  const [allCategories, setAllCategories] = useState<{ id: string; label: string; icon: string }[]>([])
 
   useFocusEffect(
     useCallback(() => {
@@ -43,22 +45,28 @@ export default function TransactionsScreen() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
-    const { data } = await supabase
-      .from('transactions')
-      .select(`
-        id,
-        label,
-        amount,
-        date,
-        type,
-        is_unexpected,
-        category:budget_categories(label, icon)
-      `)
-      .eq('user_id', user.id)
-      .order('date', { ascending: false })
-      .limit(500)
+    const [{ data }, { data: cats }] = await Promise.all([
+      supabase
+        .from('transactions')
+        .select(`
+          id,
+          label,
+          amount,
+          date,
+          type,
+          is_unexpected,
+          category_id,
+          account_id,
+          category:budget_categories(label, icon)
+        `)
+        .eq('user_id', user.id)
+        .order('date', { ascending: false })
+        .limit(500),
+      supabase.from('budget_categories').select('id, label, icon').eq('user_id', user.id),
+    ])
 
     if (data) setTransactions(data as any)
+    if (cats) setAllCategories(cats)
     setLoading(false)
   }
 
@@ -129,7 +137,7 @@ export default function TransactionsScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
 
       <View style={styles.headerRow}>
         <Text style={styles.title}>Transactions</Text>
@@ -275,7 +283,7 @@ export default function TransactionsScreen() {
 
           <View style={styles.transactionGroup}>
             {dayTransactions.map(transaction => (
-              <View key={transaction.id} style={styles.transactionRow}>
+              <TouchableOpacity key={transaction.id} style={styles.transactionRow} onPress={() => setSelectedTransaction(transaction)}>
                 <View style={styles.transactionIcon}>
                   <Text style={styles.transactionIconText}>
                     {transaction.is_unexpected ? '⚠️' : transaction.category?.icon || '💳'}
@@ -296,11 +304,19 @@ export default function TransactionsScreen() {
                   {transaction.type === 'income' ? '+' : '-'}
                   ${transaction.amount.toLocaleString('en-CA', { maximumFractionDigits: 2 })}
                 </Text>
-              </View>
+              </TouchableOpacity>
             ))}
           </View>
         </View>
       ))}
+    <TransactionEditSheet
+        visible={!!selectedTransaction}
+        transaction={selectedTransaction}
+        categories={allCategories}
+        onClose={() => setSelectedTransaction(null)}
+        onSaved={() => { setSelectedTransaction(null); loadTransactions() }}
+        onDeleted={() => { setSelectedTransaction(null); loadTransactions() }}
+      />
     </ScrollView>
   )
 }

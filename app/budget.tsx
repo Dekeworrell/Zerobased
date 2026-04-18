@@ -1,6 +1,7 @@
 import { router } from 'expo-router'
 import { useEffect, useState } from 'react'
-import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view'
 import CurrencyInput from '../components/CurrencyInput'
 import { Colors } from '../constants/colors'
 import { calculateBudgetStatus, toMonthly } from '../lib/store'
@@ -41,6 +42,7 @@ const EXPENSE_CATEGORIES = [
   { id: 'mortgage_extra', label: 'Mortgage overpayment', icon: '🏦', type: 'priority' },
   { id: 'emergency_fund', label: 'Emergency fund', icon: '🆘', type: 'priority' },
   { id: 'recreation_vehicles', label: 'Recreation vehicles', icon: '🚤', type: 'fixed' },
+  { id: 'credit_card', label: 'Credit card', icon: '💳', type: 'fixed' },
   { id: 'other', label: 'Other', icon: '➕', type: 'variable' },
 ]
 
@@ -206,11 +208,8 @@ export default function BudgetScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <>
+      <KeyboardAwareScrollView style={styles.container} contentContainerStyle={styles.content} enableOnAndroid extraScrollHeight={20} keyboardShouldPersistTaps="handled">
 
       <Text style={styles.title}>Edit budget</Text>
       <Text style={styles.subtitle}>Adjust your monthly budget categories</Text>
@@ -293,19 +292,21 @@ export default function BudgetScreen() {
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
       {success ? <Text style={styles.successText}>✅ Budget saved!</Text> : null}
-
-      <TouchableOpacity
-        style={[styles.primaryButton, saving && styles.disabled]}
-        onPress={handleSave}
-        disabled={saving}
-      >
-        {saving
-          ? <ActivityIndicator color={Colors.text} />
-          : <Text style={styles.primaryButtonText}>Save budget</Text>
-        }
-      </TouchableOpacity>
-    </ScrollView>
-    </KeyboardAvoidingView>
+      <View style={{ height: 80 }} />
+    </KeyboardAwareScrollView>
+  <View style={styles.floatingButton}>
+        <TouchableOpacity
+          style={[styles.primaryButton, saving && styles.disabled]}
+          onPress={handleSave}
+          disabled={saving}
+        >
+          {saving
+            ? <ActivityIndicator color={Colors.text} />
+            : <Text style={styles.primaryButtonText}>Save budget</Text>
+          }
+        </TouchableOpacity>
+      </View>
+    </>
   )
 }
 
@@ -496,5 +497,18 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '500',
     marginBottom: 4,
+  },
+  floatingButton: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#f2f4f2',
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    paddingBottom: 32,
+    borderTopWidth: 1,
+    borderTopColor: '#e3e8e3',
+    alignItems: 'center',
   },
 })
