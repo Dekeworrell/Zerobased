@@ -2,6 +2,7 @@ import { router } from 'expo-router'
 import { useState } from 'react'
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import CurrencyInput from '../../components/CurrencyInput'
+import { EXPENSE_CATEGORIES } from '../../constants/categories'
 import { Colors } from '../../constants/colors'
 import { clearOnboardingData, getOnboardingData, toMonthly } from '../../lib/store'
 import { supabase } from '../../lib/supabase'
@@ -33,42 +34,6 @@ const US_PRIORITY_ITEMS = [
   { id: 'vacation', label: 'Vacation fund', icon: '✈️' },
   { id: 'car_fund', label: 'Car fund', icon: '🚗' },
   { id: 'custom_goal', label: 'Custom goal', icon: '🎯' },
-]
-
-const EXPENSE_CATEGORIES = [
-  { id: 'groceries', label: 'Groceries', icon: '🛒', category_type: 'variable' },
-  { id: 'transport', label: 'Transport', icon: '🚗', category_type: 'variable' },
-  { id: 'utilities', label: 'Utilities', icon: '💡', category_type: 'variable' },
-  { id: 'internet', label: 'Internet', icon: '📶', category_type: 'fixed' },
-  { id: 'phone', label: 'Phone', icon: '📱', category_type: 'fixed' },
-  { id: 'home_insurance', label: 'Home insurance', icon: '🏡', category_type: 'fixed' },
-  { id: 'fuel', label: 'Fuel', icon: '⛽', category_type: 'variable' },
-  { id: 'auto_insurance', label: 'Auto insurance', icon: '🚘', category_type: 'fixed' },
-  { id: 'vehicle_maintenance', label: 'Vehicle maintenance', icon: '🔧', category_type: 'variable' },
-  { id: 'property_tax', label: 'Property tax', icon: '🏛️', category_type: 'fixed' },
-  { id: 'water_sewer', label: 'Water & sewer', icon: '💧', category_type: 'variable' },
-  { id: 'car_loan', label: 'Car loan', icon: '🔑', category_type: 'fixed' },
-  { id: 'loc', label: 'Line of credit', icon: '💸', category_type: 'fixed' },
-  { id: 'studentloan', label: 'Student loan', icon: '🎓', category_type: 'fixed' },
-  { id: 'mortgage', label: 'Mortgage/Rent', icon: '🏠', category_type: 'fixed' },
-  { id: 'dining', label: 'Dining out', icon: '🍽️', category_type: 'variable' },
-  { id: 'subscriptions', label: 'Subscriptions', icon: '📺', category_type: 'fixed' },
-  { id: 'health', label: 'Health', icon: '💊', category_type: 'variable' },
-  { id: 'fitness', label: 'Fitness', icon: '💪', category_type: 'variable' },
-  { id: 'clothing', label: 'Clothing', icon: '👕', category_type: 'variable' },
-  { id: 'entertainment', label: 'Entertainment', icon: '🎬', category_type: 'variable' },
-  { id: 'savings', label: 'Savings', icon: '💰', category_type: 'priority' },
-  { id: 'rrsp', label: 'RRSP', icon: '📈', category_type: 'priority' },
-  { id: 'tfsa', label: 'TFSA', icon: '🌱', category_type: 'priority' },
-  { id: 'fhsa', label: 'FHSA', icon: '🏠', category_type: 'priority' },
-  { id: 'mortgage_extra', label: 'Mortgage overpayment', icon: '🏦', category_type: 'priority' },
-  { id: 'emergency_fund', label: 'Emergency fund', icon: '🆘', category_type: 'priority' },
-  { id: 'investments', label: 'Investments', icon: '💰', category_type: 'priority' },
-  { id: 'education', label: 'Education', icon: '📚', category_type: 'variable' },
-  { id: 'childcare', label: 'Childcare', icon: '👶', category_type: 'fixed' },
-  { id: 'cable_tv', label: 'Cable TV', icon: '📡', category_type: 'fixed' },
-  { id: 'life_insurance', label: 'Life insurance', icon: '🛡️', category_type: 'fixed' },
-  { id: 'other', label: 'Other', icon: '➕', category_type: 'variable' },
 ]
 
 type Expense = {
@@ -228,7 +193,7 @@ export default function AssignScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
         <Text style={styles.backText}>← Back</Text>
       </TouchableOpacity>
@@ -275,7 +240,7 @@ export default function AssignScreen() {
           </TouchableOpacity>
           {showAddCategory === 'fixed' && (
             <View style={styles.addCategoryChips}>
-              {EXPENSE_CATEGORIES.filter(c => c.category_type === 'fixed' && (c.id === 'loan_repayment' || !expenses.find(e => e.id === c.id || e.id.startsWith(c.id + '_')))).map(cat => (
+              {EXPENSE_CATEGORIES.filter(c => c.type === 'fixed' && (c.id === 'loan_repayment' || !expenses.find(e => e.id === c.id || e.id.startsWith(c.id + '_')))).map(cat => (
                 <TouchableOpacity
                   key={cat.id}
                   style={styles.addChip}
@@ -318,7 +283,7 @@ export default function AssignScreen() {
           {showAddCategory === 'variable' && (
             <View style={styles.addCategoryChips}>
               {EXPENSE_CATEGORIES.filter(c => {
-                if (c.category_type !== 'variable') return false
+                if (c.type !== 'variable') return false
                 if (c.id === 'entertainment' || c.id === 'other') return true
                 return !expenses.find(e => e.id === c.id)
               }).map(cat => (

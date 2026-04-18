@@ -3,48 +3,10 @@ import { useEffect, useState } from 'react'
 import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import CurrencyInput from '../components/CurrencyInput'
 import KeyboardScrollView from '../components/KeyboardScrollView'
+import { EXPENSE_CATEGORIES } from '../constants/categories'
 import { Colors } from '../constants/colors'
 import { calculateBudgetStatus, toMonthly } from '../lib/store'
 import { supabase } from '../lib/supabase'
-
-const EXPENSE_CATEGORIES = [
-  { id: 'groceries', label: 'Groceries', icon: '🛒', type: 'variable' },
-  { id: 'transport', label: 'Transport', icon: '🚗', type: 'variable' },
-  { id: 'utilities', label: 'Utilities', icon: '💡', type: 'fixed' },
-  { id: 'internet', label: 'Internet', icon: '📶', type: 'fixed' },
-  { id: 'phone', label: 'Phone', icon: '📱', type: 'fixed' },
-  { id: 'home_insurance', label: 'Home insurance', icon: '🏡', type: 'fixed' },
-  { id: 'fuel', label: 'Fuel', icon: '⛽', type: 'variable' },
-  { id: 'auto_insurance', label: 'Auto insurance', icon: '🚘', type: 'fixed' },
-  { id: 'vehicle_maintenance', label: 'Vehicle maintenance', icon: '🔧', type: 'variable' },
-  { id: 'property_tax', label: 'Property tax', icon: '🏛️', type: 'fixed' },
-  { id: 'water_sewer', label: 'Water & sewer', icon: '💧', type: 'fixed' },
-  { id: 'car_loan', label: 'Car loan', icon: '🔑', type: 'fixed' },
-  { id: 'loc', label: 'Line of credit', icon: '💸', type: 'fixed' },
-  { id: 'studentloan', label: 'Student loan', icon: '🎓', type: 'fixed' },
-  { id: 'mortgage', label: 'Mortgage', icon: '🏦', type: 'fixed' },
-  { id: 'dining', label: 'Dining out', icon: '🍽️', type: 'variable' },
-  { id: 'subscriptions', label: 'Subscriptions', icon: '📺', type: 'fixed' },
-  { id: 'health', label: 'Health', icon: '💊', type: 'variable' },
-  { id: 'fitness', label: 'Fitness', icon: '💪', type: 'fixed' },
-  { id: 'clothing', label: 'Clothing', icon: '👕', type: 'variable' },
-  { id: 'entertainment', label: 'Entertainment', icon: '🎬', type: 'variable' },
-  { id: 'savings', label: 'Savings', icon: '💰', type: 'priority' },
-  { id: 'investments', label: 'Investments', icon: '📈', type: 'priority' },
-  { id: 'education', label: 'Education', icon: '📚', type: 'variable' },
-  { id: 'childcare', label: 'Childcare', icon: '👶', type: 'fixed' },
-  { id: 'pets', label: 'Pets', icon: '🐾', type: 'variable' },
-  { id: 'cable_tv', label: 'Cable TV', icon: '📡', type: 'fixed' },
-  { id: 'life_insurance', label: 'Life insurance', icon: '🛡️', type: 'fixed' },
-  { id: 'rrsp', label: 'RRSP', icon: '📈', type: 'priority' },
-  { id: 'tfsa', label: 'TFSA', icon: '🌱', type: 'priority' },
-  { id: 'fhsa', label: 'FHSA', icon: '🏠', type: 'priority' },
-  { id: 'mortgage_extra', label: 'Mortgage overpayment', icon: '🏦', type: 'priority' },
-  { id: 'emergency_fund', label: 'Emergency fund', icon: '🆘', type: 'priority' },
-  { id: 'recreation_vehicles', label: 'Recreation vehicles', icon: '🚤', type: 'fixed' },
-  { id: 'credit_card', label: 'Credit card', icon: '💳', type: 'fixed' },
-  { id: 'other', label: 'Other', icon: '➕', type: 'variable' },
-]
 
 type Category = {
   id: string
