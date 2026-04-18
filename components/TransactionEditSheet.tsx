@@ -84,7 +84,8 @@ export default function TransactionEditSheet({ visible, transaction, categories,
         if (acc) {
           const current = parseFloat(acc.balance) || 0
           const LIABILITY_TYPES = ['mortgage', 'heloc', 'line_of_credit', 'credit_card', 'car_loan', 'student_loan', 'personal_loan', 'other_liability']
-          const accIsLiability = LIABILITY_TYPES.some(l => acc.type.toLowerCase().replace(/[\s-]/g, '_').includes(l))
+          const baseT = acc.type.replace(/_\d+$/, '').toLowerCase().replace(/[\s-]/g, '_')
+          const accIsLiability = LIABILITY_TYPES.some(l => baseT === l || baseT.startsWith(l))
           let newBalance: number
           if (transaction!.type === 'income') {
             newBalance = accIsLiability ? current + oldAmount - newAmount : current - oldAmount + newAmount
@@ -115,7 +116,8 @@ export default function TransactionEditSheet({ visible, transaction, categories,
               if (acc) {
                 const current = parseFloat(acc.balance) || 0
                 const LIABILITY_TYPES = ['mortgage', 'heloc', 'line_of_credit', 'credit_card', 'car_loan', 'student_loan', 'personal_loan', 'other_liability']
-                const accIsLiability = LIABILITY_TYPES.some(l => acc.type.toLowerCase().replace(/[\s-]/g, '_').includes(l))
+                const baseT = acc.type.replace(/_\d+$/, '').toLowerCase().replace(/[\s-]/g, '_')
+                const accIsLiability = LIABILITY_TYPES.some(l => baseT === l || baseT.startsWith(l))
                 let newBalance: number
                 if (transaction!.type === 'income') {
                   newBalance = accIsLiability ? current + transaction!.amount : current - transaction!.amount
@@ -159,7 +161,6 @@ export default function TransactionEditSheet({ visible, transaction, categories,
                 value={label}
                 onChangeText={setLabel}
                 placeholderTextColor={Colors.textSecondary}
-                selectTextOnFocus
               />
 
               <Text style={styles.fieldLabel}>Date</Text>
