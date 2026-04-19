@@ -2,6 +2,7 @@ import { router } from 'expo-router'
 import { useState } from 'react'
 import { ActivityIndicator, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { Colors } from '../constants/colors'
+import { toMonthly } from '../lib/store'
 import { supabase } from '../lib/supabase'
 import CurrencyInput from './CurrencyInput'
 
@@ -30,6 +31,8 @@ export default function PaydayModal({ visible, incomeSources, onComplete }: Prop
   const [extraAmount, setExtraAmount] = useState(0)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [confirmedActual, setConfirmedActual] = useState(0)
+  const [confirmedBudgeted, setConfirmedBudgeted] = useState(0)
 
   const today = new Date()
   const offset = today.getTimezoneOffset()
@@ -45,6 +48,17 @@ export default function PaydayModal({ visible, incomeSources, onComplete }: Prop
 
       let totalBudgeted = 0
       let totalActual = 0
+
+      // Get total budgeted from categories (the template)
+      const { data: cats } = await supabase
+        .from('budget_categories')
+        .select('budgeted_amount, frequency')
+        .eq('user_id', user.id)
+      if (cats) {
+        cats.forEach((c: any) => {
+          totalBudgeted += toMonthly(c.budgeted_amount, c.frequency) / 2
+        })
+      }
 
       // Auto-log fixed income sources
       for (const source of fixedSources) {
@@ -70,7 +84,6 @@ export default function PaydayModal({ visible, incomeSources, onComplete }: Prop
           }
         }
 
-        totalBudgeted += source.amount
         totalActual += source.amount
       }
 
@@ -99,16 +112,35 @@ export default function PaydayModal({ visible, incomeSources, onComplete }: Prop
             }
           }
         }
-        totalBudgeted += source.amount
         totalActual += actualAmount
       }
 
       // Mark payday as checked today — do this before anything else so re-renders don't re-trigger
       await supabase.from('profiles').update({ last_payday_check: dateStr }).eq('id', user.id)
 
+      // Advance next_payday for each income source
+      for (const source of incomeSources) {
+        if (!source.next_payday) continue
+        let periodDays = 14
+        if (source.frequency === 'weekly') periodDays = 7
+        if (source.frequency === 'monthly') periodDays = 30
+        if (source.frequency === 'semimonthly') periodDays = 15
+
+        const current = new Date(source.next_payday.split('|')[0] + 'T12:00:00')
+        const todayMid = new Date()
+        todayMid.setHours(12, 0, 0, 0)
+        while (current <= todayMid) {
+          current.setDate(current.getDate() + periodDays)
+        }
+        const nextPaydayStr = current.toISOString().split('T')[0]
+        await supabase.from('income_sources').update({ next_payday: nextPaydayStr }).eq('id', source.id)
+      }
+
       // Small delay to ensure the profile update is committed before dashboard reloads
       await new Promise(resolve => setTimeout(resolve, 300))
 
+      setConfirmedActual(totalActual)
+      setConfirmedBudgeted(totalBudgeted)
       const diff = totalActual - totalBudgeted
 
       if (diff < -1) {
@@ -141,7 +173,15 @@ export default function PaydayModal({ visible, incomeSources, onComplete }: Prop
               style={styles.primaryBtn}
               onPress={() => {
                 onComplete()
-                setTimeout(() => router.push('/budget'), 300)
+                setTimeout(() => router.push({
+                  pathname: '/budget-adjust',
+                  params: {
+                    actualPay: confirmedActual.toString(),
+                    expectedPay: confirmedBudgeted.toString(),
+                    periodStart: dateStr,
+                    periodEnd: dateStr,
+                  }
+                }), 300)
               }}
             >
               <Text style={styles.primaryBtnText}>Review Budget</Text>
@@ -169,7 +209,15 @@ export default function PaydayModal({ visible, incomeSources, onComplete }: Prop
               style={styles.primaryBtn}
               onPress={() => {
                 onComplete()
-                setTimeout(() => router.push('/onboarding/assign'), 300)
+                setTimeout(() => router.push({
+                  pathname: '/budget-adjust',
+                  params: {
+                    actualPay: confirmedActual.toString(),
+                    expectedPay: confirmedBudgeted.toString(),
+                    periodStart: dateStr,
+                    periodEnd: dateStr,
+                  }
+                }), 300)
               }}
             >
               <Text style={styles.primaryBtnText}>Assign It</Text>

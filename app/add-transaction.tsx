@@ -306,15 +306,18 @@ export default function AddTransactionScreen() {
         .from('profiles').select('notifications_enabled, notify_at_percent_1, notify_at_percent_2')
         .eq('id', user.id).single()
 
-      if (profile?.notifications_enabled && type !== 'income') {
-        const { data: cats } = await supabase.from('budget_categories').select('*').eq('user_id', user.id)
-        const { data: txns } = await supabase.from('transactions').select('category_id, amount, type').eq('user_id', user.id).eq('type', 'expense')
-        if (cats && txns) await checkBudgetAndNotify(cats, txns, profile.notify_at_percent_1 || 80, profile.notify_at_percent_2 || 90, true)
-      }
-
-      if (type === 'income' && profile?.notifications_enabled) {
-        const { data: incomeData } = await supabase.from('income_sources').select('next_payday, frequency').eq('user_id', user.id).single()
-        if (incomeData?.next_payday) await schedulePaydayReminder(incomeData.next_payday)
+      try {
+        if (profile?.notifications_enabled && type !== 'income') {
+          const { data: cats } = await supabase.from('budget_categories').select('*').eq('user_id', user.id)
+          const { data: txns } = await supabase.from('transactions').select('category_id, amount, type').eq('user_id', user.id).eq('type', 'expense')
+          if (cats && txns) await checkBudgetAndNotify(cats, txns, profile.notify_at_percent_1 || 80, profile.notify_at_percent_2 || 90, true)
+        }
+        if (type === 'income' && profile?.notifications_enabled) {
+          const { data: incomeData } = await supabase.from('income_sources').select('next_payday, frequency').eq('user_id', user.id).single()
+          if (incomeData?.next_payday) await schedulePaydayReminder(incomeData.next_payday)
+        }
+      } catch (notifErr) {
+        console.warn('Notification check failed (non-critical):', notifErr)
       }
 
       router.replace('/dashboard')

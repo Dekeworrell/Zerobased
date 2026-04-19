@@ -1,7 +1,7 @@
 import DateTimePicker from '@react-native-community/datetimepicker'
 import { router, useFocusEffect } from 'expo-router'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import TransactionEditSheet from '../components/TransactionEditSheet'
 import { Colors } from '../constants/colors'
 import { supabase } from '../lib/supabase'
@@ -62,12 +62,7 @@ export default function TransactionsScreen() {
           type,
           is_unexpected,
           category_id,
-          account_id,
-          from_account_id,
-          to_account_id,
-          category:budget_categories(label, icon),
-          from_account:accounts!from_account_id(label),
-          to_account:accounts!to_account_id(label)
+          account_id
         `)
         .eq('user_id', user.id)
         .order('date', { ascending: false })
@@ -75,7 +70,13 @@ export default function TransactionsScreen() {
       supabase.from('budget_categories').select('id, label, icon').eq('user_id', user.id),
     ])
 
-    if (data) setTransactions(data as any)
+    if (data) {
+      const txnsWithCategories = (data as any[]).map(t => ({
+        ...t,
+        category: cats?.find((c: any) => c.id === t.category_id) || null
+      }))
+      setTransactions(txnsWithCategories as any)
+    }
     if (cats) setAllCategories(cats)
     setLoading(false)
   }
@@ -218,43 +219,81 @@ export default function TransactionsScreen() {
       </View>
 
       {showStartPicker && (
-        <View style={{ backgroundColor: '#ffffff', borderRadius: 16, borderWidth: 1, borderColor: '#e3e8e3', overflow: 'hidden' }}>
-          <DateTimePicker
-            value={startDate || new Date()}
-            mode="date"
-            display="spinner"
-            themeVariant="light"
-            onChange={(event, date) => {
-              if (date) setStartDate(date)
+        Platform.OS === 'web' ? (
+          <input
+            type="date"
+            value={startDate ? startDate.toISOString().split('T')[0] : ''}
+            onChange={(e) => {
+              if (e.target.value) setStartDate(new Date(e.target.value + 'T12:00:00'))
+              setShowStartPicker(false)
+            }}
+            style={{
+              backgroundColor: '#ffffff',
+              border: '2px solid #e3e8e3',
+              borderRadius: 12,
+              padding: '14px 16px',
+              fontSize: 16,
+              color: '#1a1a1a',
+              width: '100%',
+              boxSizing: 'border-box' as any,
+              cursor: 'pointer',
             }}
           />
-          <TouchableOpacity
-            style={styles.datePickerDoneBtn}
-            onPress={() => setShowStartPicker(false)}
-          >
-            <Text style={styles.datePickerDoneBtnText}>Done</Text>
-          </TouchableOpacity>
-        </View>
+        ) : (
+          <View style={{ backgroundColor: '#ffffff', borderRadius: 16, borderWidth: 1, borderColor: '#e3e8e3', overflow: 'hidden' }}>
+            <DateTimePicker
+              value={startDate || new Date()}
+              mode="date"
+              display="spinner"
+              themeVariant="light"
+              onChange={(event, date) => {
+                if (date) setStartDate(date)
+              }}
+            />
+            <TouchableOpacity style={styles.datePickerDoneBtn} onPress={() => setShowStartPicker(false)}>
+              <Text style={styles.datePickerDoneBtnText}>Done</Text>
+            </TouchableOpacity>
+          </View>
+        )
       )}
 
       {showEndPicker && (
-        <View style={{ backgroundColor: '#ffffff', borderRadius: 16, borderWidth: 1, borderColor: '#e3e8e3', overflow: 'hidden' }}>
-          <DateTimePicker
-            value={endDate || new Date()}
-            mode="date"
-            display="spinner"
-            themeVariant="light"
-            onChange={(event, date) => {
-              if (date) setEndDate(date)
+        Platform.OS === 'web' ? (
+          <input
+            type="date"
+            value={endDate ? endDate.toISOString().split('T')[0] : ''}
+            onChange={(e) => {
+              if (e.target.value) setEndDate(new Date(e.target.value + 'T12:00:00'))
+              setShowEndPicker(false)
+            }}
+            style={{
+              backgroundColor: '#ffffff',
+              border: '2px solid #e3e8e3',
+              borderRadius: 12,
+              padding: '14px 16px',
+              fontSize: 16,
+              color: '#1a1a1a',
+              width: '100%',
+              boxSizing: 'border-box' as any,
+              cursor: 'pointer',
             }}
           />
-          <TouchableOpacity
-            style={styles.datePickerDoneBtn}
-            onPress={() => setShowEndPicker(false)}
-          >
-            <Text style={styles.datePickerDoneBtnText}>Done</Text>
-          </TouchableOpacity>
-        </View>
+        ) : (
+          <View style={{ backgroundColor: '#ffffff', borderRadius: 16, borderWidth: 1, borderColor: '#e3e8e3', overflow: 'hidden' }}>
+            <DateTimePicker
+              value={endDate || new Date()}
+              mode="date"
+              display="spinner"
+              themeVariant="light"
+              onChange={(event, date) => {
+                if (date) setEndDate(date)
+              }}
+            />
+            <TouchableOpacity style={styles.datePickerDoneBtn} onPress={() => setShowEndPicker(false)}>
+              <Text style={styles.datePickerDoneBtnText}>Done</Text>
+            </TouchableOpacity>
+          </View>
+        )
       )}
 
       <View style={styles.filterRow}>

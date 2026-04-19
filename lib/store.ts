@@ -143,9 +143,8 @@ export function getPayPeriodDates(nextPayday: string, frequency: string): { star
   }
 
   const start = new Date(payday)
-  start.setDate(start.getDate() - periodDays)
   const end = new Date(payday)
-  end.setDate(end.getDate() - 1)
+  end.setDate(end.getDate() + periodDays - 1)
 
   return { start, end }
 

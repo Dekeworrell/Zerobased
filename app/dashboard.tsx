@@ -26,6 +26,7 @@ export default function DashboardScreen() {
   const [showPaydayModal, setShowPaydayModal] = useState(false)
   const [paydayIncomeSources, setPaydayIncomeSources] = useState<any[]>([])
   const scrollRef = useRef<ScrollView>(null)
+  const paydayShownRef = useRef(false)
 
   useFocusEffect(
     useCallback(() => {
@@ -65,9 +66,10 @@ export default function DashboardScreen() {
       if (profile?.default_account_id) setGlobalDefaultAccountId(profile.default_account_id)
 
       // Payday check
-      const todayStr = new Date().toISOString().split('T')[0]
+      const now = new Date()
+      const todayStr = new Date(now.getTime() - now.getTimezoneOffset() * 60 * 1000).toISOString().split('T')[0]
       const lastCheck = profile?.last_payday_check || ''
-      if (lastCheck !== todayStr && !showPaydayModal && income && income.length > 0) {
+      if (lastCheck !== todayStr && !showPaydayModal && !paydayShownRef.current && income && income.length > 0) {
         const isPayday = income.some((s: any) => {
           if (!s.next_payday) return false
           const paydays = s.next_payday.split('|')
@@ -78,6 +80,7 @@ export default function DashboardScreen() {
             ...s,
             income_type: s.income_type || 'fixed',
           })))
+          paydayShownRef.current = true
           setShowPaydayModal(true)
         }
       }

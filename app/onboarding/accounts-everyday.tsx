@@ -103,7 +103,6 @@ export default function AccountsEverydayScreen() {
                 value={account.label}
                 onChangeText={(val) => setLocalAccounts(accounts.map(a => a.type === account.type ? { ...a, label: val } : a))}
                 placeholderTextColor={Colors.textSecondary}
-                selectTextOnFocus
               />
               <TouchableOpacity onPress={() => setLocalAccounts(accounts.filter(a => a.type !== account.type))}>
                 <Text style={styles.deleteBtn}>✕</Text>
