@@ -5,7 +5,7 @@ import { ActivityIndicator, Alert, Platform, StyleSheet, Text, TextInput, Toucha
 import CurrencyInput from '../components/CurrencyInput'
 import KeyboardScrollView from '../components/KeyboardScrollView'
 import TransactionEditSheet from '../components/TransactionEditSheet'
-import { balanceChangeOnExpense, balanceChangeOnIncome, balanceChangeOnTransferFrom, balanceChangeOnTransferTo, isAssetAccount, isInvestmentAccount, isPayFromLiability, isPayToOnlyLiability, isPrimaryPayable } from '../constants/categories'
+import { balanceChangeOnExpense, balanceChangeOnIncome, balanceChangeOnTransferFrom, balanceChangeOnTransferTo, isAssetAccount, isInvestmentAccount, isPayFromLiability, isPrimaryPayable } from '../constants/categories'
 import { Colors } from '../constants/colors'
 import { checkBudgetAndNotify, schedulePaydayReminder } from '../lib/notifications'
 import { getPayPeriodDates, toMonthly } from '../lib/store'
@@ -57,6 +57,11 @@ export default function AddTransactionScreen() {
   const scrollRef = useRef<any>(null)
   const [showMoreIncomeAccounts, setShowMoreIncomeAccounts] = useState(false)
   const [showMoreAccounts, setShowMoreAccounts] = useState(false)
+  const [showMoreTransferToAccounts, setShowMoreTransferToAccounts] = useState(false)
+  const [showFromLiability, setShowFromLiability] = useState(false)
+  const [showFromRegistered, setShowFromRegistered] = useState(false)
+  const [showToRegistered, setShowToRegistered] = useState(false)
+  const [showToLiability, setShowToLiability] = useState(false)
   const [accountSectionExpanded, setAccountSectionExpanded] = useState(false)
 
   useFocusEffect(
@@ -367,7 +372,7 @@ export default function AddTransactionScreen() {
           <View style={styles.accountSection}>
             <Text style={styles.fieldLabel}>From account</Text>
             <View style={styles.accountList}>
-              {accounts.filter(a => !isAssetAccount(a.type) && !isInvestmentAccount(a.type) && !isPayToOnlyLiability(a.type)).map(acc => (
+              {accounts.filter(a => isPrimaryPayable(a.type)).map(acc => (
                 <TouchableOpacity
                   key={acc.id}
                   style={[styles.accountRow, selectedAccount?.id === acc.id && styles.accountRowActive]}
@@ -380,9 +385,68 @@ export default function AddTransactionScreen() {
                 </TouchableOpacity>
               ))}
             </View>
+
+            {accounts.filter(a => isPayFromLiability(a.type)).length > 0 && (
+              <>
+                <TouchableOpacity
+                  style={styles.moreAccountsBtn}
+                  onPress={() => setShowFromLiability(!showFromLiability)}
+                >
+                  <Text style={styles.moreAccountsBtnText}>
+                    {showFromLiability ? '▲ Hide' : '▼ Liability accounts'}
+                  </Text>
+                </TouchableOpacity>
+                {showFromLiability && (
+                  <View style={styles.accountList}>
+                    {accounts.filter(a => isPayFromLiability(a.type)).map(acc => (
+                      <TouchableOpacity
+                        key={acc.id}
+                        style={[styles.accountRow, selectedAccount?.id === acc.id && styles.accountRowActive]}
+                        onPress={() => setSelectedAccount(acc)}
+                      >
+                        <Text style={[styles.accountRowText, selectedAccount?.id === acc.id && styles.accountRowTextActive]}>
+                          🏦 {acc.label}
+                        </Text>
+                        {selectedAccount?.id === acc.id && <Text style={styles.accountRowCheck}>✓</Text>}
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+              </>
+            )}
+
+            {accounts.filter(a => isInvestmentAccount(a.type)).length > 0 && (
+              <>
+                <TouchableOpacity
+                  style={styles.moreAccountsBtn}
+                  onPress={() => setShowFromRegistered(!showFromRegistered)}
+                >
+                  <Text style={styles.moreAccountsBtnText}>
+                    {showFromRegistered ? '▲ Hide' : '▼ Registered accounts'}
+                  </Text>
+                </TouchableOpacity>
+                {showFromRegistered && (
+                  <View style={styles.accountList}>
+                    {accounts.filter(a => isInvestmentAccount(a.type)).map(acc => (
+                      <TouchableOpacity
+                        key={acc.id}
+                        style={[styles.accountRow, selectedAccount?.id === acc.id && styles.accountRowActive]}
+                        onPress={() => setSelectedAccount(acc)}
+                      >
+                        <Text style={[styles.accountRowText, selectedAccount?.id === acc.id && styles.accountRowTextActive]}>
+                          🏦 {acc.label}
+                        </Text>
+                        {selectedAccount?.id === acc.id && <Text style={styles.accountRowCheck}>✓</Text>}
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+              </>
+            )}
+
             <Text style={[styles.fieldLabel, { marginTop: 12 }]}>To account</Text>
             <View style={styles.accountList}>
-              {accounts.filter(a => a.id !== selectedAccount?.id && !isAssetAccount(a.type)).map(acc => (
+              {accounts.filter(a => a.id !== selectedAccount?.id && isPrimaryPayable(a.type)).map(acc => (
                 <TouchableOpacity
                   key={acc.id}
                   style={[styles.accountRow, toAccount?.id === acc.id && styles.accountRowActive]}
@@ -395,6 +459,65 @@ export default function AddTransactionScreen() {
                 </TouchableOpacity>
               ))}
             </View>
+
+            {accounts.filter(a => a.id !== selectedAccount?.id && isInvestmentAccount(a.type)).length > 0 && (
+              <>
+                <TouchableOpacity
+                  style={styles.moreAccountsBtn}
+                  onPress={() => setShowToRegistered(!showToRegistered)}
+                >
+                  <Text style={styles.moreAccountsBtnText}>
+                    {showToRegistered ? '▲ Hide' : '▼ Registered accounts'}
+                  </Text>
+                </TouchableOpacity>
+                {showToRegistered && (
+                  <View style={styles.accountList}>
+                    {accounts.filter(a => a.id !== selectedAccount?.id && isInvestmentAccount(a.type)).map(acc => (
+                      <TouchableOpacity
+                        key={acc.id}
+                        style={[styles.accountRow, toAccount?.id === acc.id && styles.accountRowActive]}
+                        onPress={() => setToAccount(acc)}
+                      >
+                        <Text style={[styles.accountRowText, toAccount?.id === acc.id && styles.accountRowTextActive]}>
+                          🏦 {acc.label}
+                        </Text>
+                        {toAccount?.id === acc.id && <Text style={styles.accountRowCheck}>✓</Text>}
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+              </>
+            )}
+
+            {accounts.filter(a => a.id !== selectedAccount?.id && isPayFromLiability(a.type)).length > 0 && (
+              <>
+                <TouchableOpacity
+                  style={styles.moreAccountsBtn}
+                  onPress={() => setShowToLiability(!showToLiability)}
+                >
+                  <Text style={styles.moreAccountsBtnText}>
+                    {showToLiability ? '▲ Hide' : '▼ Liability accounts'}
+                  </Text>
+                </TouchableOpacity>
+                {showToLiability && (
+                  <View style={styles.accountList}>
+                    {accounts.filter(a => a.id !== selectedAccount?.id && isPayFromLiability(a.type)).map(acc => (
+                      <TouchableOpacity
+                        key={acc.id}
+                        style={[styles.accountRow, toAccount?.id === acc.id && styles.accountRowActive]}
+                        onPress={() => setToAccount(acc)}
+                      >
+                        <Text style={[styles.accountRowText, toAccount?.id === acc.id && styles.accountRowTextActive]}>
+                          🏦 {acc.label}
+                        </Text>
+                        {toAccount?.id === acc.id && <Text style={styles.accountRowCheck}>✓</Text>}
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+              </>
+            )}
+
           </View>
         )}
 
@@ -604,7 +727,7 @@ export default function AddTransactionScreen() {
               </View>
             )}
 
-            {selectedCategory && (
+            {(selectedCategory || type === 'unexpected') && (
               <View style={styles.accountSection}>
                 <TouchableOpacity
                   style={styles.sectionHeader}
@@ -667,7 +790,7 @@ export default function AddTransactionScreen() {
                     <View style={[styles.checkbox, setAsDefault && styles.checkboxActive]}>
                       {setAsDefault && <Text style={styles.checkboxCheck}>✓</Text>}
                     </View>
-                    <Text style={styles.defaultToggleText}>Always use {selectedAccount.label} for {selectedCategory.label}</Text>
+                    <Text style={styles.defaultToggleText}>Always use {selectedAccount.label} for {selectedCategory?.label || 'this category'}</Text>
                   </TouchableOpacity>
                 )}
               </View>
