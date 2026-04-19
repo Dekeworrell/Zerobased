@@ -14,7 +14,7 @@ export const ASSET_ACCOUNT_TYPES = [
 
 export const INVESTMENT_ACCOUNT_TYPES = [
   'rrsp', 'tfsa', 'fhsa', 'resp', 'pension', 'margin',
-  '401k', 'ira', 'roth_ira', 'hsa', '529'
+  '401k', 'ira', 'roth_ira', 'hsa', '529', 'brokerage', 'crypto', 'other_investment'
 ]
 
 export const LIABILITY_PAY_FROM_TYPES = [

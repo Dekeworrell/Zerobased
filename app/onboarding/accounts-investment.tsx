@@ -1,5 +1,5 @@
 import { router } from 'expo-router'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import CurrencyInput from '../../components/CurrencyInput'
 import { Colors } from '../../constants/colors'
@@ -44,22 +44,6 @@ export default function AccountsInvestmentScreen() {
   )
 
   const [accounts, setLocalAccounts] = useState<Account[]>(existing)
-
-  useEffect(() => {
-    const existing = getOnboardingData().accounts
-    const nonInvestmentAccounts = existing.filter(a =>
-      !INVESTMENT_ACCOUNTS.some(d => a.type === d.id || a.type.startsWith(d.id + '_'))
-    )
-    setAccounts([...nonInvestmentAccounts, ...accounts])
-  }, [accounts])
-  
-  useEffect(() => {
-    const existing = getOnboardingData().accounts
-    const nonInvestmentAccounts = existing.filter(a =>
-      !INVESTMENT_ACCOUNTS.some(d => a.type === d.id || a.type.startsWith(d.id + '_'))
-    )
-    setAccounts([...nonInvestmentAccounts, ...accounts])
-  }, [accounts])
 
   function toggleAccount(type: string, label: string, icon: string, multi: boolean) {
     const exists = accounts.find(a => a.type === type)
