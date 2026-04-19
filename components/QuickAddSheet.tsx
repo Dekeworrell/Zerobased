@@ -32,6 +32,7 @@ export default function QuickAddSheet({ visible, category, accounts, categoryDef
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [setAsDefault, setSetAsDefault] = useState(false)
+  const [showMoreAccounts, setShowMoreAccounts] = useState(false)
 
   const getDefaultAccount = () => {
     if (!category) return null
@@ -130,18 +131,41 @@ export default function QuickAddSheet({ visible, category, accounts, categoryDef
   }
 
   function getAccountOrder(type: string): number {
-    const t = type.toLowerCase()
+    const t = baseType(type).replace(/[\s-]/g, '_')
     for (const key of Object.keys(ACCOUNT_ORDER)) {
-      if (t === key || t.startsWith(key) || t.includes(key)) return ACCOUNT_ORDER[key]
+      if (t === key || t.startsWith(key)) return ACCOUNT_ORDER[key]
     }
     return 99
   }
 
-  const sortedAccounts = [...accounts].sort((a, b) =>
-    getAccountOrder(a.type) - getAccountOrder(b.type)
-  )
+  const PRIMARY_TYPES = ['chequing', 'savings', 'cash', 'credit_card', 'credit', 'other']
+  const SECONDARY_TYPES = ['heloc', 'loc', 'line_of_credit', 'tfsa']
+
+  function isPayableAccount(type: string): boolean {
+    const t = baseType(type).replace(/[\s-]/g, '_')
+    return [...PRIMARY_TYPES, ...SECONDARY_TYPES].some(p => t === p || t.startsWith(p))
+  }
+
+  function isPrimaryAccount(type: string): boolean {
+    const t = baseType(type).replace(/[\s-]/g, '_')
+    return PRIMARY_TYPES.some(p => t === p || t.startsWith(p))
+  }
+
+  const payableAccounts = [...accounts]
+    .filter(a => isPayableAccount(a.type))
+    .filter((a, index, self) => self.findIndex(b => b.id === a.id) === index)
+    .sort((a, b) => getAccountOrder(a.type) - getAccountOrder(b.type))
+
+  const primaryAccounts = payableAccounts.filter(a => isPrimaryAccount(a.type))
+  const secondaryAccounts = payableAccounts.filter(a => !isPrimaryAccount(a.type))
+
+  const sortedAccounts = payableAccounts
 
   const currentAccount = getAccount()
+
+  function baseType(type: string): string {
+    return type.replace(/_\d+$/, '').toLowerCase()
+  }
 
   const ACCOUNT_ICONS: { [key: string]: string } = {
     chequing: '💳', savings: '🏦', cash: '💵',
@@ -155,9 +179,9 @@ export default function QuickAddSheet({ visible, category, accounts, categoryDef
   }
 
   function getAccountIcon(type: string): string {
-    const t = type.toLowerCase().replace(/[\s-]/g, '_')
+    const t = baseType(type).replace(/[\s-]/g, '_')
     for (const key of Object.keys(ACCOUNT_ICONS)) {
-      if (t === key || t.includes(key)) return ACCOUNT_ICONS[key]
+      if (t === key || t.startsWith(key)) return ACCOUNT_ICONS[key]
     }
     return '🏦'
   }
@@ -177,9 +201,9 @@ export default function QuickAddSheet({ visible, category, accounts, categoryDef
           </View>
           <Text style={styles.fieldLabel}>Amount</Text>
           <CurrencyInput style={styles.amountInput} placeholder="$0.00" value={amount} onChangeText={setAmount} autoFocus />
-          <Text style={styles.fieldLabel}>Account</Text>
+          <Text style={styles.fieldLabel}>Which account is this expense being paid from?</Text>
           <View style={styles.accountRow}>
-            {sortedAccounts.map(acc => (
+            {primaryAccounts.map(acc => (
               <TouchableOpacity
                 key={acc.id}
                 style={[styles.accountChip, (selectedAccount?.id === acc.id || (!selectedAccount && currentAccount?.id === acc.id)) && styles.accountChipActive]}
@@ -192,6 +216,27 @@ export default function QuickAddSheet({ visible, category, accounts, categoryDef
               </TouchableOpacity>
             ))}
           </View>
+          {secondaryAccounts.length > 0 && (
+            <TouchableOpacity style={styles.moreAccountsBtn} onPress={() => setShowMoreAccounts(!showMoreAccounts)}>
+              <Text style={styles.moreAccountsBtnText}>{showMoreAccounts ? '▲ Hide' : '▼ More accounts'}</Text>
+            </TouchableOpacity>
+          )}
+          {showMoreAccounts && (
+            <View style={styles.accountRow}>
+              {secondaryAccounts.map(acc => (
+                <TouchableOpacity
+                  key={acc.id}
+                  style={[styles.accountChip, (selectedAccount?.id === acc.id || (!selectedAccount && currentAccount?.id === acc.id)) && styles.accountChipActive]}
+                  onPress={() => setSelectedAccount(acc)}
+                >
+                  <Text style={styles.accountChipIcon}>{getAccountIcon(acc.type)}</Text>
+                  <Text style={[styles.accountChipText, (selectedAccount?.id === acc.id || (!selectedAccount && currentAccount?.id === acc.id)) && styles.accountChipTextActive]}>
+                    {acc.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
           {currentAccount && (
             <TouchableOpacity style={styles.defaultToggle} onPress={() => setSetAsDefault(!setAsDefault)}>
               <View style={[styles.checkbox, setAsDefault && styles.checkboxActive]}>
@@ -238,9 +283,9 @@ export default function QuickAddSheet({ visible, category, accounts, categoryDef
           autoFocus
         />
 
-        <Text style={styles.fieldLabel}>Account</Text>
+        <Text style={styles.fieldLabel}>Which account is this expense being paid from?</Text>
         <View style={styles.accountRow}>
-          {sortedAccounts.map(acc => (
+          {primaryAccounts.map(acc => (
             <TouchableOpacity
               key={acc.id}
               style={[styles.accountChip, (selectedAccount?.id === acc.id || (!selectedAccount && currentAccount?.id === acc.id)) && styles.accountChipActive]}
@@ -253,6 +298,27 @@ export default function QuickAddSheet({ visible, category, accounts, categoryDef
             </TouchableOpacity>
           ))}
         </View>
+        {secondaryAccounts.length > 0 && (
+          <TouchableOpacity style={styles.moreAccountsBtn} onPress={() => setShowMoreAccounts(!showMoreAccounts)}>
+            <Text style={styles.moreAccountsBtnText}>{showMoreAccounts ? '▲ Hide' : '▼ More accounts'}</Text>
+          </TouchableOpacity>
+        )}
+        {showMoreAccounts && (
+          <View style={styles.accountRow}>
+            {secondaryAccounts.map(acc => (
+              <TouchableOpacity
+                key={acc.id}
+                style={[styles.accountChip, (selectedAccount?.id === acc.id || (!selectedAccount && currentAccount?.id === acc.id)) && styles.accountChipActive]}
+                onPress={() => setSelectedAccount(acc)}
+              >
+                <Text style={styles.accountChipIcon}>{getAccountIcon(acc.type)}</Text>
+                <Text style={[styles.accountChipText, (selectedAccount?.id === acc.id || (!selectedAccount && currentAccount?.id === acc.id)) && styles.accountChipTextActive]}>
+                  {acc.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
 
         {currentAccount && (
           <TouchableOpacity style={styles.defaultToggle} onPress={() => setSetAsDefault(!setAsDefault)}>
@@ -339,4 +405,6 @@ const styles = StyleSheet.create({
   saveBtnText: { color: Colors.text, fontSize: 16, fontWeight: '600' },
   moreOptionsBtn: { alignItems: 'center', paddingVertical: 8 },
   moreOptionsBtnText: { color: Colors.primary, fontSize: 14 },
+  moreAccountsBtn: { alignItems: 'center', paddingVertical: 8, borderWidth: 1, borderColor: Colors.border, borderRadius: 20, paddingHorizontal: 16 },
+  moreAccountsBtnText: { color: Colors.primary, fontSize: 13, fontWeight: '500' },
 })

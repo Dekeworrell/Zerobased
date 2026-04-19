@@ -296,7 +296,7 @@ export default function ReportsScreen() {
 
   // ── Render ────────────────────────────────────────────────────
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <Text style={styles.title}>Reports</Text>
 
       {/* Month chips */}
