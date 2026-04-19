@@ -70,8 +70,23 @@ export async function scheduleBudgetOver(categoryLabel: string, percentOver: num
 }
 
 export async function schedulePaydayReminder(nextPayday: string) {
-  const payday = new Date(nextPayday + 'T09:00:00')
-  if (payday <= new Date()) return
+  let payday = new Date(nextPayday + 'T09:00:00')
+  const now = new Date()
+
+  // If payday already passed, try to advance by the most common cycles
+  // until we find a future date
+  if (payday <= now) {
+    const diff = now.getTime() - payday.getTime()
+    const daysPast = Math.ceil(diff / (1000 * 60 * 60 * 24))
+    // Advance by 14 days (biweekly) until future
+    let advances = 0
+    while (payday <= now && advances < 52) {
+      payday = new Date(payday.getTime() + 14 * 24 * 60 * 60 * 1000)
+      advances++
+    }
+  }
+
+  if (payday <= now) return
 
   await Notifications.scheduleNotificationAsync({
     content: {
@@ -95,6 +110,18 @@ export async function checkBudgetAndNotify(
 ) {
   if (!notificationsEnabled) return
 
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('last_notified_category, last_notified_threshold')
+    .eq('id', user.id)
+    .single()
+
+  const lastNotifiedCategory = profile?.last_notified_category || ''
+  const lastNotifiedThreshold = profile?.last_notified_threshold || 0
+
   for (const cat of categories) {
     if (cat.category_type === 'fixed') continue
 
@@ -107,17 +134,34 @@ export async function checkBudgetAndNotify(
 
     const percentUsed = (spent / budgeted) * 100
 
-    if (percentUsed >= 100) {
+    let thresholdReached = 0
+    if (percentUsed >= 100) thresholdReached = 100
+    else if (notifyAt2 && percentUsed >= notifyAt2) thresholdReached = notifyAt2
+    else if (notifyAt1 && percentUsed >= notifyAt1) thresholdReached = notifyAt1
+
+    if (thresholdReached === 0) continue
+
+    // Skip if already notified for this category + threshold combo
+    if (lastNotifiedCategory === cat.id && lastNotifiedThreshold >= thresholdReached) continue
+
+    // Fire the notification
+    if (thresholdReached >= 100) {
       const overPercent = percentUsed - 100
-      if (overPercent > 0 && overPercent % 10 < 1) {
+      if (overPercent > 0) {
         await scheduleBudgetOver(cat.label, overPercent)
-      } else if (percentUsed === 100) {
+      } else {
         await scheduleBudgetFull(cat.label)
       }
-    } else if (notifyAt2 && percentUsed >= notifyAt2) {
-      await scheduleBudgetWarning(cat.label, percentUsed, notifyAt2)
-    } else if (notifyAt1 && percentUsed >= notifyAt1) {
-      await scheduleBudgetWarning(cat.label, percentUsed, notifyAt1)
+    } else {
+      await scheduleBudgetWarning(cat.label, percentUsed, thresholdReached)
     }
+
+    // Save that we notified for this category + threshold
+    await supabase.from('profiles').update({
+      last_notified_category: cat.id,
+      last_notified_threshold: thresholdReached,
+    }).eq('id', user.id)
+
+    break // One notification per transaction save to avoid spam
   }
 }

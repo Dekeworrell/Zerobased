@@ -60,10 +60,15 @@ export function isPayToOnlyLiability(type: string): boolean {
 
 export function isPrimaryPayable(type: string): boolean {
   const t = baseType(type)
+  if (ASSET_ACCOUNT_TYPES.some(a => t === a || t.startsWith(a))) return false
+  if (INVESTMENT_ACCOUNT_TYPES.some(a => t === a || t.startsWith(a))) return false
   return PRIMARY_PAYABLE_TYPES.some(a => t === a || t.startsWith(a))
 }
 
 export function isPayableFromAccount(type: string): boolean {
+  const t = baseType(type)
+  if (ASSET_ACCOUNT_TYPES.some(a => t === a || t.startsWith(a))) return false
+  if (INVESTMENT_ACCOUNT_TYPES.some(a => t === a || t.startsWith(a))) return false
   return isPrimaryPayable(type) || isPayFromLiability(type)
 }
 

@@ -8,6 +8,7 @@ import { getOnboardingData, setAccounts } from '../../lib/store'
 const ASSET_TYPES = [
   { id: 'home', label: 'Home', icon: '🏠', multi: true },
   { id: 'vehicle', label: 'Vehicle', icon: '🚗', multi: true },
+  { id: 'recreation_vehicle', label: 'Recreation vehicle', icon: '🚤', multi: true },
   { id: 'cottage', label: 'Cottage/Cabin', icon: '🏡', multi: true },
   { id: 'rental', label: 'Rental property', icon: '🏢', multi: true },
   { id: 'business', label: 'Business', icon: '💼', multi: true },
@@ -62,8 +63,8 @@ export default function AssetsScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <TouchableOpacity onPress={() => router.back()} style={styles.backButton}> 
         <Text style={styles.backText}>← Back</Text>
       </TouchableOpacity>
 
@@ -107,7 +108,6 @@ export default function AssetsScreen() {
                 value={asset.label}
                 onChangeText={(val) => setAssets(assets.map(a => a.type === asset.type ? { ...a, label: val } : a))}
                 placeholderTextColor={Colors.textSecondary}
-                selectTextOnFocus
               />
               <TouchableOpacity onPress={() => setAssets(assets.filter(a => a.type !== asset.type))}>
                 <Text style={styles.deleteBtn}>✕</Text>

@@ -64,9 +64,9 @@ export default function AssignScreen() {
   const totalMonthlyExpenses = expenses.reduce(
     (sum, e) => sum + toMonthly(e.amount, e.frequency), 0
   )
-  const remaining = totalMonthlyIncome - totalMonthlyExpenses
-  const isZero = Math.abs(remaining) < 0.5
-  const isOver = remaining < -0.5
+  const remaining = Math.round((totalMonthlyIncome - totalMonthlyExpenses) * 100) / 100
+  const isZero = Math.abs(remaining) < 1
+  const isOver = remaining < -1
 
   const priorityExpenses = expenses.filter(e => e.category_type === 'priority')
   const fixedExpenses = expenses.filter(e => e.category_type === 'fixed')
@@ -216,10 +216,10 @@ export default function AssignScreen() {
           {isZero ? '🎉 $0' : '$' + Math.abs(remaining).toFixed(0) + '/mo'}
         </Text>
         <Text style={[styles.statusBiweekly, { color: getStatusColor() }]}>
-          {isZero ? 'Every dollar assigned!' : isOver ? 'Over budget by $' + Math.abs(remaining / 2).toFixed(0) + ' per paycheque' : '$' + Math.abs(remaining / 2).toFixed(0) + ' per paycheque'}
+          {isZero ? 'Every dollar assigned!' : isOver ? 'Over budget by $' + Math.floor(Math.abs(remaining / 2)) + ' per paycheque' : '$' + Math.floor(Math.abs(remaining / 2)) + ' per paycheque'}
         </Text>
         <Text style={styles.statusIncome}>
-          Income: ${totalMonthlyIncome.toFixed(0)}/mo · ${(totalMonthlyIncome / 2).toFixed(0)} per paycheque
+          Income: ${Math.round(totalMonthlyIncome)}/mo · ${Math.floor(totalMonthlyIncome / 2)} per paycheque
         </Text>
       </View>
 
