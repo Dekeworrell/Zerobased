@@ -1,5 +1,5 @@
 import { router } from 'expo-router'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import CurrencyInput from '../../components/CurrencyInput'
 import { Colors } from '../../constants/colors'
@@ -8,12 +8,12 @@ import { getOnboardingData, setAccounts } from '../../lib/store'
 const DEBT_ACCOUNTS = [
   { id: 'mortgage', label: 'Mortgage', icon: '🏠', multi: true },
   { id: 'heloc', label: 'HELOC', icon: '🏦', multi: true },
-  { id: 'loc', label: 'Line of Credit', icon: '💳', multi: true },
-  { id: 'credit', label: 'Credit card', icon: '💳', multi: true },
+  { id: 'line_of_credit', label: 'Line of Credit', icon: '💳', multi: true },
+  { id: 'credit_card', label: 'Credit card', icon: '💳', multi: true },
   { id: 'car_loan', label: 'Car loan', icon: '🚗', multi: true },
   { id: 'student_loan', label: 'Student loan', icon: '🎓', multi: true },
   { id: 'personal_loan', label: 'Personal loan', icon: '📋', multi: true },
-  { id: 'other_debt', label: 'Other', icon: '➕', multi: true },
+  { id: 'other_liability', label: 'Other', icon: '➕', multi: true },
 ]
 
 type Account = {
@@ -25,23 +25,11 @@ type Account = {
 
 export default function AccountsDebtScreen() {
   const existing = getOnboardingData().accounts.filter(a =>
-    DEBT_ACCOUNTS.find(e => e.id === a.type) ||
-    a.type.startsWith('other_debt') ||
-    a.type.startsWith('credit_') ||
-    a.type.startsWith('car_loan_') ||
-    a.type.startsWith('personal_loan_')
+    DEBT_ACCOUNTS.some(e => a.type === e.id || a.type.startsWith(e.id + '_'))
   )
 
   const [accounts, setLocalAccounts] = useState<Account[]>(existing)
   
-  useEffect(() => {
-    const existing = getOnboardingData().accounts
-    const nonDebtAccounts = existing.filter(a => 
-      !DEBT_ACCOUNTS.some(d => a.type === d.id || a.type.startsWith(d.id + '_'))
-    )
-    setAccounts([...nonDebtAccounts, ...accounts])
-  }, [accounts])
-
   function toggleAccount(type: string, label: string, icon: string, multi: boolean) {
     const exists = accounts.find(a => a.type === type)
     if (exists && !multi) {
@@ -108,7 +96,6 @@ export default function AccountsDebtScreen() {
                 value={account.label}
                 onChangeText={(val) => setLocalAccounts(accounts.map(a => a.type === account.type ? { ...a, label: val } : a))}
                 placeholderTextColor={Colors.textSecondary}
-                selectTextOnFocus
               />
               <TouchableOpacity onPress={() => setLocalAccounts(accounts.filter(a => a.type !== account.type))}>
                 <Text style={styles.deleteBtn}>✕</Text>

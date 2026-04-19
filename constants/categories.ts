@@ -18,7 +18,11 @@ export const INVESTMENT_ACCOUNT_TYPES = [
 ]
 
 export const LIABILITY_PAY_FROM_TYPES = [
-  'credit_card', 'heloc', 'line_of_credit', 'student_loan', 'personal_loan', 'other_liability'
+  'credit_card', 'heloc', 'line_of_credit', 'student_loan', 'personal_loan'
+]
+
+export const LIABILITY_SECONDARY_TYPES = [
+  'other_liability'
 ]
 
 export const LIABILITY_PAY_TO_ONLY_TYPES = [
@@ -26,7 +30,7 @@ export const LIABILITY_PAY_TO_ONLY_TYPES = [
 ]
 
 export const PRIMARY_PAYABLE_TYPES = [
-  'chequing', 'savings', 'cash', 'other'
+  'chequing', 'savings', 'cash', 'other_everyday', 'other'
 ]
 
 export function baseType(type: string): string {
@@ -45,12 +49,12 @@ export function isInvestmentAccount(type: string): boolean {
 
 export function isLiabilityAccount(type: string): boolean {
   const t = baseType(type)
-  return [...LIABILITY_PAY_FROM_TYPES, ...LIABILITY_PAY_TO_ONLY_TYPES].some(a => t === a || t.startsWith(a))
+  return [...LIABILITY_PAY_FROM_TYPES, ...LIABILITY_SECONDARY_TYPES, ...LIABILITY_PAY_TO_ONLY_TYPES].some(a => t === a || t.startsWith(a))
 }
 
 export function isPayFromLiability(type: string): boolean {
   const t = baseType(type)
-  return LIABILITY_PAY_FROM_TYPES.some(a => t === a || t.startsWith(a))
+  return [...LIABILITY_PAY_FROM_TYPES, ...LIABILITY_SECONDARY_TYPES].some(a => t === a || t.startsWith(a))
 }
 
 export function isPayToOnlyLiability(type: string): boolean {
@@ -62,6 +66,7 @@ export function isPrimaryPayable(type: string): boolean {
   const t = baseType(type)
   if (ASSET_ACCOUNT_TYPES.some(a => t === a || t.startsWith(a))) return false
   if (INVESTMENT_ACCOUNT_TYPES.some(a => t === a || t.startsWith(a))) return false
+  if ([...LIABILITY_PAY_FROM_TYPES, ...LIABILITY_SECONDARY_TYPES, ...LIABILITY_PAY_TO_ONLY_TYPES].some(a => t === a || t.startsWith(a))) return false
   return PRIMARY_PAYABLE_TYPES.some(a => t === a || t.startsWith(a))
 }
 

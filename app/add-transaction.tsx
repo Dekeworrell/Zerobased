@@ -5,7 +5,7 @@ import { ActivityIndicator, Alert, Platform, StyleSheet, Text, TextInput, Toucha
 import CurrencyInput from '../components/CurrencyInput'
 import KeyboardScrollView from '../components/KeyboardScrollView'
 import TransactionEditSheet from '../components/TransactionEditSheet'
-import { balanceChangeOnExpense, balanceChangeOnIncome, balanceChangeOnTransferFrom, balanceChangeOnTransferTo, isAssetAccount, isInvestmentAccount, isPayableFromAccount, isPayToOnlyLiability, isPrimaryPayable } from '../constants/categories'
+import { balanceChangeOnExpense, balanceChangeOnIncome, balanceChangeOnTransferFrom, balanceChangeOnTransferTo, isAssetAccount, isInvestmentAccount, isPayFromLiability, isPayToOnlyLiability, isPrimaryPayable } from '../constants/categories'
 import { Colors } from '../constants/colors'
 import { checkBudgetAndNotify, schedulePaydayReminder } from '../lib/notifications'
 import { getPayPeriodDates, toMonthly } from '../lib/store'
@@ -56,6 +56,8 @@ export default function AddTransactionScreen() {
   const [editingTransaction, setEditingTransaction] = useState<HistoryTransaction | null>(null)
   const scrollRef = useRef<any>(null)
   const [showMoreIncomeAccounts, setShowMoreIncomeAccounts] = useState(false)
+  const [showMoreAccounts, setShowMoreAccounts] = useState(false)
+  const [accountSectionExpanded, setAccountSectionExpanded] = useState(false)
 
   useFocusEffect(
     useCallback(() => {
@@ -68,7 +70,9 @@ export default function AddTransactionScreen() {
       setActiveTab('log')
       setCategoryHistory([])
       setToAccount(null)
+      setShowMoreAccounts(false)
       setShowMoreIncomeAccounts(false)
+      setAccountSectionExpanded(false)
       scrollRef.current?.scrollTo({ y: 0, animated: false })
       setDate(new Date(now.getTime() - now.getTimezoneOffset() * 60 * 1000))
       if (categoryId && categoryLabel && categoryIcon) {
@@ -199,6 +203,8 @@ export default function AddTransactionScreen() {
   function handleCategorySelect(cat: Category) {
     setSelectedCategory(cat)
     setCategoriesExpanded(false)
+    setShowMoreAccounts(false)
+    setAccountSectionExpanded(false)
     const catDefault = categoryDefaults[cat.id]
     if (catDefault) {
       const acc = accounts.find(a => a.id === catDefault)
@@ -554,12 +560,17 @@ export default function AddTransactionScreen() {
             )}
 
             {(type === 'expense' || type === 'unexpected') && (
-              <>
+              <View style={styles.accountSection}>
                 <TouchableOpacity style={styles.sectionHeader} onPress={() => setCategoriesExpanded(!categoriesExpanded)}>
-                  <Text style={styles.fieldLabel}>
-                    {type === 'unexpected' ? 'Unexpected expense for' : 'Category'}
-                    {selectedCategory ? ` — ${selectedCategory.icon} ${selectedCategory.label}` : ''}
-                  </Text>
+                  <View>
+                    <Text style={styles.sectionHeaderTitle}>
+                      {type === 'unexpected' ? 'Unexpected expense category' : 'Expense category'}
+                    </Text>
+                    {selectedCategory
+                      ? <Text style={styles.fieldLabelSub}>{selectedCategory.icon} {selectedCategory.label} selected</Text>
+                      : <Text style={styles.fieldLabelSub}>Which type of expense is this?</Text>
+                    }
+                  </View>
                   <Text style={styles.sectionChevron}>{categoriesExpanded ? '▲' : '▼'}</Text>
                 </TouchableOpacity>
                 {type === 'unexpected' && (
@@ -587,24 +598,67 @@ export default function AddTransactionScreen() {
                     ))}
                   </View>
                 )}
-              </>
+              </View>
             )}
 
             {selectedCategory && (
               <View style={styles.accountSection}>
-                <Text style={styles.fieldLabel}>Account for {selectedCategory.icon} {selectedCategory.label}</Text>
+                <TouchableOpacity
+                  style={styles.sectionHeader}
+                  onPress={() => setAccountSectionExpanded(!accountSectionExpanded)}
+                >
+                  <View>
+                    <Text style={styles.sectionHeaderTitle}>Payment account</Text>
+                    <Text style={styles.fieldLabelSub}>Which account are you paying this expense from?</Text>
+                  </View>
+                  <Text style={styles.sectionChevron}>{accountSectionExpanded ? '▲' : '▼'}</Text>
+                </TouchableOpacity>
+                {accountSectionExpanded && <>
                 <View style={styles.accountList}>
-                  {accounts.filter(a => isPayableFromAccount(a.type)).map(acc => (
-                    <TouchableOpacity
-                      key={acc.id}
-                      style={[styles.accountRow, selectedAccount?.id === acc.id && styles.accountRowActive]}
-                      onPress={() => setSelectedAccount(acc)}
-                    >
-                      <Text style={[styles.accountRowText, selectedAccount?.id === acc.id && styles.accountRowTextActive]}>🏦 {acc.label}</Text>
-                      {selectedAccount?.id === acc.id && <Text style={styles.accountRowCheck}>✓</Text>}
-                    </TouchableOpacity>
-                  ))}
+                  {accounts
+                    .filter(a => isPrimaryPayable(a.type))
+                    .filter((a, i, self) => self.findIndex(b => b.id === a.id) === i)
+                    .map(acc => (
+                      <TouchableOpacity
+                        key={acc.id}
+                        style={[styles.accountRow, selectedAccount?.id === acc.id && styles.accountRowActive]}
+                        onPress={() => setSelectedAccount(acc)}
+                      >
+                        <Text style={[styles.accountRowText, selectedAccount?.id === acc.id && styles.accountRowTextActive]}>🏦 {acc.label}</Text>
+                        {selectedAccount?.id === acc.id && <Text style={styles.accountRowCheck}>✓</Text>}
+                      </TouchableOpacity>
+                    ))}
                 </View>
+                {accounts.filter(a => isPayFromLiability(a.type)).length > 0 && (
+                  <>
+                    <TouchableOpacity
+                      style={styles.moreAccountsBtn}
+                      onPress={() => setShowMoreAccounts(!showMoreAccounts)}
+                    >
+                      <Text style={styles.moreAccountsBtnText}>
+                        {showMoreAccounts ? '▲ Hide' : '▼ More accounts'}
+                      </Text>
+                    </TouchableOpacity>
+                    {showMoreAccounts && (
+                      <View style={styles.accountList}>
+                        {accounts
+                          .filter(a => isPayFromLiability(a.type))
+                          .filter((a, i, self) => self.findIndex(b => b.id === a.id) === i)
+                          .map(acc => (
+                            <TouchableOpacity
+                              key={acc.id}
+                              style={[styles.accountRow, selectedAccount?.id === acc.id && styles.accountRowActive]}
+                              onPress={() => setSelectedAccount(acc)}
+                            >
+                              <Text style={[styles.accountRowText, selectedAccount?.id === acc.id && styles.accountRowTextActive]}>🏦 {acc.label}</Text>
+                              {selectedAccount?.id === acc.id && <Text style={styles.accountRowCheck}>✓</Text>}
+                            </TouchableOpacity>
+                          ))}
+                      </View>
+                    )}
+                  </>
+                )}
+                </>}
                 {selectedAccount && (
                   <TouchableOpacity style={styles.defaultToggle} onPress={() => setSetAsDefault(!setAsDefault)}>
                     <View style={[styles.checkbox, setAsDefault && styles.checkboxActive]}>
@@ -783,4 +837,6 @@ const styles = StyleSheet.create({
   floatingButton: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#f2f4f2', paddingHorizontal: 24, paddingVertical: 16, paddingBottom: 32, borderTopWidth: 1, borderTopColor: '#e3e8e3', alignItems: 'center' },
   moreAccountsBtn: { alignItems: 'center', paddingVertical: 8, borderWidth: 1, borderColor: Colors.border, borderRadius: 20, paddingHorizontal: 16 },
   moreAccountsBtnText: { color: Colors.primary, fontSize: 13, fontWeight: '500' },
+  fieldLabelSub: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
+  sectionHeaderTitle: { fontSize: 15, fontWeight: '600', color: Colors.text },
 })
