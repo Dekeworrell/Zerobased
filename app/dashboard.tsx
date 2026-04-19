@@ -2,7 +2,7 @@ import { router, useFocusEffect } from 'expo-router'
 import { useCallback, useState } from 'react'
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import PaydayModal from '../components/PaydayModal'
-import QuickAddSheet from '../components/QuickAddSheet'
+import { isLiabilityAccount } from '../constants/categories'
 import { Colors } from '../constants/colors'
 import { calculateBudgetStatus, getPayPeriodDates, toMonthly } from '../lib/store'
 import { supabase } from '../lib/supabase'
@@ -21,7 +21,6 @@ export default function DashboardScreen() {
   const [payPeriodStart, setPayPeriodStart] = useState<Date | null>(null)
   const [payPeriodEnd, setPayPeriodEnd] = useState<Date | null>(null)
   const [summaryView, setSummaryView] = useState<'cycle' | 'monthly'>('cycle')
-  const [quickAddCategory, setQuickAddCategory] = useState<{ id: string, label: string, icon: string } | null>(null)
   const [categoryDefaults, setCategoryDefaults] = useState<{ [categoryId: string]: string }>({})
   const [globalDefaultAccountId, setGlobalDefaultAccountId] = useState<string | null>(null)
   const [showPaydayModal, setShowPaydayModal] = useState(false)
@@ -177,19 +176,9 @@ export default function DashboardScreen() {
 
   const displayBudgeted = summaryView === 'monthly' ? monthlyBudgeted : totalBudgeted
 
-  const LIABILITY_TYPES = [
-    'mortgage', 'heloc', 'loc', 'carloan', 'studentloan', 'creditcard', 'other_liability',
-    'loan', 'credit', 'car_loan', 'student_loan', 'credit_card', 'line_of_credit',
-  ]
-
-  function isLiability(type: string) {
-    const t = type.toLowerCase()
-    return LIABILITY_TYPES.some(l => t.startsWith(l) || t.includes(l))
-  }
-
   const netWorth = accounts.reduce((sum, a) => {
     const balance = parseFloat(a.balance) || 0
-    return isLiability(a.type) ? sum - balance : sum + balance
+    return isLiabilityAccount(a.type) ? sum - balance : sum + balance
   }, 0)
 
   function getHour() {
@@ -343,7 +332,8 @@ export default function DashboardScreen() {
                 const displayAmount = summaryView === 'monthly' ? monthlyAmount : periodAmount
                 const displayLabel = summaryView === 'monthly' ? '/mo' : budgetCycle === 'paycycle' ? '/period' : '/mo'
                 return (
-                  <TouchableOpacity key={cat.id} style={styles.categoryCard} onPress={() => setQuickAddCategory({ id: cat.id, label: cat.label, icon: cat.icon })}>
+                  <TouchableOpacity key={cat.id} style={styles.categoryCard}
+                    onPress={() => router.push({ pathname: '/add-transaction', params: { categoryId: cat.id, categoryLabel: cat.label, categoryIcon: cat.icon } })}>
                     <View style={styles.categoryHeader}>
                       <View style={styles.categoryLeft}>
                         <Text style={styles.categoryIcon}>{cat.icon}</Text>
@@ -418,17 +408,6 @@ export default function DashboardScreen() {
         visible={showPaydayModal}
         incomeSources={paydayIncomeSources}
         onComplete={() => { setShowPaydayModal(false); loadDashboard() }}
-      />
-    )}
-    {!!quickAddCategory && (
-      <QuickAddSheet
-        visible={!!quickAddCategory}
-        category={quickAddCategory}
-        accounts={accounts}
-        categoryDefaults={categoryDefaults}
-        globalDefaultAccountId={globalDefaultAccountId}
-        onClose={() => setQuickAddCategory(null)}
-        onSaved={() => { setQuickAddCategory(null); loadDashboard() }}
       />
     )}
     </>

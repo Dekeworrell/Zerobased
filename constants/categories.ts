@@ -8,6 +8,93 @@ export type Category = {
   permanent?: boolean
 }
 
+export const ASSET_ACCOUNT_TYPES = [
+  'home', 'vehicle', 'recreation_vehicle', 'cottage', 'rental', 'business', 'other_asset'
+]
+
+export const INVESTMENT_ACCOUNT_TYPES = [
+  'rrsp', 'tfsa', 'fhsa', 'resp', 'pension', 'margin',
+  '401k', 'ira', 'roth_ira', 'hsa', '529'
+]
+
+export const LIABILITY_PAY_FROM_TYPES = [
+  'credit_card', 'heloc', 'line_of_credit', 'student_loan', 'personal_loan', 'other_liability'
+]
+
+export const LIABILITY_PAY_TO_ONLY_TYPES = [
+  'mortgage', 'car_loan'
+]
+
+export const PRIMARY_PAYABLE_TYPES = [
+  'chequing', 'savings', 'cash', 'other'
+]
+
+export function baseType(type: string): string {
+  return type.replace(/_\d+$/, '').toLowerCase().replace(/[\s-]/g, '_')
+}
+
+export function isAssetAccount(type: string): boolean {
+  const t = baseType(type)
+  return ASSET_ACCOUNT_TYPES.some(a => t === a || t.startsWith(a))
+}
+
+export function isInvestmentAccount(type: string): boolean {
+  const t = baseType(type)
+  return INVESTMENT_ACCOUNT_TYPES.some(a => t === a || t.startsWith(a))
+}
+
+export function isLiabilityAccount(type: string): boolean {
+  const t = baseType(type)
+  return [...LIABILITY_PAY_FROM_TYPES, ...LIABILITY_PAY_TO_ONLY_TYPES].some(a => t === a || t.startsWith(a))
+}
+
+export function isPayFromLiability(type: string): boolean {
+  const t = baseType(type)
+  return LIABILITY_PAY_FROM_TYPES.some(a => t === a || t.startsWith(a))
+}
+
+export function isPayToOnlyLiability(type: string): boolean {
+  const t = baseType(type)
+  return LIABILITY_PAY_TO_ONLY_TYPES.some(a => t === a || t.startsWith(a))
+}
+
+export function isPrimaryPayable(type: string): boolean {
+  const t = baseType(type)
+  return PRIMARY_PAYABLE_TYPES.some(a => t === a || t.startsWith(a))
+}
+
+export function isPayableFromAccount(type: string): boolean {
+  return isPrimaryPayable(type) || isPayFromLiability(type)
+}
+
+export function balanceChangeOnExpense(type: string, amount: number): number {
+  // Returns the new balance delta for an expense transaction
+  // Liability pay-from = balance goes UP (more debt)
+  // Asset/payable = balance goes DOWN
+  return isPayFromLiability(type) ? amount : -amount
+}
+
+export function balanceChangeOnIncome(type: string, amount: number): number {
+  // Returns the new balance delta for an income transaction
+  // Liability = balance goes DOWN (cash advance repaid)
+  // Asset/payable = balance goes UP
+  return isLiabilityAccount(type) ? -amount : amount
+}
+
+export function balanceChangeOnTransferFrom(type: string, amount: number): number {
+  // Sending money out
+  // Liability source = cash advance, balance goes UP
+  // Asset/payable source = balance goes DOWN
+  return isLiabilityAccount(type) ? amount : -amount
+}
+
+export function balanceChangeOnTransferTo(type: string, amount: number): number {
+  // Receiving money
+  // Liability destination = paying it off, balance goes DOWN
+  // Asset/payable destination = balance goes UP
+  return isLiabilityAccount(type) ? -amount : amount
+}
+
 export const EXPENSE_CATEGORIES: Category[] = [
   // Fixed
   { id: 'mortgage', label: 'Mortgage/Rent', icon: '🏠', type: 'fixed' },

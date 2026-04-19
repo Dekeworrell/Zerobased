@@ -1,6 +1,7 @@
 import DateTimePicker from '@react-native-community/datetimepicker'
 import { useEffect, useState } from 'react'
 import { ActivityIndicator, Alert, Keyboard, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { balanceChangeOnExpense, balanceChangeOnIncome } from '../constants/categories'
 import { Colors } from '../constants/colors'
 import { supabase } from '../lib/supabase'
 import CurrencyInput from './CurrencyInput'
@@ -83,15 +84,13 @@ export default function TransactionEditSheet({ visible, transaction, categories,
           .from('accounts').select('balance, type').eq('id', transaction!.account_id).single()
         if (acc) {
           const current = parseFloat(acc.balance) || 0
-          const LIABILITY_TYPES = ['mortgage', 'heloc', 'line_of_credit', 'credit_card', 'car_loan', 'student_loan', 'personal_loan', 'other_liability']
-          const baseT = acc.type.replace(/_\d+$/, '').toLowerCase().replace(/[\s-]/g, '_')
-          const accIsLiability = LIABILITY_TYPES.some(l => baseT === l || baseT.startsWith(l))
-          let newBalance: number
-          if (transaction!.type === 'income') {
-            newBalance = accIsLiability ? current + oldAmount - newAmount : current - oldAmount + newAmount
-          } else {
-            newBalance = accIsLiability ? current - oldAmount + newAmount : current + oldAmount - newAmount
-          }
+          const oldDelta = transaction!.type === 'income'
+            ? balanceChangeOnIncome(acc.type, oldAmount)
+            : balanceChangeOnExpense(acc.type, oldAmount)
+          const newDelta = transaction!.type === 'income'
+            ? balanceChangeOnIncome(acc.type, newAmount)
+            : balanceChangeOnExpense(acc.type, newAmount)
+          const newBalance = current - oldDelta + newDelta
           await supabase.from('accounts').update({ balance: newBalance }).eq('id', transaction!.account_id)
         }
       }
@@ -115,15 +114,10 @@ export default function TransactionEditSheet({ visible, transaction, categories,
                 .from('accounts').select('balance, type').eq('id', transaction!.account_id).single()
               if (acc) {
                 const current = parseFloat(acc.balance) || 0
-                const LIABILITY_TYPES = ['mortgage', 'heloc', 'line_of_credit', 'credit_card', 'car_loan', 'student_loan', 'personal_loan', 'other_liability']
-                const baseT = acc.type.replace(/_\d+$/, '').toLowerCase().replace(/[\s-]/g, '_')
-                const accIsLiability = LIABILITY_TYPES.some(l => baseT === l || baseT.startsWith(l))
-                let newBalance: number
-                if (transaction!.type === 'income') {
-                  newBalance = accIsLiability ? current + transaction!.amount : current - transaction!.amount
-                } else {
-                  newBalance = accIsLiability ? current - transaction!.amount : current + transaction!.amount
-                }
+                const delta = transaction!.type === 'income'
+                  ? balanceChangeOnIncome(acc.type, transaction!.amount)
+                  : balanceChangeOnExpense(acc.type, transaction!.amount)
+                const newBalance = current - delta
                 await supabase.from('accounts').update({ balance: newBalance }).eq('id', transaction!.account_id)
               }
             }

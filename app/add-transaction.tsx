@@ -5,6 +5,7 @@ import { ActivityIndicator, Alert, Platform, StyleSheet, Text, TextInput, Toucha
 import CurrencyInput from '../components/CurrencyInput'
 import KeyboardScrollView from '../components/KeyboardScrollView'
 import TransactionEditSheet from '../components/TransactionEditSheet'
+import { balanceChangeOnExpense, balanceChangeOnIncome, balanceChangeOnTransferFrom, balanceChangeOnTransferTo, isAssetAccount, isInvestmentAccount, isPayableFromAccount, isPayToOnlyLiability } from '../constants/categories'
 import { Colors } from '../constants/colors'
 import { checkBudgetAndNotify, schedulePaydayReminder } from '../lib/notifications'
 import { getPayPeriodDates, toMonthly } from '../lib/store'
@@ -16,13 +17,6 @@ type HistoryTransaction = {
   id: string; label: string; amount: number; date: string
   type: string; is_unexpected: boolean; category_id: string | null
   account_id: string | null; category: { label: string; icon: string } | null
-}
-
-const LIABILITY_TYPES = ['mortgage', 'heloc', 'line_of_credit', 'credit_card', 'car_loan', 'student_loan', 'personal_loan', 'other_liability']
-
-function isLiability(type: string): boolean {
-  const t = type.toLowerCase().replace(/[\s-]/g, '_')
-  return LIABILITY_TYPES.some(l => t === l || t.includes(l))
 }
 
 export default function AddTransactionScreen() {
@@ -241,66 +235,53 @@ export default function AddTransactionScreen() {
       const parsedAmount = parseFloat(amount)
 
       if (type === 'transfer') {
-        // Store transfer as single transaction
-        await supabase.from('transactions').insert({
-          user_id: user.id,
-          account_id: selectedAccount.id,
-          from_account_id: selectedAccount.id,
-          to_account_id: toAccount!.id,
-          label: label || `Transfer → ${toAccount!.label}`,
-          amount: parsedAmount,
-          date: formatDateForDB(date),
-          type: 'transfer',
-          is_unexpected: false,
-          category_id: null,
-        })
+          await supabase.from('transactions').insert({
+            user_id: user.id,
+            account_id: selectedAccount.id,
+            from_account_id: selectedAccount.id,
+            to_account_id: toAccount!.id,
+            label: label || `Transfer → ${toAccount!.label}`,
+            amount: parsedAmount,
+            date: formatDateForDB(date),
+            type: 'transfer',
+            is_unexpected: false,
+            category_id: null,
+          })
 
-        // From account balance logic
-        const { data: fromAcc } = await supabase.from('accounts').select('balance').eq('id', selectedAccount.id).single()
-        if (fromAcc) {
-          const current = parseFloat(fromAcc.balance) || 0
-          // Liability as source = cash advance, balance goes UP (more debt)
-          // Asset as source = sending money out, balance goes DOWN
-          const newBalance = isLiability(selectedAccount.type) ? current + parsedAmount : current - parsedAmount
-          await supabase.from('accounts').update({ balance: newBalance }).eq('id', selectedAccount.id)
-        }
-
-        // To account balance logic
-        const { data: toAcc } = await supabase.from('accounts').select('balance').eq('id', toAccount!.id).single()
-        if (toAcc) {
-          const current = parseFloat(toAcc.balance) || 0
-          // Liability as destination = paying it off, balance goes DOWN
-          // Asset as destination = receiving money, balance goes UP
-          const newBalance = isLiability(toAccount!.type) ? current - parsedAmount : current + parsedAmount
-          await supabase.from('accounts').update({ balance: newBalance }).eq('id', toAccount!.id)
-        }
-
-      } else {
-        await supabase.from('transactions').insert({
-          user_id: user.id,
-          category_id: type === 'unexpected' ? null : selectedCategory?.id || null,
-          account_id: selectedAccount.id,
-          label: label || selectedCategory?.label || 'Transaction',
-          amount: parsedAmount,
-          date: formatDateForDB(date),
-          type: type === 'unexpected' ? 'expense' : type,
-          is_unexpected: type === 'unexpected',
-        })
-
-        const { data: currentAccount } = await supabase
-          .from('accounts').select('balance').eq('id', selectedAccount.id).single()
-        if (currentAccount) {
-          const current = parseFloat(currentAccount.balance) || 0
-          let newBalance: number
-          if (type === 'income') {
-            newBalance = isLiability(selectedAccount.type) ? current - parsedAmount : current + parsedAmount
-          } else {
-            // expense or unexpected
-            newBalance = isLiability(selectedAccount.type) ? current + parsedAmount : current - parsedAmount
+          const { data: fromAcc } = await supabase.from('accounts').select('balance').eq('id', selectedAccount.id).single()
+          if (fromAcc) {
+            const current = parseFloat(fromAcc.balance) || 0
+            await supabase.from('accounts').update({ balance: current + balanceChangeOnTransferFrom(selectedAccount.type, parsedAmount) }).eq('id', selectedAccount.id)
           }
-          await supabase.from('accounts').update({ balance: newBalance }).eq('id', selectedAccount.id)
+
+          const { data: toAcc } = await supabase.from('accounts').select('balance').eq('id', toAccount!.id).single()
+          if (toAcc) {
+            const current = parseFloat(toAcc.balance) || 0
+            await supabase.from('accounts').update({ balance: current + balanceChangeOnTransferTo(toAccount!.type, parsedAmount) }).eq('id', toAccount!.id)
+          }
+
+        } else {
+          await supabase.from('transactions').insert({
+            user_id: user.id,
+            category_id: type === 'unexpected' ? null : selectedCategory?.id || null,
+            account_id: selectedAccount.id,
+            label: label || selectedCategory?.label || 'Transaction',
+            amount: parsedAmount,
+            date: formatDateForDB(date),
+            type: type === 'unexpected' ? 'expense' : type,
+            is_unexpected: type === 'unexpected',
+          })
+
+          const { data: currentAccount } = await supabase
+            .from('accounts').select('balance').eq('id', selectedAccount.id).single()
+          if (currentAccount) {
+            const current = parseFloat(currentAccount.balance) || 0
+            const delta = type === 'income'
+              ? balanceChangeOnIncome(selectedAccount.type, parsedAmount)
+              : balanceChangeOnExpense(selectedAccount.type, parsedAmount)
+            await supabase.from('accounts').update({ balance: current + delta }).eq('id', selectedAccount.id)
+          }
         }
-      }
 
       if (setAsDefault && selectedCategory) {
         await supabase.from('category_account_defaults').upsert({
@@ -373,7 +354,7 @@ export default function AddTransactionScreen() {
           <View style={styles.accountSection}>
             <Text style={styles.fieldLabel}>From account</Text>
             <View style={styles.accountList}>
-              {accounts.map(acc => (
+              {accounts.filter(a => !isAssetAccount(a.type) && !isInvestmentAccount(a.type) && !isPayToOnlyLiability(a.type)).map(acc => (
                 <TouchableOpacity
                   key={acc.id}
                   style={[styles.accountRow, selectedAccount?.id === acc.id && styles.accountRowActive]}
@@ -388,7 +369,7 @@ export default function AddTransactionScreen() {
             </View>
             <Text style={[styles.fieldLabel, { marginTop: 12 }]}>To account</Text>
             <View style={styles.accountList}>
-              {accounts.filter(a => a.id !== selectedAccount?.id).map(acc => (
+              {accounts.filter(a => a.id !== selectedAccount?.id && !isAssetAccount(a.type)).map(acc => (
                 <TouchableOpacity
                   key={acc.id}
                   style={[styles.accountRow, toAccount?.id === acc.id && styles.accountRowActive]}
@@ -609,7 +590,7 @@ export default function AddTransactionScreen() {
               <View style={styles.accountSection}>
                 <Text style={styles.fieldLabel}>Account for {selectedCategory.icon} {selectedCategory.label}</Text>
                 <View style={styles.accountList}>
-                  {accounts.map(acc => (
+                  {accounts.filter(a => isPayableFromAccount(a.type)).map(acc => (
                     <TouchableOpacity
                       key={acc.id}
                       style={[styles.accountRow, selectedAccount?.id === acc.id && styles.accountRowActive]}
