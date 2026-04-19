@@ -1,11 +1,11 @@
 import DateTimePicker from '@react-native-community/datetimepicker'
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ActivityIndicator, Alert, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import CurrencyInput from '../components/CurrencyInput'
 import KeyboardScrollView from '../components/KeyboardScrollView'
 import TransactionEditSheet from '../components/TransactionEditSheet'
-import { balanceChangeOnExpense, balanceChangeOnIncome, balanceChangeOnTransferFrom, balanceChangeOnTransferTo, isAssetAccount, isInvestmentAccount, isPayableFromAccount, isPayToOnlyLiability } from '../constants/categories'
+import { balanceChangeOnExpense, balanceChangeOnIncome, balanceChangeOnTransferFrom, balanceChangeOnTransferTo, isAssetAccount, isInvestmentAccount, isPayableFromAccount, isPayToOnlyLiability, isPrimaryPayable } from '../constants/categories'
 import { Colors } from '../constants/colors'
 import { checkBudgetAndNotify, schedulePaydayReminder } from '../lib/notifications'
 import { getPayPeriodDates, toMonthly } from '../lib/store'
@@ -54,6 +54,8 @@ export default function AddTransactionScreen() {
   const [budgetCycle, setBudgetCycle] = useState<'monthly' | 'paycycle'>('monthly')
   const [payPeriodLabel, setPayPeriodLabel] = useState('')
   const [editingTransaction, setEditingTransaction] = useState<HistoryTransaction | null>(null)
+  const scrollRef = useRef<any>(null)
+  const [showMoreIncomeAccounts, setShowMoreIncomeAccounts] = useState(false)
 
   useFocusEffect(
     useCallback(() => {
@@ -66,6 +68,8 @@ export default function AddTransactionScreen() {
       setActiveTab('log')
       setCategoryHistory([])
       setToAccount(null)
+      setShowMoreIncomeAccounts(false)
+      scrollRef.current?.scrollTo({ y: 0, animated: false })
       setDate(new Date(now.getTime() - now.getTimezoneOffset() * 60 * 1000))
       if (categoryId && categoryLabel && categoryIcon) {
         setSelectedCategory({ id: categoryId, label: categoryLabel, icon: categoryIcon })
@@ -327,7 +331,7 @@ export default function AddTransactionScreen() {
 
   return (
     <>
-      <KeyboardScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <KeyboardScrollView ref={scrollRef} style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <TouchableOpacity onPress={() => router.push('/dashboard')} style={styles.backButton}>
           <Text style={styles.backText}>← Back</Text>
         </TouchableOpacity>
@@ -616,7 +620,10 @@ export default function AddTransactionScreen() {
               <View style={styles.accountSection}>
                 <Text style={styles.fieldLabel}>Deposit to account</Text>
                 <View style={styles.accountList}>
-                  {accounts.map(acc => (
+                  {accounts
+                    .filter(a => !isAssetAccount(a.type) && isPrimaryPayable(a.type))
+                    .filter((a, index, self) => self.findIndex(b => b.id === a.id) === index)
+                    .map(acc => (
                     <TouchableOpacity
                       key={acc.id}
                       style={[styles.accountRow, selectedAccount?.id === acc.id && styles.accountRowActive]}
@@ -627,6 +634,33 @@ export default function AddTransactionScreen() {
                     </TouchableOpacity>
                   ))}
                 </View>
+                {accounts.filter(a => !isAssetAccount(a.type) && !isPrimaryPayable(a.type)).length > 0 && (
+                  <TouchableOpacity
+                    style={styles.moreAccountsBtn}
+                    onPress={() => setShowMoreIncomeAccounts(!showMoreIncomeAccounts)}
+                  >
+                    <Text style={styles.moreAccountsBtnText}>
+                      {showMoreIncomeAccounts ? '▲ Hide' : '▼ More accounts'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                {showMoreIncomeAccounts && (
+                  <View style={styles.accountList}>
+                    {accounts
+                      .filter(a => !isAssetAccount(a.type) && !isPrimaryPayable(a.type))
+                      .filter((a, index, self) => self.findIndex(b => b.id === a.id) === index)
+                      .map(acc => (
+                      <TouchableOpacity
+                        key={acc.id}
+                        style={[styles.accountRow, selectedAccount?.id === acc.id && styles.accountRowActive]}
+                        onPress={() => setSelectedAccount(acc)}
+                      >
+                        <Text style={[styles.accountRowText, selectedAccount?.id === acc.id && styles.accountRowTextActive]}>🏦 {acc.label}</Text>
+                        {selectedAccount?.id === acc.id && <Text style={styles.accountRowCheck}>✓</Text>}
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
               </View>
             )}
 
@@ -747,4 +781,6 @@ const styles = StyleSheet.create({
   disabled: { opacity: 0.4 },
   primaryButtonText: { color: Colors.text, fontSize: 16, fontWeight: '600' },
   floatingButton: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#f2f4f2', paddingHorizontal: 24, paddingVertical: 16, paddingBottom: 32, borderTopWidth: 1, borderTopColor: '#e3e8e3', alignItems: 'center' },
+  moreAccountsBtn: { alignItems: 'center', paddingVertical: 8, borderWidth: 1, borderColor: Colors.border, borderRadius: 20, paddingHorizontal: 16 },
+  moreAccountsBtnText: { color: Colors.primary, fontSize: 13, fontWeight: '500' },
 })

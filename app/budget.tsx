@@ -1,5 +1,5 @@
 import { router } from 'expo-router'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import CurrencyInput from '../components/CurrencyInput'
 import KeyboardScrollView from '../components/KeyboardScrollView'
@@ -25,8 +25,10 @@ export default function BudgetScreen() {
   const [monthlyIncome, setMonthlyIncome] = useState(0)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+  const scrollRef = useRef<any>(null)
 
   useEffect(() => {
+    scrollRef.current?.scrollTo({ y: 0, animated: false })
     loadBudget()
   }, [])
 
@@ -171,7 +173,7 @@ export default function BudgetScreen() {
 
   return (
     <>
-      <KeyboardScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <KeyboardScrollView ref={scrollRef} style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
 
       <Text style={styles.title}>Edit budget</Text>
       <Text style={styles.subtitle}>Adjust your monthly budget categories</Text>

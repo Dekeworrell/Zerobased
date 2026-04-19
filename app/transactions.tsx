@@ -1,6 +1,6 @@
 import DateTimePicker from '@react-native-community/datetimepicker'
 import { router, useFocusEffect } from 'expo-router'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import TransactionEditSheet from '../components/TransactionEditSheet'
 import { Colors } from '../constants/colors'
@@ -34,9 +34,11 @@ export default function TransactionsScreen() {
   const [showEndPicker, setShowEndPicker] = useState(false)
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null)
   const [allCategories, setAllCategories] = useState<{ id: string; label: string; icon: string }[]>([])
+  const scrollRef = useRef<ScrollView>(null)
 
   useFocusEffect(
     useCallback(() => {
+      scrollRef.current?.scrollTo({ y: 0, animated: false })
       loadTransactions()
     }, [])
   )
@@ -146,7 +148,7 @@ export default function TransactionsScreen() {
 
   return (
     <>
-    <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+    <ScrollView ref={scrollRef} style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
 
       <View style={styles.headerRow}>
         <Text style={styles.title}>Transactions</Text>

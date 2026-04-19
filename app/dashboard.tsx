@@ -1,5 +1,5 @@
 import { router, useFocusEffect } from 'expo-router'
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import PaydayModal from '../components/PaydayModal'
 import { isLiabilityAccount } from '../constants/categories'
@@ -25,9 +25,12 @@ export default function DashboardScreen() {
   const [globalDefaultAccountId, setGlobalDefaultAccountId] = useState<string | null>(null)
   const [showPaydayModal, setShowPaydayModal] = useState(false)
   const [paydayIncomeSources, setPaydayIncomeSources] = useState<any[]>([])
+  const scrollRef = useRef<ScrollView>(null)
 
   useFocusEffect(
     useCallback(() => {
+      setCategoriesExpanded(false)
+      scrollRef.current?.scrollTo({ y: 0, animated: false })
       loadDashboard()
     }, [])
   )
@@ -199,7 +202,7 @@ export default function DashboardScreen() {
 
   return (
     <>
-    <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+    <ScrollView ref={scrollRef} style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
 
       <View style={styles.header}>
         <View style={{ flex: 1, marginRight: 8 }}>

@@ -1,3 +1,4 @@
+import { forwardRef } from 'react'
 import { Platform, ScrollView } from 'react-native'
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view'
 
@@ -8,10 +9,11 @@ type Props = {
   children: React.ReactNode
 }
 
-export default function KeyboardScrollView({ style, contentContainerStyle, keyboardShouldPersistTaps, children }: Props) {
+const KeyboardScrollView = forwardRef<any, Props>(({ style, contentContainerStyle, keyboardShouldPersistTaps, children }, ref) => {
   if (Platform.OS === 'web') {
     return (
       <ScrollView
+        ref={ref}
         style={style}
         contentContainerStyle={contentContainerStyle}
         keyboardShouldPersistTaps={keyboardShouldPersistTaps}
@@ -32,4 +34,8 @@ export default function KeyboardScrollView({ style, contentContainerStyle, keybo
       {children}
     </KeyboardAwareScrollView>
   )
-}
+})
+
+KeyboardScrollView.displayName = 'KeyboardScrollView'
+
+export default KeyboardScrollView

@@ -1,5 +1,5 @@
 import { router, useFocusEffect } from 'expo-router'
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import CurrencyInput from '../components/CurrencyInput'
 import { baseType as getBaseType, isLiabilityAccount } from '../constants/categories'
@@ -74,13 +74,14 @@ export default function AccountsScreen() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+  const scrollRef = useRef<ScrollView>(null)
 
   useFocusEffect(
     useCallback(() => {
+      scrollRef.current?.scrollTo({ y: 0, animated: false })
       loadAccounts()
     }, [])
   )
-
   async function loadAccounts() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { router.replace('/'); return }
@@ -214,7 +215,7 @@ export default function AccountsScreen() {
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-    <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+    <ScrollView ref={scrollRef} style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <Text style={styles.title}>Accounts</Text>
 
       <Text style={styles.sectionTitle}>Assets</Text>
