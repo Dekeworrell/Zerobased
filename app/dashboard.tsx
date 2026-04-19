@@ -67,7 +67,7 @@ export default function DashboardScreen() {
       // Payday check
       const todayStr = new Date().toISOString().split('T')[0]
       const lastCheck = profile?.last_payday_check || ''
-      if (lastCheck !== todayStr && income && income.length > 0) {
+      if (lastCheck !== todayStr && !showPaydayModal && income && income.length > 0) {
         const isPayday = income.some((s: any) => {
           if (!s.next_payday) return false
           const paydays = s.next_payday.split('|')

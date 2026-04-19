@@ -1,5 +1,5 @@
 import { router } from 'expo-router'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import CurrencyInput from '../../components/CurrencyInput'
 import { Colors } from '../../constants/colors'
@@ -28,14 +28,6 @@ export default function AssetsScreen() {
   )
 
   const [assets, setAssets] = useState<Asset[]>(existing)
-
-  useEffect(() => {
-    const existing = getOnboardingData().accounts
-    const nonAssets = existing.filter(a =>
-      !ASSET_TYPES.some(d => a.type === d.id || a.type.startsWith(d.id + '_'))
-    )
-    setAccounts([...nonAssets, ...assets])
-  }, [assets])
 
   function toggleAsset(type: string, label: string, icon: string, multi?: boolean) {
     const exists = assets.find(a => a.type === type)

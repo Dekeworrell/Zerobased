@@ -103,8 +103,11 @@ export default function PaydayModal({ visible, incomeSources, onComplete }: Prop
         totalActual += actualAmount
       }
 
-      // Mark payday as checked today
+      // Mark payday as checked today — do this before anything else so re-renders don't re-trigger
       await supabase.from('profiles').update({ last_payday_check: dateStr }).eq('id', user.id)
+
+      // Small delay to ensure the profile update is committed before dashboard reloads
+      await new Promise(resolve => setTimeout(resolve, 300))
 
       const diff = totalActual - totalBudgeted
 
@@ -132,11 +135,14 @@ export default function PaydayModal({ visible, incomeSources, onComplete }: Prop
             <Text style={styles.emoji}>📉</Text>
             <Text style={styles.title}>You're ${shortfallAmount.toLocaleString('en-CA', { maximumFractionDigits: 0 })} short this cycle</Text>
             <Text style={styles.body}>
-              Your take-home was less than expected. We recommend reviewing your budget to find savings — or carry the shortfall and we'll track it in your reports.
+              Your take-home was less than expected. Your budget now reflects your actual pay. We recommend reviewing your budget to find savings — or carry the shortfall and we'll track it in your reports.
             </Text>
             <TouchableOpacity
               style={styles.primaryBtn}
-              onPress={() => { onComplete(); router.push('/budget') }}
+              onPress={() => {
+                onComplete()
+                setTimeout(() => router.push('/budget'), 300)
+              }}
             >
               <Text style={styles.primaryBtnText}>Review Budget</Text>
             </TouchableOpacity>
@@ -155,13 +161,16 @@ export default function PaydayModal({ visible, incomeSources, onComplete }: Prop
         <View style={styles.overlay}>
           <View style={styles.modal}>
             <Text style={styles.emoji}>🎉</Text>
-            <Text style={styles.title}>Extra ${ extraAmount.toLocaleString('en-CA', { maximumFractionDigits: 0 })} this cycle!</Text>
+            <Text style={styles.title}>Extra ${extraAmount.toLocaleString('en-CA', { maximumFractionDigits: 0 })} this cycle!</Text>
             <Text style={styles.body}>
-              Nice! You earned more than expected. Consider paying down high-interest debt first, then put the rest toward your goals.
+              Nice! You earned more than expected. Your budget now shows the extra cash — consider paying down high-interest debt first, then put the rest toward your goals.
             </Text>
             <TouchableOpacity
               style={styles.primaryBtn}
-              onPress={() => { onComplete(); router.push('/onboarding/assign') }}
+              onPress={() => {
+                onComplete()
+                setTimeout(() => router.push('/onboarding/assign'), 300)
+              }}
             >
               <Text style={styles.primaryBtnText}>Assign It</Text>
             </TouchableOpacity>
