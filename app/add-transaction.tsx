@@ -238,7 +238,7 @@ export default function AddTransactionScreen() {
       if (!toAccount) { Alert.alert('Missing account', 'Please select the To account.'); return }
       if (selectedAccount.id === toAccount.id) { Alert.alert('Same account', 'From and To accounts must be different.'); return }
     } else {
-      if (!selectedAccount) { Alert.alert('No account selected', 'Please select an account to log this transaction against.'); return }
+      if (!selectedAccount) { setError('Please select a payment account before saving.'); return }
     }
 
     setSaving(true)

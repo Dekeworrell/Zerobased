@@ -323,13 +323,18 @@ export default function AssignScreen() {
         </View>
       )}
 
-      {remaining > 0 && (
-        <View style={styles.remainingBox}>
-          <Text style={styles.remainingTitle}>💡 You have ${remaining.toFixed(0)}/mo unassigned</Text>
-          <Text style={styles.remainingSubtitle}>
-            Add priority items below to put this money to work
-          </Text>
-          <View style={styles.priorityChips}>
+      <View style={styles.remainingBox}>
+        <Text style={styles.remainingTitle}>
+          {remaining > 0
+            ? `💡 You have $${remaining.toFixed(0)}/mo unassigned`
+            : '⭐ Pay yourself first'}
+        </Text>
+        <Text style={styles.remainingSubtitle}>
+          {remaining > 0
+            ? 'Add savings goals and investments below to put this money to work. Paying yourself first means treating savings like a bill — it gets paid before anything else.'
+            : 'Even when your budget is tight, consider adding a small amount to savings or investments. Paying yourself first — even $25/paycheque — builds the habit that compounds over time.'}
+        </Text>
+        <View style={styles.priorityChips}>
             {PRIORITY_ITEMS.filter(p => !expenses.find(e => e.id === p.id)).map(item => (
               <TouchableOpacity
                 key={item.id}
@@ -349,14 +354,13 @@ export default function AssignScreen() {
             ))}
           </View>
         </View>
-      )}
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
       <TouchableOpacity
-        style={[styles.primaryButton, (isOver || saving) && styles.disabled]}
+        style={[styles.primaryButton, saving && styles.disabled]}
         onPress={handleFinish}
-        disabled={isOver || saving}
+        disabled={saving}
       >
         {saving
           ? <ActivityIndicator color={Colors.text} />
@@ -364,6 +368,10 @@ export default function AssignScreen() {
               {isZero ? '🎉 Start budgeting!' : 'Continue to dashboard'}
             </Text>
         }
+      </TouchableOpacity>
+
+      <TouchableOpacity onPress={handleFinish} style={{ paddingVertical: 12, alignItems: 'center' }}>
+        <Text style={{ color: Colors.textSecondary, fontSize: 14 }}>Skip for now</Text>
       </TouchableOpacity>
     </ScrollView>
   )

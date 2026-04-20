@@ -15,6 +15,9 @@ const GOALS = [
   { id: 'invest', label: 'Start investing', icon: '📈' },
   { id: 'budget', label: 'Get control of my budget', icon: '📊' },
   { id: 'wealth', label: 'Build long term wealth', icon: '💰' },
+  { id: 'savings', label: 'Build savings', icon: '🏦' },
+  { id: 'project', label: 'Save for a project', icon: '🔨' },
+  { id: 'other', label: 'Other', icon: '➕' },
 ]
 
 const TIMELINES = [
