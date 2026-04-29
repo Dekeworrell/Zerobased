@@ -39,7 +39,7 @@ export default function SignUpScreen() {
         })
       }
       setCountry(country)
-      router.replace('/onboarding/tracking-method')
+      router.replace({ pathname: '/welcome', params: { country } })
     } else {
       if (data.user) {
         await supabase.from('profiles').upsert({

@@ -46,6 +46,7 @@ export default function RootLayout() {
       <Tabs.Screen name="onboarding" options={{ href: null, tabBarStyle: { display: 'none' } }} />
       <Tabs.Screen name="add-transaction" options={{ href: null, tabBarStyle: { display: 'none' } }} />
       <Tabs.Screen name="budget-adjust" options={{ href: null, tabBarStyle: { display: 'none' } }} />
+      <Tabs.Screen name="welcome" options={{ href: null, tabBarStyle: { display: 'none' } }} />
       <Tabs.Screen name="settings" options={{ href: null, tabBarStyle: { display: 'none' } }} />
       <Tabs.Screen
         name="budget"
