@@ -1,6 +1,7 @@
 import { Tabs } from 'expo-router'
 import { useEffect } from 'react'
 import { Platform, Text, View } from 'react-native'
+import 'react-native-url-polyfill/auto'
 import { Colors } from '../constants/colors'
 import { registerForPushNotifications } from '../lib/notifications'
 import { initStore } from '../lib/store'
