@@ -313,7 +313,8 @@ backButton: {
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
-    marginTop: 8,
+    width: '100%',
+    maxWidth: 500,
   },
   primaryButtonText: {
     color: Colors.text,

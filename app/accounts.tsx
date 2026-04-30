@@ -413,7 +413,8 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
-    marginTop: 8,
+    width: '100%',
+    maxWidth: 500,
   },
   disabled: {
     opacity: 0.4,
