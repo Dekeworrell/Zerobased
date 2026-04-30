@@ -93,6 +93,8 @@ export default function ReportsScreen() {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.replace('/'); return }
+      const { data: householdIds } = await supabase.rpc('get_household_user_ids')
+      const userIds: string[] = householdIds || [user.id]
 
       const twelveMonthsAgo = new Date()
       twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 11)
@@ -108,17 +110,17 @@ export default function ReportsScreen() {
         { data: snaps },
       ] = await Promise.all([
         supabase.from('profiles').select('goals, primary_goal').eq('id', user.id).single(),
-        supabase.from('income_sources').select('*').eq('user_id', user.id),
-        supabase.from('accounts').select('*').eq('user_id', user.id),
+        supabase.from('income_sources').select('*').in('user_id', userIds),
+        supabase.from('accounts').select('*').in('user_id', userIds),
         supabase.from('transactions')
           .select('amount, date, type, is_unexpected, category:budget_categories(label, icon)')
-          .eq('user_id', user.id)
+          .in('user_id', userIds)
           .gte('date', fromDate)
           .order('date', { ascending: false }),
-        supabase.from('budget_categories').select('*').eq('user_id', user.id),
+        supabase.from('budget_categories').select('*').in('user_id', userIds),
         supabase.from('monthly_snapshots')
           .select('month, net_worth, total_assets, total_liabilities')
-          .eq('user_id', user.id)
+          .in('user_id', userIds)
           .order('month', { ascending: true })
           .limit(12),
       ])

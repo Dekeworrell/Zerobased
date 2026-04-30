@@ -50,6 +50,8 @@ export default function TransactionsScreen() {
   async function loadTransactions() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
+    const { data: householdIds } = await supabase.rpc('get_household_user_ids')
+    const userIds: string[] = householdIds || [user.id]
 
     const [{ data }, { data: cats }] = await Promise.all([
       supabase
@@ -64,10 +66,10 @@ export default function TransactionsScreen() {
           category_id,
           account_id
         `)
-        .eq('user_id', user.id)
+        .in('user_id', userIds)
         .order('date', { ascending: false })
         .limit(500),
-      supabase.from('budget_categories').select('id, label, icon').eq('user_id', user.id),
+      supabase.from('budget_categories').select('id, label, icon').in('user_id', userIds),
     ])
 
     if (data) {

@@ -19,6 +19,14 @@ export default function SettingsScreen() {
   const [paychequeReminders, setPaychequeReminders] = useState(true)
   const [trackingMethod, setTrackingMethod] = useState('manual')
   const [budgetCycleLocal, setBudgetCycleLocal] = useState<'monthly' | 'paycycle'>('monthly')
+  const [householdId, setHouseholdId] = useState<string | null>(null)
+  const [partnerEmail, setPartnerEmail] = useState('')
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [inviteSent, setInviteSent] = useState(false)
+  const [inviteCode, setInviteCode] = useState('')
+  const [joiningHousehold, setJoiningHousehold] = useState(false)
+  const [pendingInvite, setPendingInvite] = useState<any>(null)
+  const [householdLoading, setHouseholdLoading] = useState(false)
 
   useEffect(() => {
     loadProfile()
@@ -43,6 +51,35 @@ export default function SettingsScreen() {
       setNotificationsEnabled(profile.notifications_enabled ?? true)
       setNotifyAt1(profile.notify_at_percent_1 ?? 80)
       setNotifyAt2(profile.notify_at_percent_2 ?? 90)
+      setHouseholdId(profile.household_id || null)
+
+      // Load partner info if in a household
+      if (profile.household_id) {
+        const { data: partner } = await supabase
+          .from('profiles')
+          .select('name, id')
+          .eq('household_id', profile.household_id)
+          .neq('id', user.id)
+          .single()
+        if (partner) {
+          const { data: partnerUser } = await supabase
+            .from('auth.users')
+            .select('email')
+            .eq('id', partner.id)
+            .single()
+          setPartnerEmail(partnerUser?.email || partner.name || 'Partner')
+        }
+      }
+
+      // Check for pending invite sent to this user's email
+      const { data: invite } = await supabase
+        .from('household_invitations')
+        .select('*')
+        .eq('invited_email', user.email || '')
+        .eq('accepted', false)
+        .gt('expires_at', new Date().toISOString())
+        .single()
+      if (invite) setPendingInvite(invite)
     }
 
     setLoading(false)
@@ -78,6 +115,72 @@ export default function SettingsScreen() {
     await supabase.auth.signOut()
     clearOnboardingData()
     router.replace('/')
+  }
+
+  async function acceptInvite() {
+    if (!pendingInvite) return
+    setHouseholdLoading(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      await supabase.from('profiles')
+        .update({ household_id: pendingInvite.household_id })
+        .eq('id', user.id)
+      await supabase.from('household_invitations')
+        .update({ accepted: true })
+        .eq('id', pendingInvite.id)
+      setHouseholdId(pendingInvite.household_id)
+      setPendingInvite(null)
+      setSuccess(true)
+      setTimeout(() => setSuccess(false), 2000)
+    } catch (err: any) {
+      setError(err.message)
+    }
+    setHouseholdLoading(false)
+  }
+
+  async function leaveHousehold() {
+    const confirm = Platform.OS === 'web'
+      ? window.confirm('Leave household? You will no longer share this budget.')
+      : await new Promise<boolean>(resolve => Alert.alert(
+          'Leave household',
+          'You will no longer share this budget with your partner.',
+          [{ text: 'Cancel', onPress: () => resolve(false), style: 'cancel' },
+           { text: 'Leave', onPress: () => resolve(true), style: 'destructive' }]
+        ))
+    if (!confirm) return
+    setHouseholdLoading(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      await supabase.from('profiles').update({ household_id: null }).eq('id', user.id)
+      setHouseholdId(null)
+      setPartnerEmail('')
+    } catch (err: any) {
+      setError(err.message)
+    }
+    setHouseholdLoading(false)
+  }
+
+async function sendInvite() {
+    if (!inviteEmail.trim()) return
+    setHouseholdLoading(true)
+    setError('')
+    try {
+      const { data, error } = await supabase.rpc('create_household_and_invite', {
+        invited_email_param: inviteEmail.trim().toLowerCase()
+      })
+
+      if (error) throw error
+
+      setHouseholdId(data.household_id)
+      setInviteCode(data.token)
+      setInviteSent(true)
+      setInviteEmail('')
+    } catch (err: any) {
+      setError(err.message)
+    }
+    setHouseholdLoading(false)
   }
 
   async function handleDeleteAccount() {
@@ -288,6 +391,96 @@ export default function SettingsScreen() {
           <Text style={styles.linkRowText}>Redo budget setup</Text>
           <Text style={styles.linkRowChevron}>›</Text>
         </TouchableOpacity>
+      </View>
+<View style={styles.section}>
+        <Text style={styles.sectionTitle}>Household</Text>
+
+        {householdId && partnerEmail ? (
+          <>
+            <View style={styles.partnerCard}>
+              <Text style={styles.partnerIcon}>👫</Text>
+              <View style={styles.partnerInfo}>
+                <Text style={styles.partnerName}>Sharing with {partnerEmail}</Text>
+                <Text style={styles.switchSubLabel}>You share the same budget and transactions</Text>
+              </View>
+            </View>
+            <TouchableOpacity
+              style={styles.leaveBtn}
+              onPress={leaveHousehold}
+              disabled={householdLoading}
+            >
+              <Text style={styles.leaveBtnText}>Leave household</Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <>
+            {pendingInvite && (
+              <View style={styles.inviteCard}>
+                <Text style={styles.inviteCardTitle}>📬 You have a pending invite!</Text>
+                <Text style={styles.switchSubLabel}>
+                  Someone invited you to share their budget.
+                </Text>
+                <TouchableOpacity
+                  style={styles.acceptBtn}
+                  onPress={acceptInvite}
+                  disabled={householdLoading}
+                >
+                  {householdLoading
+                    ? <ActivityIndicator color={Colors.text} />
+                    : <Text style={styles.acceptBtnText}>Accept Invite</Text>
+                  }
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {!pendingInvite && (
+              <>
+                <Text style={styles.switchSubLabel}>
+                  Invite a partner to share your budget. They'll be able to log transactions and see the same dashboard.
+                </Text>
+                {inviteSent ? (
+                  <View style={styles.inviteCard}>
+                    <Text style={styles.inviteCardTitle}>✅ Invite sent!</Text>
+                    <Text style={styles.switchSubLabel}>
+                      Share this code with your partner:
+                    </Text>
+                    <Text style={styles.inviteCode}>{inviteCode}</Text>
+                    <Text style={styles.switchSubLabel}>
+                      They'll see the invite when they open the app on their device.
+                    </Text>
+                    <TouchableOpacity onPress={() => setInviteSent(false)}>
+                      <Text style={[styles.switchSubLabel, { color: Colors.primary, marginTop: 4 }]}>
+                        Send another invite
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <View style={styles.inviteRow}>
+                    <TextInput
+                      style={[styles.input, { flex: 1 }]}
+                      placeholder="Partner's email"
+                      placeholderTextColor={Colors.textSecondary}
+                      value={inviteEmail}
+                      onChangeText={setInviteEmail}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                    />
+                    <TouchableOpacity
+                      style={[styles.sendBtn, householdLoading && styles.disabled]}
+                      onPress={sendInvite}
+                      disabled={householdLoading}
+                    >
+                      {householdLoading
+                        ? <ActivityIndicator color={Colors.text} size="small" />
+                        : <Text style={styles.sendBtnText}>Invite</Text>
+                      }
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </>
+            )}
+          </>
+        )}
       </View>
 
       <View style={styles.section}>
@@ -561,5 +754,89 @@ const styles = StyleSheet.create({
   thresholdBtnTextActive: {
     color: Colors.text,
     fontWeight: '600',
+  },
+  partnerCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: Colors.primaryLight,
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+  },
+  partnerIcon: {
+    fontSize: 24,
+  },
+  partnerInfo: {
+    flex: 1,
+    gap: 2,
+  },
+  partnerName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: Colors.text,
+  },
+  inviteCard: {
+    backgroundColor: '#f2f4f2',
+    borderRadius: 12,
+    padding: 14,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  inviteCardTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: Colors.text,
+  },
+  inviteCode: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: Colors.primary,
+    textAlign: 'center',
+    letterSpacing: 4,
+    paddingVertical: 8,
+  },
+  inviteRow: {
+    flexDirection: 'row',
+    gap: 10,
+    alignItems: 'center',
+  },
+  sendBtn: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+    minWidth: 70,
+  },
+  sendBtnText: {
+    color: Colors.text,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  acceptBtn: {
+    backgroundColor: Colors.primary,
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  acceptBtnText: {
+    color: Colors.text,
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  leaveBtn: {
+    borderWidth: 1,
+    borderColor: Colors.danger,
+    borderRadius: 10,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  leaveBtnText: {
+    color: Colors.danger,
+    fontSize: 14,
+    fontWeight: '500',
   },
 })

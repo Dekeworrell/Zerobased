@@ -258,13 +258,14 @@ export default function IncomeScreen() {
               </TouchableOpacity>
             )}
             {showPaydayPicker === index && (
-              <View style={{ backgroundColor: '#ffffff', borderRadius: 16, borderWidth: 1, borderColor: '#e3e8e3', overflow: 'hidden', marginHorizontal: 4 }}>
+              <View style={{ backgroundColor: '#ffffff', borderRadius: 16, borderWidth: 1, borderColor: '#e3e8e3', overflow: 'hidden', marginHorizontal: 4, alignSelf: 'stretch' }}>
                 <DateTimePicker
                   value={source.next_payday ? new Date(source.next_payday + 'T12:00:00') : new Date()}
                   mode="date"
                   display="spinner"
                   themeVariant="light"
                   minimumDate={new Date()}
+                  style={{ width: '100%' }}
                   onChange={(event, selectedDate) => {
                     if (selectedDate) {
                       const offset = selectedDate.getTimezoneOffset()
@@ -314,13 +315,14 @@ export default function IncomeScreen() {
                   </TouchableOpacity>
                 )}
                 {showSecondPaydayPicker === index && (
-                  <View style={{ backgroundColor: '#ffffff', borderRadius: 16, borderWidth: 1, borderColor: '#e3e8e3', overflow: 'hidden' }}>
+                  <View style={{ backgroundColor: '#ffffff', borderRadius: 16, borderWidth: 1, borderColor: '#e3e8e3', overflow: 'hidden', alignSelf: 'stretch' }}>
                     <DateTimePicker
                       value={source.second_payday ? new Date(source.second_payday + 'T12:00:00') : new Date()}
                       mode="date"
                       display="spinner"
                       themeVariant="light"
                       minimumDate={new Date()}
+                      style={{ width: '100%' }}
                       onChange={(event, selectedDate) => {
                         if (selectedDate) {
                           const offset = selectedDate.getTimezoneOffset()

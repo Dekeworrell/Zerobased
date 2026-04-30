@@ -36,11 +36,13 @@ export default function AccountsScreen() {
   async function loadAccounts() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { router.replace('/'); return }
+    const { data: householdIds } = await supabase.rpc('get_household_user_ids')
+    const userIds: string[] = householdIds || [user.id]
 
     const { data } = await supabase
       .from('accounts')
       .select('*')
-      .eq('user_id', user.id)
+      .in('user_id', userIds)
       .order('sort_order', { ascending: true })
 
     if (data) {
@@ -136,7 +138,7 @@ export default function AccountsScreen() {
       <ScaleDecorator>
         <View style={[styles.accountRow, isActive && styles.accountRowActive]}>
           <View style={styles.accountLeft}>
-            <TouchableOpacity onLongPress={drag} delayLongPress={200}>
+            <TouchableOpacity onLongPress={drag} delayLongPress={150} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
               <Text style={styles.dragHandle}>☰</Text>
             </TouchableOpacity>
             <Text style={styles.accountIcon}>
@@ -187,6 +189,8 @@ export default function AccountsScreen() {
         data={[]}
         renderItem={() => null}
         keyExtractor={() => ''}
+        scrollEnabled={true}
+        showsVerticalScrollIndicator={true}
         ListHeaderComponent={
           <View style={styles.content}>
             <Text style={styles.title}>Accounts</Text>
@@ -202,6 +206,7 @@ export default function AccountsScreen() {
               keyExtractor={(item) => item.id}
               renderItem={renderAccount}
               scrollEnabled={false}
+              activationDistance={5}
             />
             <TouchableOpacity
               style={styles.addSmallBtn}
@@ -236,6 +241,7 @@ export default function AccountsScreen() {
               keyExtractor={(item) => item.id}
               renderItem={renderAccount}
               scrollEnabled={false}
+              activationDistance={5}
             />
             <TouchableOpacity
               style={styles.addSmallBtn}

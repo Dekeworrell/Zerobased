@@ -36,11 +36,13 @@ export default function BudgetScreen() {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.replace('/'); return }
+      const { data: householdIds } = await supabase.rpc('get_household_user_ids')
+      const userIds: string[] = householdIds || [user.id]
 
       const { data: income } = await supabase
         .from('income_sources')
         .select('*')
-        .eq('user_id', user.id)
+        .in('user_id', userIds)
 
       if (income) {
         const total = income.reduce((sum: number, s: any) =>
@@ -51,7 +53,7 @@ export default function BudgetScreen() {
       const { data: cats } = await supabase
         .from('budget_categories')
         .select('*')
-        .eq('user_id', user.id)
+        .in('user_id', userIds)
         .order('sort_order', { ascending: true })
 
       if (cats) {

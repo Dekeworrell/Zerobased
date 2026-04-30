@@ -44,6 +44,9 @@ export default function DashboardScreen() {
         return
       }
 
+      const { data: householdIds } = await supabase.rpc('get_household_user_ids')
+      const userIds: string[] = householdIds || [user.id]
+
       // Fire all independent queries in parallel
       const [
         { data: profile },
@@ -53,10 +56,10 @@ export default function DashboardScreen() {
         { data: catDefaults },
       ] = await Promise.all([
         supabase.from('profiles').select('name, budget_cycle, default_account_id, last_payday_check').eq('id', user.id).single(),
-        supabase.from('income_sources').select('*').eq('user_id', user.id),
-        supabase.from('budget_categories').select('*').eq('user_id', user.id),
-        supabase.from('accounts').select('*').eq('user_id', user.id),
-        supabase.from('category_account_defaults').select('category_id, account_id').eq('user_id', user.id),
+        supabase.from('income_sources').select('*').in('user_id', userIds),
+        supabase.from('budget_categories').select('*').in('user_id', userIds).order('sort_order', { ascending: true }),
+        supabase.from('accounts').select('*').in('user_id', userIds),
+        supabase.from('category_account_defaults').select('category_id, account_id').in('user_id', userIds),
       ])
 
       // Profile
@@ -129,7 +132,7 @@ export default function DashboardScreen() {
         let txnQuery = supabase
           .from('transactions')
           .select('category_id, amount, type, is_unexpected, date')
-          .eq('user_id', user.id)
+          .in('user_id', userIds)
           .eq('type', 'expense')
 
         if (periodStart && periodEnd) {
@@ -140,7 +143,6 @@ export default function DashboardScreen() {
 
         const { data: txns } = await txnQuery
 
-        const TYPE_ORDER: { [key: string]: number } = { fixed: 0, variable: 1, priority: 2 }
         const catsWithSpent = cats.map((cat: any) => {
           const spent = txns
             ? txns.filter((t: any) => t.category_id === cat.id)
@@ -155,7 +157,7 @@ export default function DashboardScreen() {
           : 0
 
         setCategories(catsWithSpent.sort((a: any, b: any) =>
-          (TYPE_ORDER[a.category_type] ?? 1) - (TYPE_ORDER[b.category_type] ?? 1)
+          (a.sort_order ?? 0) - (b.sort_order ?? 0)
         ))
         setTotalSpent(
           catsWithSpent.reduce((sum: number, c: any) => sum + c.spent, 0) + unexpectedTotal
