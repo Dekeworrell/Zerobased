@@ -2,7 +2,8 @@ import { router, useFocusEffect } from 'expo-router'
 import { useCallback, useRef, useState } from 'react'
 import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import CurrencyInput from '../components/CurrencyInput'
-import { baseType as getBaseType, isLiabilityAccount } from '../constants/categories'
+import { ASSET_TYPE_OPTIONS, LIABILITY_ACCOUNTS as LIABILITY_TYPE_OPTIONS, getAccountIcon } from '../constants/accounts'
+import { isLiabilityAccount } from '../constants/categories'
 import { Colors } from '../constants/colors'
 import { supabase } from '../lib/supabase'
 
@@ -15,56 +16,6 @@ type Account = {
 
 }
 
-const ACCOUNT_ICONS: { [key: string]: string } = {
-  chequing: '💳',
-  savings: '🏦',
-  rrsp: '📈',
-  tfsa: '🌱',
-  fhsa: '🏡',
-  resp: '🎓',
-  pension: '👴',
-  home: '🏡',
-  vehicle: '🚗',
-  other: '➕',
-  margin: '📊',
-  mortgage: '🏦',
-  heloc: '🏦',
-  loc: '💸',
-  carloan: '🚗',
-  studentloan: '🎓',
-  creditcard: '💳',
-  other_liability: '📋',
-  loan: '📋',
-  credit: '💳',
-  car_loan: '🚗',
-  student_loan: '🎓',
-  credit_card: '💳',
-  line_of_credit: '💸',
-}
-
-const ASSET_TYPE_OPTIONS = [
-  { id: 'chequing', label: 'Chequing', icon: '💳' },
-  { id: 'savings', label: 'Savings', icon: '🏦' },
-  { id: 'rrsp', label: 'RRSP', icon: '📈' },
-  { id: 'tfsa', label: 'TFSA', icon: '🌱' },
-  { id: 'fhsa', label: 'FHSA', icon: '🏡' },
-  { id: 'resp', label: 'RESP', icon: '🎓' },
-  { id: 'pension', label: 'Pension', icon: '👴' },
-  { id: 'home', label: 'Home value', icon: '🏡' },
-  { id: 'vehicle', label: 'Vehicle value', icon: '🚗' },
-  { id: 'other', label: 'Other asset', icon: '➕' },
-]
-
-const LIABILITY_TYPE_OPTIONS = [
-  { id: 'mortgage', label: 'Mortgage', icon: '🏦' },
-  { id: 'heloc', label: 'HELOC', icon: '🏦' },
-  { id: 'line_of_credit', label: 'Line of credit', icon: '💸' },
-  { id: 'car_loan', label: 'Car loan', icon: '🚗' },
-  { id: 'student_loan', label: 'Student loan', icon: '🎓' },
-  { id: 'credit_card', label: 'Credit card', icon: '💳' },
-  { id: 'personal_loan', label: 'Personal loan', icon: '💳' },
-  { id: 'other_liability', label: 'Other liability', icon: '📋' },
-]
 
 export default function AccountsScreen() {
   const [accounts, setAccounts] = useState<Account[]>([])
@@ -160,11 +111,7 @@ export default function AccountsScreen() {
   const netWorth = totalAssets - totalLiabilities
 
   function getIcon(type: string) {
-    const t = getBaseType(type)
-    for (const key of Object.keys(ACCOUNT_ICONS)) {
-      if (t === key || t.startsWith(key)) return ACCOUNT_ICONS[key]
-    }
-    return '💳'
+    return getAccountIcon(type)
   }
   
   function renderAccount(account: Account) {

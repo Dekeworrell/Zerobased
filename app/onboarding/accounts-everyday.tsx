@@ -5,12 +5,7 @@ import CurrencyInput from '../../components/CurrencyInput'
 import { Colors } from '../../constants/colors'
 import { getOnboardingData, setAccounts } from '../../lib/store'
 
-const EVERYDAY_ACCOUNTS = [
-  { id: 'chequing', label: 'Chequing', icon: '💳', multi: true },
-  { id: 'savings', label: 'Savings', icon: '🏦', multi: true },
-  { id: 'cash', label: 'Cash', icon: '💵', multi: true },
-  { id: 'other_everyday', label: 'Other', icon: '➕', multi: true },
-]
+import { EVERYDAY_ACCOUNTS } from '../../constants/accounts'
 
 type Account = {
   type: string
@@ -30,7 +25,7 @@ export default function AccountsEverydayScreen() {
     ]
   )
   
-  function toggleAccount(type: string, label: string, icon: string, multi: boolean) {
+  function toggleAccount(type: string, label: string, icon: string, multi: boolean = true) {
     const exists = accounts.find(a => a.type === type)
     if (exists && !multi) {
       if (accounts.length > 1) {
