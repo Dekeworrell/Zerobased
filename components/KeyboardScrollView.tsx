@@ -28,8 +28,10 @@ const KeyboardScrollView = forwardRef<any, Props>(function KeyboardScrollView({ 
       style={style}
       contentContainerStyle={contentContainerStyle}
       enableOnAndroid
-      extraScrollHeight={20}
+      extraScrollHeight={80}
+      extraHeight={80}
       keyboardShouldPersistTaps={keyboardShouldPersistTaps}
+      enableResetScrollToCoords={false}
     >
       {children}
     </KeyboardAwareScrollView>

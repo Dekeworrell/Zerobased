@@ -1,8 +1,9 @@
 import DateTimePicker from '@react-native-community/datetimepicker'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useEffect, useState } from 'react'
-import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { ActivityIndicator, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import CurrencyInput from '../../components/CurrencyInput'
+import KeyboardScrollView from '../../components/KeyboardScrollView'
 import { Colors } from '../../constants/colors'
 import { getOnboardingData, setIncomeSources } from '../../lib/store'
 import { supabase } from '../../lib/supabase'
@@ -153,11 +154,7 @@ export default function IncomeScreen() {
 
   return (
     <>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-    <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <KeyboardScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
         <Text style={styles.backText}>← Back</Text>
       </TouchableOpacity>
@@ -391,8 +388,7 @@ export default function IncomeScreen() {
       ) : null}
 
       <View style={{ height: 80 }} />
-    </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardScrollView>
       <View style={styles.floatingButton}>
       <TouchableOpacity
         style={[styles.primaryButton, saving && styles.disabled]}

@@ -1,7 +1,8 @@
 import { router } from 'expo-router'
 import { useState } from 'react'
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import CurrencyInput from '../../components/CurrencyInput'
+import KeyboardScrollView from '../../components/KeyboardScrollView'
 import { Colors } from '../../constants/colors'
 import { getOnboardingData, setAccounts as saveAccountsToStore } from '../../lib/store'
 
@@ -60,7 +61,7 @@ export default function AccountsScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+    <KeyboardScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
         <Text style={styles.backText}>← Back</Text>
       </TouchableOpacity>
@@ -128,7 +129,7 @@ export default function AccountsScreen() {
       <TouchableOpacity style={styles.primaryButton} onPress={handleContinue}>
         <Text style={styles.primaryButtonText}>Continue</Text>
       </TouchableOpacity>
-    </ScrollView>
+    </KeyboardScrollView>
   )
 }
 

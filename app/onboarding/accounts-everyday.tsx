@@ -1,7 +1,8 @@
 import { router } from 'expo-router'
 import { useState } from 'react'
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import CurrencyInput from '../../components/CurrencyInput'
+import KeyboardScrollView from '../../components/KeyboardScrollView'
 import { Colors } from '../../constants/colors'
 import { getOnboardingData, setAccounts } from '../../lib/store'
 
@@ -57,7 +58,7 @@ export default function AccountsEverydayScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+    <KeyboardScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
         <Text style={styles.backText}>← Back</Text>
       </TouchableOpacity>
@@ -70,7 +71,7 @@ export default function AccountsEverydayScreen() {
       </View>
       <Text style={styles.title}>Where does your money live?</Text>
       <Text style={styles.subtitle}>
-        Add your chequing, savings, and cash accounts — estimates are fine!
+        Add your chequing, savings, and cash accounts.
       </Text>
 
       <View style={styles.chipRow}>
@@ -113,12 +114,6 @@ export default function AccountsEverydayScreen() {
         ))}
       </View>
 
-      <View style={styles.infoBox}>
-        <Text style={styles.infoText}>
-          💡 Don't worry about being exact — you can update balances anytime in the Accounts section.
-        </Text>
-      </View>
-
       <TouchableOpacity style={styles.primaryButton} onPress={handleContinue}>
         <Text style={styles.primaryButtonText}>Continue</Text>
       </TouchableOpacity>
@@ -126,7 +121,7 @@ export default function AccountsEverydayScreen() {
       <TouchableOpacity onPress={handleContinue} style={styles.skipButton}>
         <Text style={styles.skipText}>Skip for now</Text>
       </TouchableOpacity>
-    </ScrollView>
+    </KeyboardScrollView>
   )
 }
 

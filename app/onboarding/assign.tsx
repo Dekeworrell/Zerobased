@@ -1,7 +1,8 @@
 import { router } from 'expo-router'
 import { useState } from 'react'
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import CurrencyInput from '../../components/CurrencyInput'
+import KeyboardScrollView from '../../components/KeyboardScrollView'
 import { EXPENSE_CATEGORIES } from '../../constants/categories'
 import { Colors } from '../../constants/colors'
 import { clearOnboardingData, getOnboardingData, toMonthly } from '../../lib/store'
@@ -193,7 +194,7 @@ export default function AssignScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+    <KeyboardScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
         <Text style={styles.backText}>← Back</Text>
       </TouchableOpacity>
@@ -373,7 +374,7 @@ export default function AssignScreen() {
       <TouchableOpacity onPress={handleFinish} style={{ paddingVertical: 12, alignItems: 'center' }}>
         <Text style={{ color: Colors.textSecondary, fontSize: 14 }}>Skip for now</Text>
       </TouchableOpacity>
-    </ScrollView>
+    </KeyboardScrollView>
   )
 }
 

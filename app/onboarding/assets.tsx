@@ -1,7 +1,8 @@
 import { router } from 'expo-router'
 import { useState } from 'react'
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import CurrencyInput from '../../components/CurrencyInput'
+import KeyboardScrollView from '../../components/KeyboardScrollView'
 import { Colors } from '../../constants/colors'
 import { getOnboardingData, setAccounts } from '../../lib/store'
 
@@ -55,7 +56,7 @@ export default function AssetsScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+    <KeyboardScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <TouchableOpacity onPress={() => router.back()} style={styles.backButton}> 
         <Text style={styles.backText}>← Back</Text>
       </TouchableOpacity>
@@ -129,7 +130,7 @@ export default function AssetsScreen() {
       <TouchableOpacity onPress={handleContinue} style={styles.skipButton}>
         <Text style={styles.skipText}>I have no physical assets to add</Text>
       </TouchableOpacity>
-    </ScrollView>
+    </KeyboardScrollView>
   )
 }
 
