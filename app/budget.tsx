@@ -1,8 +1,9 @@
 import { router } from 'expo-router'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist'
+import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import CurrencyInput from '../components/CurrencyInput'
-import KeyboardScrollView from '../components/KeyboardScrollView'
 import { EXPENSE_CATEGORIES } from '../constants/categories'
 import { Colors } from '../constants/colors'
 import { calculateBudgetStatus, toMonthly } from '../lib/store'
@@ -16,6 +17,7 @@ type Category = {
   frequency: 'monthly' | 'biweekly'
   category_type: 'priority' | 'fixed' | 'variable'
   isNew?: boolean
+  sort_order: number
 }
 
 export default function BudgetScreen() {
@@ -25,10 +27,8 @@ export default function BudgetScreen() {
   const [monthlyIncome, setMonthlyIncome] = useState(0)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
-  const scrollRef = useRef<any>(null)
 
   useEffect(() => {
-    scrollRef.current?.scrollTo({ y: 0, animated: false })
     loadBudget()
   }, [])
 
@@ -52,15 +52,17 @@ export default function BudgetScreen() {
         .from('budget_categories')
         .select('*')
         .eq('user_id', user.id)
+        .order('sort_order', { ascending: true })
 
-   if (cats) {
-        setCategories(cats.map((c: any) => ({
+      if (cats) {
+        setCategories(cats.map((c: any, index: number) => ({
           id: c.id,
           label: c.label,
           icon: c.icon,
           budgeted_amount: c.budgeted_amount.toString(),
           frequency: c.frequency || 'monthly',
           category_type: c.category_type || 'variable',
+          sort_order: c.sort_order ?? index,
         })))
       }
     } catch (err: any) {
@@ -78,6 +80,7 @@ export default function BudgetScreen() {
       frequency: 'monthly',
       category_type: cat.type as 'priority' | 'fixed' | 'variable' || 'variable',
       isNew: true,
+      sort_order: categories.length,
     }])
   }
 
@@ -95,6 +98,23 @@ export default function BudgetScreen() {
 
   function updateLabel(id: string, label: string) {
     setCategories(categories.map(c => c.id === id ? { ...c, label } : c))
+  }
+
+  async function saveSortOrder(reorderedCats: Category[]) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      for (let i = 0; i < reorderedCats.length; i++) {
+        if (!reorderedCats[i].isNew) {
+          await supabase
+            .from('budget_categories')
+            .update({ sort_order: i })
+            .eq('id', reorderedCats[i].id)
+        }
+      }
+    } catch (err) {
+      console.warn('Sort order save failed:', err)
+    }
   }
 
   async function handleSave() {
@@ -122,12 +142,13 @@ export default function BudgetScreen() {
 
       if (newCats.length > 0) {
         await supabase.from('budget_categories').insert(
-          newCats.map(c => ({
+          newCats.map((c, i) => ({
             user_id: user.id,
             label: c.label,
             icon: c.icon,
             budgeted_amount: parseFloat(c.budgeted_amount) || 0,
             frequency: c.frequency,
+            sort_order: existingCats.length + i,
           }))
         )
       }
@@ -163,6 +184,52 @@ export default function BudgetScreen() {
 
   const { totalBudgeted, remaining } = calculateBudgetStatus(monthlyIncome, categories)
 
+  function renderItem({ item: cat, drag, isActive }: RenderItemParams<Category>) {
+    return (
+      <ScaleDecorator>
+        <View style={[styles.categoryRow, isActive && styles.categoryRowActive]}>
+          <View style={styles.categoryTopRow}>
+            <TouchableOpacity onLongPress={drag} delayLongPress={200}>
+              <Text style={styles.dragHandle}>☰</Text>
+            </TouchableOpacity>
+            <Text style={styles.categoryIcon}>{cat.icon}</Text>
+            <TextInput
+              style={styles.categoryLabel}
+              value={cat.label}
+              onChangeText={(val) => updateLabel(cat.id, val)}
+              placeholderTextColor={Colors.textSecondary}
+            />
+            <TouchableOpacity onPress={() => removeCategory(cat.id)}>
+              <Text style={styles.removeBtn}>✕</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.categoryBottomRow}>
+            <View style={styles.freqToggle}>
+              <TouchableOpacity
+                style={[styles.freqChip, cat.frequency === 'monthly' && styles.freqChipActive]}
+                onPress={() => updateFrequency(cat.id, 'monthly')}
+              >
+                <Text style={[styles.freqChipText, cat.frequency === 'monthly' && styles.freqChipTextActive]}>Mo</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.freqChip, cat.frequency === 'biweekly' && styles.freqChipActive]}
+                onPress={() => updateFrequency(cat.id, 'biweekly')}
+              >
+                <Text style={[styles.freqChipText, cat.frequency === 'biweekly' && styles.freqChipTextActive]}>BiW</Text>
+              </TouchableOpacity>
+            </View>
+            <CurrencyInput
+              style={styles.amountInput}
+              placeholder="$0"
+              value={cat.budgeted_amount}
+              onChangeText={(val) => updateAmount(cat.id, val)}
+            />
+          </View>
+        </View>
+      </ScaleDecorator>
+    )
+  }
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -171,13 +238,10 @@ export default function BudgetScreen() {
     )
   }
 
-  return (
-    <>
-      <KeyboardScrollView ref={scrollRef} style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-
+  const headerComponent = (
+    <View style={styles.headerContent}>
       <Text style={styles.title}>Edit budget</Text>
       <Text style={styles.subtitle}>Adjust your monthly budget categories</Text>
-
       <View style={[styles.statusCard, {
         borderColor: remaining < 0 ? Colors.danger : Math.abs(remaining) < 0.5 ? Colors.success : Colors.info,
         backgroundColor: remaining < 0 ? Colors.danger + '22' : Math.abs(remaining) < 0.5 ? Colors.success + '22' : Colors.info + '22',
@@ -197,48 +261,12 @@ export default function BudgetScreen() {
           Monthly income: ${monthlyIncome.toLocaleString('en-CA', { maximumFractionDigits: 0 })} · Per paycheque: ${(monthlyIncome / 2).toLocaleString('en-CA', { maximumFractionDigits: 0 })}
         </Text>
       </View>
+      <Text style={styles.dragHint}>Hold ☰ to drag and reorder</Text>
+    </View>
+  )
 
-      <View style={styles.categoryList}>
-        {categories.map((cat) => (
-          <View key={cat.id} style={styles.categoryRow}>
-            <View style={styles.categoryTopRow}>
-              <Text style={styles.categoryIcon}>{cat.icon}</Text>
-              <TextInput
-                style={styles.categoryLabel}
-                value={cat.label}
-                onChangeText={(val) => updateLabel(cat.id, val)}
-                placeholderTextColor={Colors.textSecondary}
-              />
-              <TouchableOpacity onPress={() => removeCategory(cat.id)}>
-                <Text style={styles.removeBtn}>✕</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.categoryBottomRow}>
-              <View style={styles.freqToggle}>
-                <TouchableOpacity
-                  style={[styles.freqChip, cat.frequency === 'monthly' && styles.freqChipActive]}
-                  onPress={() => updateFrequency(cat.id, 'monthly')}
-                >
-                  <Text style={[styles.freqChipText, cat.frequency === 'monthly' && styles.freqChipTextActive]}>Mo</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.freqChip, cat.frequency === 'biweekly' && styles.freqChipActive]}
-                  onPress={() => updateFrequency(cat.id, 'biweekly')}
-                >
-                  <Text style={[styles.freqChipText, cat.frequency === 'biweekly' && styles.freqChipTextActive]}>BiW</Text>
-                </TouchableOpacity>
-              </View>
-              <CurrencyInput
-                style={styles.amountInput}
-                placeholder="$0"
-                value={cat.budgeted_amount}
-                onChangeText={(val) => updateAmount(cat.id, val)}
-              />
-            </View>
-          </View>
-        ))}
-      </View>
-
+  const footerComponent = (
+    <View style={styles.footerContent}>
       <Text style={styles.addLabel}>Add a category</Text>
       <View style={styles.typeGrid}>
         {EXPENSE_CATEGORIES.sort((a, b) => a.label.localeCompare(b.label)).map((category) => (
@@ -252,12 +280,28 @@ export default function BudgetScreen() {
           </TouchableOpacity>
         ))}
       </View>
-
       {error ? <Text style={styles.error}>{error}</Text> : null}
       {success ? <Text style={styles.successText}>✅ Budget saved!</Text> : null}
       <View style={{ height: 80 }} />
-    </KeyboardScrollView>
-  <View style={styles.floatingButton}>
+    </View>
+  )
+
+  return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <DraggableFlatList
+        data={categories}
+        onDragEnd={({ data }) => {
+          setCategories(data)
+          saveSortOrder(data)
+        }}
+        keyExtractor={(item) => item.id}
+        renderItem={renderItem}
+        ListHeaderComponent={headerComponent}
+        ListFooterComponent={footerComponent}
+        containerStyle={styles.container}
+        contentContainerStyle={styles.content}
+      />
+      <View style={styles.floatingButton}>
         <TouchableOpacity
           style={[styles.primaryButton, saving && styles.disabled]}
           onPress={handleSave}
@@ -269,7 +313,7 @@ export default function BudgetScreen() {
           }
         </TouchableOpacity>
       </View>
-    </>
+    </GestureHandlerRootView>
   )
 }
 
@@ -286,18 +330,29 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: 24,
-    paddingVertical: 60,
+    paddingBottom: 100,
     maxWidth: 600,
     alignSelf: 'center',
     width: '100%',
+  },
+  headerContent: {
+    paddingTop: 60,
     gap: 16,
+    marginBottom: 10,
   },
-  backButton: {
-    marginBottom: 8,
+  footerContent: {
+    gap: 16,
+    marginTop: 10,
   },
-  backText: {
-    color: Colors.primary,
-    fontSize: 16,
+  dragHint: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+  },
+  dragHandle: {
+    fontSize: 18,
+    color: Colors.textSecondary,
+    paddingRight: 4,
   },
   title: {
     fontSize: 28,
@@ -329,9 +384,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.textSecondary,
   },
-  categoryList: {
-    gap: 10,
-  },
   categoryRow: {
     backgroundColor: Colors.card,
     borderWidth: 1,
@@ -339,6 +391,16 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 14,
     gap: 10,
+    marginBottom: 10,
+  },
+  categoryRowActive: {
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primary + '11',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 8,
   },
   categoryTopRow: {
     flexDirection: 'row',
@@ -453,7 +515,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-
   statusBiweekly: {
     fontSize: 18,
     fontWeight: '500',

@@ -8,7 +8,7 @@ import TransactionEditSheet from '../components/TransactionEditSheet'
 import { balanceChangeOnExpense, balanceChangeOnIncome, balanceChangeOnTransferFrom, balanceChangeOnTransferTo, isAssetAccount, isInvestmentAccount, isPayFromLiability, isPrimaryPayable } from '../constants/categories'
 import { Colors } from '../constants/colors'
 import { checkBudgetAndNotify, schedulePaydayReminder } from '../lib/notifications'
-import { getPayPeriodDates, toMonthly } from '../lib/store'
+import { getPayPeriodDates, toMonthly, toPeriodAmount } from '../lib/store'
 import { supabase } from '../lib/supabase'
 
 type Category = { id: string; label: string; icon: string }
@@ -194,9 +194,8 @@ export default function AddTransactionScreen() {
       if (txns) setCategoryHistory(txns as any)
       if (cat) {
         const monthly = toMonthly(cat.budgeted_amount.toString(), cat.frequency)
-        if (view === 'cycle' && payPeriodStart && payPeriodEnd && budgetCycle === 'paycycle') {
-          const days = Math.round((payPeriodEnd.getTime() - payPeriodStart.getTime()) / (1000 * 60 * 60 * 24)) + 1
-          setBudgetedAmount((monthly / 30) * days)
+        if (view === 'cycle' && budgetCycle === 'paycycle') {
+          setBudgetedAmount(toPeriodAmount(cat.budgeted_amount, cat.frequency, budgetCycle, payPeriodStart, payPeriodEnd))
         } else {
           setBudgetedAmount(monthly)
         }

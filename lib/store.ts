@@ -148,7 +148,43 @@ export function getPayPeriodDates(nextPayday: string, frequency: string): { star
 
   return { start, end }
 
-}export function calculateBudgetStatus(
+}
+
+export function toPeriodAmount(
+  amount: string | number,
+  frequency: string,
+  budgetCycle: 'monthly' | 'paycycle',
+  payPeriodStart: Date | null,
+  payPeriodEnd: Date | null
+): number {
+  const val = typeof amount === 'number' ? amount : parseFloat(amount) || 0
+
+  if (budgetCycle !== 'paycycle' || !payPeriodStart || !payPeriodEnd) {
+    return toMonthly(val, frequency)
+  }
+
+  const days = Math.round(
+    (payPeriodEnd.getTime() - payPeriodStart.getTime()) / (1000 * 60 * 60 * 24)
+  ) + 1
+
+  if (frequency === 'biweekly') {
+    // Biweekly stored amount IS the per-period amount — return directly
+    return val
+  }
+
+  if (frequency === 'weekly') {
+    return val * (days / 7)
+  }
+
+  if (frequency === 'semimonthly') {
+    return val * (days / 15)
+  }
+
+  // Monthly — prorate by days
+  return (val / 30) * days
+}
+
+export function calculateBudgetStatus(
   monthlyIncome: number,
   categories: { budgeted_amount: string | number, frequency: string }[]
 ) {

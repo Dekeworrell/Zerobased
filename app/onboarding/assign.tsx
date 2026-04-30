@@ -20,6 +20,7 @@ const CA_PRIORITY_ITEMS = [
   { id: 'car_fund', label: 'Car fund', icon: '🚗' },
   { id: 'home_fund', label: 'Home down payment', icon: '🏡' },
   { id: 'education_fund', label: 'Education fund', icon: '📚' },
+  { id: 'project', label: 'Save for a project', icon: '🔨' },
   { id: 'custom_goal', label: 'Custom goal', icon: '🎯' },
 ]
 
@@ -34,6 +35,7 @@ const US_PRIORITY_ITEMS = [
   { id: 'savings', label: 'General savings', icon: '🏦' },
   { id: 'vacation', label: 'Vacation fund', icon: '✈️' },
   { id: 'car_fund', label: 'Car fund', icon: '🚗' },
+  { id: 'project', label: 'Save for a project', icon: '🔨' },
   { id: 'custom_goal', label: 'Custom goal', icon: '🎯' },
 ]
 
@@ -195,7 +197,7 @@ export default function AssignScreen() {
 
   return (
     <KeyboardScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-      <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+      <TouchableOpacity onPress={() => router.replace('/dashboard')} style={styles.backButton}>
         <Text style={styles.backText}>← Back</Text>
       </TouchableOpacity>
 

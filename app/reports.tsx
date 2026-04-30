@@ -370,6 +370,53 @@ export default function ReportsScreen() {
             </View>
           </View>
 
+          {/* Assets vs Liabilities */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Assets vs Liabilities</Text>
+              <Text style={[styles.sectionMeta, { color: currentNetWorth >= 0 ? '#1f7a45' : '#e05252' }]}>
+                Net {currentNetWorth >= 0 ? '+' : ''}${currentNetWorth.toLocaleString('en-CA', { maximumFractionDigits: 0 })}
+              </Text>
+            </View>
+            <View style={styles.chartCard}>
+              <View style={styles.avlRow}>
+                <View style={styles.avlItem}>
+                  <Text style={styles.avlLabel}>Total Assets</Text>
+                  <Text style={[styles.avlValue, { color: '#1f7a45' }]}>
+                    ${(currentNetWorth + currentLiabilities).toLocaleString('en-CA', { maximumFractionDigits: 0 })}
+                  </Text>
+                </View>
+                <View style={styles.avlDivider} />
+                <View style={styles.avlItem}>
+                  <Text style={styles.avlLabel}>Total Liabilities</Text>
+                  <Text style={[styles.avlValue, { color: '#e05252' }]}>
+                    ${currentLiabilities.toLocaleString('en-CA', { maximumFractionDigits: 0 })}
+                  </Text>
+                </View>
+              </View>
+              {(currentNetWorth + currentLiabilities) > 0 && (
+                <View style={{ marginTop: 14 }}>
+                  <View style={styles.avlBarTrack}>
+                    <View style={[styles.avlBarAsset, {
+                      width: `${Math.min(((currentNetWorth + currentLiabilities) / (currentNetWorth + currentLiabilities + currentLiabilities)) * 100, 100)}%` as any
+                    }]} />
+                    <View style={[styles.avlBarLiability, {
+                      width: `${Math.min((currentLiabilities / (currentNetWorth + currentLiabilities + currentLiabilities)) * 100, 100)}%` as any
+                    }]} />
+                  </View>
+                  <View style={styles.avlBarLabels}>
+                    <Text style={styles.avlBarLabel}>
+                      {Math.round(((currentNetWorth + currentLiabilities) / (currentNetWorth + currentLiabilities + currentLiabilities)) * 100)}% assets
+                    </Text>
+                    <Text style={styles.avlBarLabel}>
+                      {Math.round((currentLiabilities / (currentNetWorth + currentLiabilities + currentLiabilities)) * 100)}% liabilities
+                    </Text>
+                  </View>
+                </View>
+              )}
+            </View>
+          </View>
+
           {/* Net worth trend */}
           {nwChartData.length >= 2 && (
             <View style={styles.section}>
@@ -725,4 +772,15 @@ const styles = StyleSheet.create({
   emptyIcon: { fontSize: 32 },
   emptyTitle: { fontSize: 16, fontWeight: '600', color: Colors.text },
   emptySubtitle: { fontSize: 14, color: Colors.textSecondary },
+
+  avlRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  avlItem: { flex: 1, alignItems: 'center', gap: 4 },
+  avlDivider: { width: 1, height: 40, backgroundColor: '#e3e8e3' },
+  avlLabel: { fontSize: 11, color: Colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.4 },
+  avlValue: { fontSize: 20, fontWeight: '800', letterSpacing: -0.5 },
+  avlBarTrack: { height: 10, borderRadius: 5, backgroundColor: '#f0f4f0', flexDirection: 'row', overflow: 'hidden' },
+  avlBarAsset: { height: '100%', backgroundColor: '#3db870', borderRadius: 5 },
+  avlBarLiability: { height: '100%', backgroundColor: '#e05252', borderRadius: 5 },
+  avlBarLabels: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },
+  avlBarLabel: { fontSize: 10, color: Colors.textSecondary },
 })

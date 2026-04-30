@@ -69,6 +69,21 @@ export default function IncomeScreen() {
     if (data && data.length > 0) {
       setSources(data.map((s: any) => {
         const dates = (s.next_payday || '').split('|')
+        const storedDate = dates[0] || ''
+        let nextPayday = storedDate
+        if (storedDate) {
+          const today = new Date()
+          today.setHours(0, 0, 0, 0)
+          let periodDays = 14
+          if (s.frequency === 'weekly') periodDays = 7
+          if (s.frequency === 'monthly') periodDays = 30
+          if (s.frequency === 'semimonthly') periodDays = 15
+          const d = new Date(storedDate + 'T12:00:00')
+          while (d < today) {
+            d.setDate(d.getDate() + periodDays)
+          }
+          nextPayday = d.toISOString().split('T')[0]
+        }
         return {
           id: s.id,
           label: s.label,
@@ -76,7 +91,7 @@ export default function IncomeScreen() {
           frequency: s.frequency,
           type: s.type,
           income_type: s.income_type || 'fixed',
-          next_payday: dates[0] || '',
+          next_payday: nextPayday,
           second_payday: dates[1] || '',
         }
       }))
@@ -155,7 +170,7 @@ export default function IncomeScreen() {
   return (
     <>
       <KeyboardScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-      <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+      <TouchableOpacity onPress={() => isEditing ? router.replace('/dashboard') : router.back()} style={styles.backButton}>
         <Text style={styles.backText}>← Back</Text>
       </TouchableOpacity>
       {!isEditing && (

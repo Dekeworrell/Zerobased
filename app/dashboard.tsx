@@ -4,7 +4,7 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View
 import PaydayModal from '../components/PaydayModal'
 import { isLiabilityAccount } from '../constants/categories'
 import { Colors } from '../constants/colors'
-import { calculateBudgetStatus, getPayPeriodDates, toMonthly } from '../lib/store'
+import { calculateBudgetStatus, getPayPeriodDates, toMonthly, toPeriodAmount } from '../lib/store'
 import { supabase } from '../lib/supabase'
 
 export default function DashboardScreen() {
@@ -172,9 +172,7 @@ export default function DashboardScreen() {
 
   const paycycleBudgeted = payPeriodStart && payPeriodEnd
     ? categories.reduce((sum, c) => {
-        const monthly = toMonthly(c.budgeted_amount.toString(), c.frequency)
-        const days = Math.round((payPeriodEnd.getTime() - payPeriodStart.getTime()) / (1000 * 60 * 60 * 24)) + 1
-        return sum + (monthly / 30) * days
+        return sum + toPeriodAmount(c.budgeted_amount, c.frequency, budgetCycle, payPeriodStart, payPeriodEnd)
       }, 0)
     : monthlyBudgeted / 2
 
@@ -209,7 +207,7 @@ export default function DashboardScreen() {
 
       <View style={styles.header}>
         <View style={{ flex: 1, marginRight: 8 }}>
-          <Text style={styles.greeting} numberOfLines={1} ellipsizeMode="tail">
+          <Text style={styles.greeting} adjustsFontSizeToFit numberOfLines={2}>
             {getHour()}, {name} 👋
           </Text>
           <Text style={styles.subGreeting}>
@@ -326,15 +324,13 @@ export default function DashboardScreen() {
             <View style={styles.categoryList}>
               {categories.map((cat) => {
                 const monthlyAmount = toMonthly(cat.budgeted_amount.toString(), cat.frequency)
-                let periodAmount = monthlyAmount
-                if (budgetCycle === 'paycycle') {
-                  if (payPeriodStart && payPeriodEnd) {
-                    const days = Math.round((payPeriodEnd.getTime() - payPeriodStart.getTime()) / (1000 * 60 * 60 * 24)) + 1
-                    periodAmount = (monthlyAmount / 30) * days
-                  } else {
-                    periodAmount = monthlyAmount / 2
-                  }
-                }
+                const periodAmount = toPeriodAmount(
+                  cat.budgeted_amount,
+                  cat.frequency,
+                  budgetCycle,
+                  payPeriodStart,
+                  payPeriodEnd
+                )
                 const displayAmount = summaryView === 'monthly' ? monthlyAmount : periodAmount
                 const displayLabel = summaryView === 'monthly' ? '/mo' : budgetCycle === 'paycycle' ? '/period' : '/mo'
                 return (
@@ -453,6 +449,7 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: 'bold',
     color: Colors.text,
+    flexShrink: 1,
   },
   subGreeting: {
     fontSize: 14,

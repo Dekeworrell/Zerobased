@@ -1,38 +1,38 @@
 import { router, useFocusEffect } from 'expo-router'
-import { useCallback, useRef, useState } from 'react'
-import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { useCallback, useState } from 'react'
+import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist'
+import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import CurrencyInput from '../components/CurrencyInput'
 import { ASSET_TYPE_OPTIONS, LIABILITY_ACCOUNTS as LIABILITY_TYPE_OPTIONS, getAccountIcon } from '../constants/accounts'
 import { isLiabilityAccount } from '../constants/categories'
 import { Colors } from '../constants/colors'
 import { supabase } from '../lib/supabase'
 
-
 type Account = {
   id: string
   label: string
   type: string
   balance: number
-
+  sort_order: number
 }
 
-
 export default function AccountsScreen() {
-  const [accounts, setAccounts] = useState<Account[]>([])
+  const [assets, setAssets] = useState<Account[]>([])
+  const [liabilities, setLiabilities] = useState<Account[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [showAddType, setShowAddType] = useState<'asset' | 'liability' | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
-  const scrollRef = useRef<ScrollView>(null)
 
   useFocusEffect(
     useCallback(() => {
-      scrollRef.current?.scrollTo({ y: 0, animated: false })
       loadAccounts()
     }, [])
   )
+
   async function loadAccounts() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { router.replace('/'); return }
@@ -41,18 +41,40 @@ export default function AccountsScreen() {
       .from('accounts')
       .select('*')
       .eq('user_id', user.id)
-      .order('created_at', { ascending: true })
+      .order('sort_order', { ascending: true })
 
-    if (data) setAccounts(data)
+    if (data) {
+      const allAccounts = data.map((a: any, i: number) => ({
+        ...a,
+        sort_order: a.sort_order ?? i,
+      }))
+      setAssets(allAccounts.filter((a: Account) => !isLiabilityAccount(a.type)))
+      setLiabilities(allAccounts.filter((a: Account) => isLiabilityAccount(a.type)))
+    }
     setLoading(false)
   }
 
   function updateBalance(id: string, balance: string) {
-    setAccounts(accounts.map(a => a.id === id ? { ...a, balance: balance as any } : a))
+    setAssets(prev => prev.map(a => a.id === id ? { ...a, balance: balance as any } : a))
+    setLiabilities(prev => prev.map(a => a.id === id ? { ...a, balance: balance as any } : a))
   }
 
   function updateLabel(id: string, label: string) {
-    setAccounts(accounts.map(a => a.id === id ? { ...a, label } : a))
+    setAssets(prev => prev.map(a => a.id === id ? { ...a, label } : a))
+    setLiabilities(prev => prev.map(a => a.id === id ? { ...a, label } : a))
+  }
+
+  async function saveSortOrder(reordered: Account[]) {
+    try {
+      for (let i = 0; i < reordered.length; i++) {
+        await supabase
+          .from('accounts')
+          .update({ sort_order: i })
+          .eq('id', reordered[i].id)
+      }
+    } catch (err) {
+      console.warn('Sort order save failed:', err)
+    }
   }
 
   async function saveBalances() {
@@ -62,10 +84,10 @@ export default function AccountsScreen() {
     setEditingId(null)
 
     try {
-      for (const account of accounts) {
+      for (const account of [...assets, ...liabilities]) {
         await supabase
           .from('accounts')
-          .update({ 
+          .update({
             balance: account.balance,
             label: account.label,
           })
@@ -83,72 +105,71 @@ export default function AccountsScreen() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
+    const isLiability = isLiabilityAccount(type)
+    const sortOrder = isLiability ? liabilities.length : assets.length
+
     const { data } = await supabase
       .from('accounts')
-      .insert({ user_id: user.id, label, type, balance: 0 })
+      .insert({ user_id: user.id, label, type, balance: 0, sort_order: sortOrder })
       .select()
       .single()
 
     if (data) {
-      setAccounts([...accounts, data])
+      if (isLiability) {
+        setLiabilities(prev => [...prev, data])
+      } else {
+        setAssets(prev => [...prev, data])
+      }
       setShowAddType(null)
     }
   }
 
   async function deleteAccount(id: string) {
     await supabase.from('accounts').delete().eq('id', id)
-    setAccounts(prev => prev.filter(a => a.id !== id))
+    setAssets(prev => prev.filter(a => a.id !== id))
+    setLiabilities(prev => prev.filter(a => a.id !== id))
   }
 
-  function isLiability(type: string) {
-    return isLiabilityAccount(type)
-  }
-
-  const assets = accounts.filter(a => !isLiability(a.type))
-  const liabilities = accounts.filter(a => isLiability(a.type))
-  const totalAssets = assets.reduce((sum, a) => sum + (parseFloat(a.balance.toString()) || 0), 0)
-  const totalLiabilities = liabilities.reduce((sum, a) => sum + (parseFloat(a.balance.toString()) || 0), 0)
-  const netWorth = totalAssets - totalLiabilities
-
-  function getIcon(type: string) {
-    return getAccountIcon(type)
-  }
-  
-  function renderAccount(account: Account) {
+  function renderAccount({ item: account, drag, isActive }: RenderItemParams<Account>) {
     const isEditing = editingId === account.id
     return (
-      <View key={account.id} style={styles.accountRow}>
-        <View style={styles.accountLeft}>
-          <Text style={styles.accountIcon}>
-            {getIcon(account.type)}
-          </Text>
-          {isEditing ? (
-            <TextInput
-              style={styles.accountLabelInput}
-              value={account.label}
-              onChangeText={(val) => updateLabel(account.id, val)}
-              autoFocus
-              onBlur={() => setEditingId(null)}
-            />
-          ) : (
-            <TouchableOpacity onPress={() => setEditingId(account.id)} style={{ flex: 1 }}>
-              <Text style={styles.accountLabel}>{account.label}</Text>
-              <Text style={styles.accountLabelHint}>tap to rename</Text>
+      <ScaleDecorator>
+        <View style={[styles.accountRow, isActive && styles.accountRowActive]}>
+          <View style={styles.accountLeft}>
+            <TouchableOpacity onLongPress={drag} delayLongPress={200}>
+              <Text style={styles.dragHandle}>☰</Text>
             </TouchableOpacity>
-          )}
+            <Text style={styles.accountIcon}>
+              {getAccountIcon(account.type)}
+            </Text>
+            {isEditing ? (
+              <TextInput
+                style={styles.accountLabelInput}
+                value={account.label}
+                onChangeText={(val) => updateLabel(account.id, val)}
+                autoFocus
+                onBlur={() => setEditingId(null)}
+              />
+            ) : (
+              <TouchableOpacity onPress={() => setEditingId(account.id)} style={{ flex: 1 }}>
+                <Text style={styles.accountLabel}>{account.label}</Text>
+                <Text style={styles.accountLabelHint}>tap to rename</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          <View style={styles.accountRight}>
+            <CurrencyInput
+              style={styles.balanceInput}
+              value={account.balance.toString()}
+              onChangeText={(val) => updateBalance(account.id, val)}
+              placeholder="$0"
+            />
+            <TouchableOpacity onPress={() => deleteAccount(account.id)}>
+              <Text style={styles.deleteBtn}>✕</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-        <View style={styles.accountRight}>
-          <CurrencyInput
-            style={styles.balanceInput}
-            value={account.balance.toString()}
-            onChangeText={(val) => updateBalance(account.id, val)}
-            placeholder="$0"
-          />
-          <TouchableOpacity onPress={() => deleteAccount(account.id)}>
-            <Text style={styles.deleteBtn}>✕</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+      </ScaleDecorator>
     )
   }
 
@@ -161,83 +182,102 @@ export default function AccountsScreen() {
   }
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-    <ScrollView ref={scrollRef} style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-      <Text style={styles.title}>Accounts</Text>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#f2f4f2' }}>
+      <DraggableFlatList
+        data={[]}
+        renderItem={() => null}
+        keyExtractor={() => ''}
+        ListHeaderComponent={
+          <View style={styles.content}>
+            <Text style={styles.title}>Accounts</Text>
+            <Text style={styles.dragHint}>Hold ☰ to drag and reorder</Text>
 
-      <Text style={styles.sectionTitle}>Assets</Text>
-      {assets.length > 0 && (
-        <View style={styles.accountList}>
-          {assets.map(account => renderAccount(account))}
-        </View>
-      )}
-      <TouchableOpacity
-        style={styles.addSmallBtn}
-        onPress={() => setShowAddType(showAddType === 'asset' ? null : 'asset')}
-      >
-        <Text style={styles.addSmallBtnText}>
-          {showAddType === 'asset' ? '− Cancel' : '+ Add asset'}
-        </Text>
-      </TouchableOpacity>
-      {showAddType === 'asset' && (
-        <View style={styles.typeGrid}>
-          {[...ASSET_TYPE_OPTIONS].sort((a, b) => a.label.localeCompare(b.label)).map(type => (
+            <Text style={styles.sectionTitle}>Assets</Text>
+            <DraggableFlatList
+              data={assets}
+              onDragEnd={({ data }) => {
+                setAssets(data)
+                saveSortOrder(data)
+              }}
+              keyExtractor={(item) => item.id}
+              renderItem={renderAccount}
+              scrollEnabled={false}
+            />
             <TouchableOpacity
-              key={type.id}
-              style={styles.typeChip}
-              onPress={() => addAccount(type.id, type.label)}
+              style={styles.addSmallBtn}
+              onPress={() => setShowAddType(showAddType === 'asset' ? null : 'asset')}
             >
-              <Text style={styles.typeChipIcon}>{type.icon}</Text>
-              <Text style={styles.typeChipLabel}>{type.label}</Text>
+              <Text style={styles.addSmallBtnText}>
+                {showAddType === 'asset' ? '− Cancel' : '+ Add asset'}
+              </Text>
             </TouchableOpacity>
-          ))}
-        </View>
-      )}
+            {showAddType === 'asset' && (
+              <View style={styles.typeGrid}>
+                {[...ASSET_TYPE_OPTIONS].sort((a, b) => a.label.localeCompare(b.label)).map(type => (
+                  <TouchableOpacity
+                    key={type.id}
+                    style={styles.typeChip}
+                    onPress={() => addAccount(type.id, type.label)}
+                  >
+                    <Text style={styles.typeChipIcon}>{type.icon}</Text>
+                    <Text style={styles.typeChipLabel}>{type.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
 
-      <Text style={styles.sectionTitle}>Liabilities</Text>
-      {liabilities.length > 0 && (
-        <View style={styles.accountList}>
-          {liabilities.map(account => renderAccount(account))}
-        </View>
-      )}
-      <TouchableOpacity
-        style={styles.addSmallBtn}
-        onPress={() => setShowAddType(showAddType === 'liability' ? null : 'liability')}
-      >
-        <Text style={styles.addSmallBtnText}>
-          {showAddType === 'liability' ? '− Cancel' : '+ Add liability'}
-        </Text>
-      </TouchableOpacity>
-      {showAddType === 'liability' && (
-        <View style={styles.typeGrid}>
-          {[...LIABILITY_TYPE_OPTIONS].sort((a, b) => a.label.localeCompare(b.label)).map(type => (
+            <Text style={styles.sectionTitle}>Liabilities</Text>
+            <DraggableFlatList
+              data={liabilities}
+              onDragEnd={({ data }) => {
+                setLiabilities(data)
+                saveSortOrder(data)
+              }}
+              keyExtractor={(item) => item.id}
+              renderItem={renderAccount}
+              scrollEnabled={false}
+            />
             <TouchableOpacity
-              key={type.id}
-              style={styles.typeChip}
-              onPress={() => addAccount(type.id, type.label)}
+              style={styles.addSmallBtn}
+              onPress={() => setShowAddType(showAddType === 'liability' ? null : 'liability')}
             >
-              <Text style={styles.typeChipIcon}>{type.icon}</Text>
-              <Text style={styles.typeChipLabel}>{type.label}</Text>
+              <Text style={styles.addSmallBtnText}>
+                {showAddType === 'liability' ? '− Cancel' : '+ Add liability'}
+              </Text>
             </TouchableOpacity>
-          ))}
-        </View>
-      )}
+            {showAddType === 'liability' && (
+              <View style={styles.typeGrid}>
+                {[...LIABILITY_TYPE_OPTIONS].sort((a, b) => a.label.localeCompare(b.label)).map(type => (
+                  <TouchableOpacity
+                    key={type.id}
+                    style={styles.typeChip}
+                    onPress={() => addAccount(type.id, type.label)}
+                  >
+                    <Text style={styles.typeChipIcon}>{type.icon}</Text>
+                    <Text style={styles.typeChipLabel}>{type.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
 
-      {error ? <Text style={styles.error}>{error}</Text> : null}
-      {success ? <Text style={styles.successText}>✅ Balances saved!</Text> : null}
+            {error ? <Text style={styles.error}>{error}</Text> : null}
+            {success ? <Text style={styles.successText}>✅ Balances saved!</Text> : null}
 
-      <TouchableOpacity
-        style={[styles.primaryButton, saving && styles.disabled]}
-        onPress={saveBalances}
-        disabled={saving}
-      >
-        {saving
-          ? <ActivityIndicator color={Colors.text} />
-          : <Text style={styles.primaryButtonText}>Save balances</Text>
+            <TouchableOpacity
+              style={[styles.primaryButton, saving && styles.disabled]}
+              onPress={saveBalances}
+              disabled={saving}
+            >
+              {saving
+                ? <ActivityIndicator color={Colors.text} />
+                : <Text style={styles.primaryButtonText}>Save balances</Text>
+              }
+            </TouchableOpacity>
+            <View style={{ height: 40 }} />
+          </View>
         }
-      </TouchableOpacity>
-    </ScrollView>
-    </KeyboardAvoidingView>
+      />
+    </GestureHandlerRootView>
   )
 }
 
@@ -247,10 +287,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#f2f4f2',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  container: {
-    flex: 1,
-    backgroundColor: '#f2f4f2',
   },
   content: {
     paddingHorizontal: 24,
@@ -265,40 +301,15 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: Colors.text,
   },
-  netWorthCard: {
-    backgroundColor: '#edf7f1',
-    borderRadius: 20,
-    padding: 24,
-    alignItems: 'center',
-    gap: 8,
-    borderWidth: 1.5,
-    borderColor: '#b6dfc0',
-  },
-  netWorthLabel: {
-    fontSize: 14,
-    color: '#1f7a45',
-    fontWeight: '600',
-  },
-  netWorthAmount: {
-    fontSize: 40,
-    fontWeight: 'bold',
-    color: '#0A2A1A',
-  },
-  netWorthRow: {
-    flexDirection: 'row',
-    gap: 24,
-  },
-  netWorthSub: {
-    fontSize: 13,
-    color: '#1f7a45',
+  dragHint: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    textAlign: 'center',
   },
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: Colors.text,
-  },
-  accountList: {
-    gap: 10,
   },
   accountRow: {
     backgroundColor: '#ffffff',
@@ -309,12 +320,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  accountRowActive: {
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primary + '11',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 8,
   },
   accountLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
     flex: 1,
+  },
+  dragHandle: {
+    fontSize: 18,
+    color: Colors.textSecondary,
   },
   accountIcon: {
     fontSize: 22,
@@ -423,6 +448,33 @@ const styles = StyleSheet.create({
     color: Colors.text,
     fontSize: 16,
     fontWeight: '600',
+  },
+  netWorthCard: {
+    backgroundColor: '#edf7f1',
+    borderRadius: 20,
+    padding: 24,
+    alignItems: 'center',
+    gap: 8,
+    borderWidth: 1.5,
+    borderColor: '#b6dfc0',
+  },
+  netWorthLabel: {
+    fontSize: 14,
+    color: '#1f7a45',
+    fontWeight: '600',
+  },
+  netWorthAmount: {
+    fontSize: 40,
+    fontWeight: 'bold',
+    color: '#0A2A1A',
+  },
+  netWorthRow: {
+    flexDirection: 'row',
+    gap: 24,
+  },
+  netWorthSub: {
+    fontSize: 13,
+    color: '#1f7a45',
   },
   interestRow: {
     flexDirection: 'row',
