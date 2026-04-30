@@ -160,11 +160,11 @@ export default function AssignScreen() {
   function renderExpenseRow(expense: Expense) {
     return (
       <View key={expense.id} style={styles.expenseRow}>
-        <View style={styles.expenseLeft}>
+        <View style={styles.expenseTopRow}>
           <Text style={styles.expenseIcon}>{expense.icon}</Text>
           <Text style={styles.expenseLabel}>{expense.label}</Text>
         </View>
-        <View style={styles.expenseRight}>
+        <View style={styles.expenseBottomRow}>
           <View style={styles.freqToggle}>
             <TouchableOpacity
               style={[styles.freqChip, expense.frequency === 'monthly' && styles.freqChipActive]}
@@ -464,16 +464,17 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   expenseRow: {
+    gap: 8,
+  },
+  expenseTopRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     gap: 8,
   },
-  expenseLeft: {
+  expenseBottomRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    flex: 1,
+    gap: 6,
   },
   expenseIcon: {
     fontSize: 16,
@@ -482,11 +483,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.textSecondary,
     flex: 1,
-  },
-  expenseRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
   },
   freqToggle: {
     flexDirection: 'row',

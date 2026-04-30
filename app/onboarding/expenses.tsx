@@ -98,7 +98,7 @@ export default function ExpensesScreen() {
       <View style={styles.expenseList}>
         {expenses.map((expense) => (
           <View key={expense.id} style={styles.expenseRow}>
-            <View style={styles.expenseLeft}>
+            <View style={styles.expenseTopRow}>
               <Text style={styles.expenseIcon}>{expense.icon}</Text>
               <TextInput
                 style={styles.expenseLabel}
@@ -106,8 +106,11 @@ export default function ExpensesScreen() {
                 onChangeText={(val) => updateLabel(expense.id, val)}
                 placeholderTextColor={Colors.textSecondary}
               />
+              <TouchableOpacity onPress={() => removeExpense(expense.id)}>
+                <Text style={styles.removeBtn}>✕</Text>
+              </TouchableOpacity>
             </View>
-            <View style={styles.expenseRight}>
+            <View style={styles.expenseBottomRow}>
               <View style={styles.freqToggle}>
                 <TouchableOpacity
                   style={[styles.freqChip, expense.frequency === 'monthly' && styles.freqChipActive]}
@@ -126,18 +129,12 @@ export default function ExpensesScreen() {
                   </Text>
                 </TouchableOpacity>
               </View>
-                <CurrencyInput
-                  style={styles.amountInput}
-                  placeholder="$0.00"
-                  value={expense.amount}
-                  onChangeText={(val) => updateAmount(expense.id, val)}
-                  // @ts-ignore
-                tabIndex={expenses.indexOf(expense) + 1}
-                />
-
-              <TouchableOpacity onPress={() => removeExpense(expense.id)}>
-                <Text style={styles.removeBtn}>✕</Text>
-              </TouchableOpacity>
+              <CurrencyInput
+                style={styles.amountInput}
+                placeholder="$0.00"
+                value={expense.amount}
+                onChangeText={(val) => updateAmount(expense.id, val)}
+              />
             </View>
           </View>
         ))}
@@ -215,15 +212,17 @@ backButton: {
     borderColor: '#e3e8e3',
     borderRadius: 12,
     padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 10,
   },
-  expenseLeft: {
+  expenseTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    flex: 1,
+    gap: 10,
+  },
+  expenseBottomRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   expenseIcon: {
     fontSize: 20,
@@ -233,11 +232,6 @@ backButton: {
     color: Colors.text,
     fontWeight: '500',
     flex: 1,
-  },
-  expenseRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
   },
   freqToggle: {
     flexDirection: 'row',

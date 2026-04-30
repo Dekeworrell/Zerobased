@@ -201,16 +201,19 @@ export default function BudgetScreen() {
       <View style={styles.categoryList}>
         {categories.map((cat) => (
           <View key={cat.id} style={styles.categoryRow}>
-            <View style={styles.categoryLeft}>
+            <View style={styles.categoryTopRow}>
               <Text style={styles.categoryIcon}>{cat.icon}</Text>
               <TextInput
-                  style={styles.categoryLabel}
-                  value={cat.label}
-                  onChangeText={(val) => updateLabel(cat.id, val)}
-                  placeholderTextColor={Colors.textSecondary}
-                />
+                style={styles.categoryLabel}
+                value={cat.label}
+                onChangeText={(val) => updateLabel(cat.id, val)}
+                placeholderTextColor={Colors.textSecondary}
+              />
+              <TouchableOpacity onPress={() => removeCategory(cat.id)}>
+                <Text style={styles.removeBtn}>✕</Text>
+              </TouchableOpacity>
             </View>
-            <View style={styles.categoryRight}>
+            <View style={styles.categoryBottomRow}>
               <View style={styles.freqToggle}>
                 <TouchableOpacity
                   style={[styles.freqChip, cat.frequency === 'monthly' && styles.freqChipActive]}
@@ -231,9 +234,6 @@ export default function BudgetScreen() {
                 value={cat.budgeted_amount}
                 onChangeText={(val) => updateAmount(cat.id, val)}
               />
-              <TouchableOpacity onPress={() => removeCategory(cat.id)}>
-                <Text style={styles.removeBtn}>✕</Text>
-              </TouchableOpacity>
             </View>
           </View>
         ))}
@@ -333,20 +333,22 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   categoryRow: {
-    backgroundColor: '#ffffff',
+    backgroundColor: Colors.card,
     borderWidth: 1,
-    borderColor: '#e3e8e3',
+    borderColor: Colors.border,
     borderRadius: 12,
     padding: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 10,
   },
-  categoryLeft: {
+  categoryTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    flex: 1,
+  },
+  categoryBottomRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   categoryIcon: {
     fontSize: 20,
@@ -356,11 +358,6 @@ const styles = StyleSheet.create({
     color: Colors.text,
     fontWeight: '500',
     flex: 1,
-  },
-  categoryRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
   },
   freqToggle: {
     flexDirection: 'row',
