@@ -55,7 +55,7 @@ export default function DashboardScreen() {
         { data: accs },
         { data: catDefaults },
       ] = await Promise.all([
-        supabase.from('profiles').select('name, budget_cycle, default_account_id, last_payday_check').eq('id', user.id).single(),
+        supabase.from('profiles').select('name, budget_cycle, default_account_id, last_payday_check, household_id').eq('id', user.id).single(),
         supabase.from('income_sources').select('*').in('user_id', userIds),
         supabase.from('budget_categories').select('*').in('user_id', userIds).order('sort_order', { ascending: true }),
         supabase.from('accounts').select('*').in('user_id', userIds),
@@ -63,8 +63,30 @@ export default function DashboardScreen() {
       ])
 
       // Profile
-      setName(profile?.name || 'there')
-      const cycle = profile?.budget_cycle || 'monthly'
+      const profileName = profile?.name || 'there'
+      if (profile?.household_id) {
+        const { data: members } = await supabase.rpc('get_household_members')
+        if (members && members.length > 0) {
+          setName(`${profileName} & ${members[0].name}`)
+        } else {
+          setName(profileName)
+        }
+      } else {
+        setName(profileName)
+      }
+      let cycle = profile?.budget_cycle || 'monthly'
+      // If no income on this profile, use partner's budget cycle
+      if (profile?.household_id) {
+        const { data: householdProfiles } = await supabase
+          .from('profiles')
+          .select('budget_cycle')
+          .eq('household_id', profile.household_id)
+          .neq('budget_cycle', null)
+        if (householdProfiles && householdProfiles.length > 0) {
+          const withCycle = householdProfiles.find((p: any) => p.budget_cycle === 'paycycle')
+          if (withCycle) cycle = 'paycycle'
+        }
+      }
       setBudgetCycle(cycle)
       if (profile?.default_account_id) setGlobalDefaultAccountId(profile.default_account_id)
 

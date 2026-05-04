@@ -37,6 +37,8 @@ export default function SettingsScreen() {
     if (!user) { router.replace('/'); return }
 
     setEmail(user.email || '')
+    setInviteSent(false)
+    setInviteCode('')
 
     const { data: profile } = await supabase
       .from('profiles')
@@ -53,33 +55,16 @@ export default function SettingsScreen() {
       setNotifyAt2(profile.notify_at_percent_2 ?? 90)
       setHouseholdId(profile.household_id || null)
 
-      // Load partner info if in a household
       if (profile.household_id) {
-        const { data: partner } = await supabase
-          .from('profiles')
-          .select('name, id')
-          .eq('household_id', profile.household_id)
-          .neq('id', user.id)
-          .single()
-        if (partner) {
-          const { data: partnerUser } = await supabase
-            .from('auth.users')
-            .select('email')
-            .eq('id', partner.id)
-            .single()
-          setPartnerEmail(partnerUser?.email || partner.name || 'Partner')
+        const { data: members } = await supabase.rpc('get_household_members')
+        if (members && members.length > 0) {
+          setPartnerEmail(members[0].name || 'Your partner')
         }
+      }else {
+        setPartnerEmail('')
+        const { data: invite } = await supabase.rpc('get_pending_invite')
+        if (invite) setPendingInvite(invite)
       }
-
-      // Check for pending invite sent to this user's email
-      const { data: invite } = await supabase
-        .from('household_invitations')
-        .select('*')
-        .eq('invited_email', user.email || '')
-        .eq('accepted', false)
-        .gt('expires_at', new Date().toISOString())
-        .single()
-      if (invite) setPendingInvite(invite)
     }
 
     setLoading(false)
@@ -119,18 +104,18 @@ export default function SettingsScreen() {
 
   async function acceptInvite() {
     if (!pendingInvite) return
+    console.log('Accepting invite:', JSON.stringify(pendingInvite))
     setHouseholdLoading(true)
+    setError('')
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-      await supabase.from('profiles')
-        .update({ household_id: pendingInvite.household_id })
-        .eq('id', user.id)
-      await supabase.from('household_invitations')
-        .update({ accepted: true })
-        .eq('id', pendingInvite.id)
-      setHouseholdId(pendingInvite.household_id)
+      const { data, error } = await supabase.rpc('accept_household_invite', {
+        invite_token: pendingInvite.token
+      })
+      console.log('Accept result:', JSON.stringify(data), JSON.stringify(error))
+      if (error) throw error
+      setHouseholdId(data.household_id)
       setPendingInvite(null)
+      setPartnerEmail('Your partner')
       setSuccess(true)
       setTimeout(() => setSuccess(false), 2000)
     } catch (err: any) {
