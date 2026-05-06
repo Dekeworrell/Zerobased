@@ -101,35 +101,39 @@ export default function TransactionEditSheet({ visible, transaction, categories,
     setSaving(false)
   }
 
-  function handleDelete() {
-    Alert.alert('Delete transaction', 'Are you sure? This cannot be undone.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete', style: 'destructive',
-        onPress: async () => {
-          setDeleting(true)
-          try {
-            if (transaction!.account_id) {
-              const { data: acc } = await supabase
-                .from('accounts').select('balance, type').eq('id', transaction!.account_id).single()
-              if (acc) {
-                const current = parseFloat(acc.balance) || 0
-                const delta = transaction!.type === 'income'
-                  ? balanceChangeOnIncome(acc.type, transaction!.amount)
-                  : balanceChangeOnExpense(acc.type, transaction!.amount)
-                const newBalance = current - delta
-                await supabase.from('accounts').update({ balance: newBalance }).eq('id', transaction!.account_id)
-              }
-            }
-            await supabase.from('transactions').delete().eq('id', transaction!.id)
-            onDeleted()
-          } catch (err: any) {
-            setError(err.message)
-            setDeleting(false)
-          }
+  async function handleDelete() {
+    const confirmed = Platform.OS === 'web'
+      ? window.confirm('Delete this transaction? This cannot be undone.')
+      : await new Promise<boolean>(resolve =>
+          Alert.alert('Delete transaction', 'Are you sure? This cannot be undone.', [
+            { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+            { text: 'Delete', style: 'destructive', onPress: () => resolve(true) },
+          ])
+        )
+    if (!confirmed) return
+
+    setDeleting(true)
+    setError('')
+    try {
+      if (transaction!.account_id) {
+        const { data: acc } = await supabase
+          .from('accounts').select('balance, type').eq('id', transaction!.account_id).single()
+        if (acc) {
+          const current = parseFloat(acc.balance) || 0
+          const delta = transaction!.type === 'income'
+            ? balanceChangeOnIncome(acc.type, transaction!.amount)
+            : balanceChangeOnExpense(acc.type, transaction!.amount)
+          const newBalance = current - delta
+          await supabase.from('accounts').update({ balance: newBalance }).eq('id', transaction!.account_id)
         }
       }
-    ])
+      const { error: deleteError } = await supabase.from('transactions').delete().eq('id', transaction!.id)
+      if (deleteError) throw deleteError
+      onDeleted()
+    } catch (err: any) {
+      setError(err.message)
+      setDeleting(false)
+    }
   }
 
   return (
