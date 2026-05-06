@@ -302,19 +302,19 @@ export default function DashboardScreen() {
                 </Text>
               </View>
               <View style={styles.budgetSummaryRight}>
-                <TouchableOpacity
-                  onPress={(e) => {
-                    e.stopPropagation()
-                    setSummaryView(v => v === 'cycle' ? 'monthly' : 'cycle')
-                  }}
-                  style={styles.togglePill}
-                >
-                  <Text style={styles.togglePillText}>
-                    {summaryView === 'cycle'
-                      ? budgetCycle === 'paycycle' ? '📅 Pay period' : '📅 Monthly'
-                      : '🗓 Monthly'}
-                  </Text>
-                </TouchableOpacity>
+                {budgetCycle === 'paycycle' && (
+                  <TouchableOpacity
+                    onPress={(e) => {
+                      e.stopPropagation()
+                      setSummaryView(v => v === 'cycle' ? 'monthly' : 'cycle')
+                    }}
+                    style={styles.togglePill}
+                  >
+                    <Text style={styles.togglePillText}>
+                      {summaryView === 'cycle' ? '📅 Pay period' : '🗓 Monthly'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
                 <Text style={styles.budgetSummaryChevron}>
                   {categoriesExpanded ? '▲' : '▼'}
                 </Text>
