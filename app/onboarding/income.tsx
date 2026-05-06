@@ -1,7 +1,7 @@
 import DateTimePicker from '@react-native-community/datetimepicker'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useEffect, useState } from 'react'
-import { ActivityIndicator, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { ActivityIndicator, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native'
 import CurrencyInput from '../../components/CurrencyInput'
 import KeyboardScrollView from '../../components/KeyboardScrollView'
 import { Colors } from '../../constants/colors'
@@ -35,6 +35,9 @@ type IncomeSource = {
 }
 
 export default function IncomeScreen() {
+  const { width: windowWidth } = useWindowDimensions()
+  // content paddingHorizontal:32 each side + card padding:20 each side = 104
+  const pickerWidth = Math.min(windowWidth, 500) - 104
   const { from } = useLocalSearchParams<{ from?: string }>()
   const isEditing = from === 'dashboard'
   const [loading, setLoading] = useState(isEditing)
@@ -258,14 +261,14 @@ export default function IncomeScreen() {
               </TouchableOpacity>
             )}
             {showPaydayPicker === index && (
-              <View style={{ backgroundColor: '#ffffff', borderRadius: 16, borderWidth: 1, borderColor: '#e3e8e3', overflow: 'hidden', marginHorizontal: 4, alignSelf: 'stretch' }}>
+              <View style={{ backgroundColor: '#ffffff', borderRadius: 16, borderWidth: 1, borderColor: '#e3e8e3', overflow: 'hidden', alignSelf: 'stretch' }}>
                 <DateTimePicker
                   value={source.next_payday ? new Date(source.next_payday + 'T12:00:00') : new Date()}
                   mode="date"
                   display="spinner"
                   themeVariant="light"
                   minimumDate={new Date()}
-                  style={{ width: '100%' }}
+                  style={{ width: pickerWidth }}
                   onChange={(event, selectedDate) => {
                     if (selectedDate) {
                       const offset = selectedDate.getTimezoneOffset()
@@ -322,7 +325,7 @@ export default function IncomeScreen() {
                       display="spinner"
                       themeVariant="light"
                       minimumDate={new Date()}
-                      style={{ width: '100%' }}
+                      style={{ width: pickerWidth }}
                       onChange={(event, selectedDate) => {
                         if (selectedDate) {
                           const offset = selectedDate.getTimezoneOffset()
