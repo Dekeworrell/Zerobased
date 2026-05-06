@@ -194,15 +194,13 @@ export default function DashboardScreen() {
 
   const { totalBudgeted: monthlyBudgeted, remaining: unassigned } = calculateBudgetStatus(monthlyIncome, categories)
 
-  const paycycleBudgeted = payPeriodStart && payPeriodEnd
+  const paycycleBudgeted = budgetCycle === 'paycycle' && payPeriodStart && payPeriodEnd
     ? categories.reduce((sum, c) => {
         return sum + toPeriodAmount(c.budgeted_amount, c.frequency, budgetCycle, payPeriodStart, payPeriodEnd)
       }, 0)
     : monthlyBudgeted / 2
 
-  const totalBudgeted = budgetCycle === 'paycycle' ? paycycleBudgeted : monthlyBudgeted
-
-  const displayBudgeted = summaryView === 'monthly' ? monthlyBudgeted : totalBudgeted
+  const displayBudgeted = summaryView === 'monthly' ? monthlyBudgeted : paycycleBudgeted
 
   const netWorth = accounts.reduce((sum, a) => {
     const balance = parseFloat(a.balance) || 0
@@ -346,13 +344,9 @@ export default function DashboardScreen() {
             <View style={styles.categoryList}>
               {categories.map((cat) => {
                 const monthlyAmount = toMonthly(cat.budgeted_amount.toString(), cat.frequency)
-                const periodAmount = toPeriodAmount(
-                  cat.budgeted_amount,
-                  cat.frequency,
-                  budgetCycle,
-                  payPeriodStart,
-                  payPeriodEnd
-                )
+                const periodAmount = budgetCycle === 'paycycle' && payPeriodStart && payPeriodEnd
+                  ? toPeriodAmount(cat.budgeted_amount, cat.frequency, budgetCycle, payPeriodStart, payPeriodEnd)
+                  : monthlyAmount / 2
                 const displayAmount = summaryView === 'monthly' ? monthlyAmount : periodAmount
                 const displayLabel = summaryView === 'monthly' ? '/mo' : '/period'
                 return (
