@@ -739,11 +739,10 @@ export default function AddTransactionScreen() {
                 >
                   <View>
                     <Text style={styles.sectionHeaderTitle}>Payment account</Text>
-                    <Text style={styles.fieldLabelSub}>
-                      {selectedAccount && !accountSectionExpanded
-                        ? `🏦 ${selectedAccount.label}`
-                        : 'Which account are you paying this expense from?'}
-                    </Text>
+                    {selectedAccount && !accountSectionExpanded
+                      ? <Text style={styles.sectionHeaderTitle}>🏦 {selectedAccount.label}</Text>
+                      : <Text style={styles.fieldLabelSub}>Which account are you paying this expense from?</Text>
+                    }
                   </View>
                   <Text style={styles.sectionChevron}>{accountSectionExpanded ? '▲' : '▼'}</Text>
                 </TouchableOpacity>
