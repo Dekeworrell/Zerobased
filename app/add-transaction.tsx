@@ -151,7 +151,7 @@ export default function AddTransactionScreen() {
       const catDefault = defaultMap[categoryId]
       if (catDefault) {
         const acc = accs.find((a: Account) => a.id === catDefault)
-        if (acc) { setSelectedAccount(acc); setSetAsDefault(true); setAccountSectionExpanded(true); setLoading(false); return }
+        if (acc) { setSelectedAccount(acc); setSetAsDefault(true); setAccountSectionExpanded(false); setLoading(false); return }
       }
       if (globalDefault) {
         const acc = accs.find((a: Account) => a.id === globalDefault)
@@ -212,13 +212,13 @@ export default function AddTransactionScreen() {
     setSelectedCategory(cat)
     setCategoriesExpanded(false)
     setShowMoreAccounts(false)
-    setAccountSectionExpanded(true)
     const catDefault = categoryDefaults[cat.id]
     if (catDefault) {
       const acc = accounts.find(a => a.id === catDefault)
-      if (acc) { setSelectedAccount(acc); setSetAsDefault(true); return }
+      if (acc) { setSelectedAccount(acc); setSetAsDefault(true); setAccountSectionExpanded(false); return }
     }
     setSetAsDefault(false)
+    setAccountSectionExpanded(true)
     if (globalDefaultAccountId) {
       const acc = accounts.find(a => a.id === globalDefaultAccountId)
       if (acc) setSelectedAccount(acc)
@@ -739,7 +739,11 @@ export default function AddTransactionScreen() {
                 >
                   <View>
                     <Text style={styles.sectionHeaderTitle}>Payment account</Text>
-                    <Text style={styles.fieldLabelSub}>Which account are you paying this expense from?</Text>
+                    <Text style={styles.fieldLabelSub}>
+                      {selectedAccount && !accountSectionExpanded
+                        ? `🏦 ${selectedAccount.label}`
+                        : 'Which account are you paying this expense from?'}
+                    </Text>
                   </View>
                   <Text style={styles.sectionChevron}>{accountSectionExpanded ? '▲' : '▼'}</Text>
                 </TouchableOpacity>
