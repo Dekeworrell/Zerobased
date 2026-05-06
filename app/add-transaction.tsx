@@ -148,7 +148,7 @@ export default function AddTransactionScreen() {
       const catDefault = defaultMap[categoryId]
       if (catDefault) {
         const acc = accs.find((a: Account) => a.id === catDefault)
-        if (acc) { setSelectedAccount(acc); setLoading(false); return }
+        if (acc) { setSelectedAccount(acc); setSetAsDefault(true); setLoading(false); return }
       }
       if (globalDefault) {
         const acc = accs.find((a: Account) => a.id === globalDefault)
@@ -212,8 +212,9 @@ export default function AddTransactionScreen() {
     const catDefault = categoryDefaults[cat.id]
     if (catDefault) {
       const acc = accounts.find(a => a.id === catDefault)
-      if (acc) { setSelectedAccount(acc); return }
+      if (acc) { setSelectedAccount(acc); setSetAsDefault(true); return }
     }
+    setSetAsDefault(false)
     if (globalDefaultAccountId) {
       const acc = accounts.find(a => a.id === globalDefaultAccountId)
       if (acc) setSelectedAccount(acc)
