@@ -26,6 +26,7 @@ export default function SettingsScreen() {
   const [inviteCode, setInviteCode] = useState('')
   const [joiningHousehold, setJoiningHousehold] = useState(false)
   const [pendingInvite, setPendingInvite] = useState<any>(null)
+  const [pendingInviteeEmail, setPendingInviteeEmail] = useState('')
   const [householdLoading, setHouseholdLoading] = useState(false)
 
   useEffect(() => {
@@ -39,6 +40,7 @@ export default function SettingsScreen() {
     setEmail(user.email || '')
     setInviteSent(false)
     setInviteCode('')
+    setPendingInviteeEmail('')
 
     const { data: profile } = await supabase
       .from('profiles')
@@ -59,8 +61,16 @@ export default function SettingsScreen() {
         const { data: members } = await supabase.rpc('get_household_members')
         if (members && members.length > 0) {
           setPartnerEmail(members[0].name || 'Your partner')
+        } else {
+          const { data: outgoing } = await supabase
+            .from('household_invitations')
+            .select('invited_email')
+            .eq('household_id', profile.household_id)
+            .eq('accepted', false)
+            .maybeSingle()
+          if (outgoing) setPendingInviteeEmail(outgoing.invited_email)
         }
-      }else {
+      } else {
         setPartnerEmail('')
         const { data: invite } = await supabase.rpc('get_pending_invite')
         if (invite) setPendingInvite(invite)
@@ -118,6 +128,7 @@ export default function SettingsScreen() {
       setPartnerEmail('Your partner')
       setSuccess(true)
       setTimeout(() => setSuccess(false), 2000)
+      supabase.functions.invoke('notify-invite-accepted').catch(() => {})
     } catch (err: any) {
       setError(err.message)
     }
@@ -158,10 +169,12 @@ async function sendInvite() {
 
       if (error) throw error
 
+      const sentTo = inviteEmail.trim().toLowerCase()
       setHouseholdId(data.household_id)
       setInviteCode(data.token)
       setInviteSent(true)
       setInviteEmail('')
+      setPendingInviteeEmail(sentTo)
     } catch (err: any) {
       setError(err.message)
     }
@@ -380,13 +393,21 @@ async function sendInvite() {
 <View style={styles.section}>
         <Text style={styles.sectionTitle}>Household</Text>
 
-        {householdId && partnerEmail ? (
+        {householdId && (partnerEmail || pendingInviteeEmail) ? (
           <>
             <View style={styles.partnerCard}>
-              <Text style={styles.partnerIcon}>👫</Text>
+              <Text style={styles.partnerIcon}>{partnerEmail ? '👫' : '⏳'}</Text>
               <View style={styles.partnerInfo}>
-                <Text style={styles.partnerName}>Sharing with {partnerEmail}</Text>
-                <Text style={styles.switchSubLabel}>You share the same budget and transactions</Text>
+                <Text style={styles.partnerName}>
+                  {partnerEmail
+                    ? `Sharing with ${partnerEmail}`
+                    : `Sharing with ${pendingInviteeEmail}`}
+                </Text>
+                <Text style={styles.switchSubLabel}>
+                  {partnerEmail
+                    ? 'You share the same budget and transactions'
+                    : 'Invite pending — waiting for them to accept'}
+                </Text>
               </View>
             </View>
             <TouchableOpacity
