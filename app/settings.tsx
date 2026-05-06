@@ -175,6 +175,9 @@ async function sendInvite() {
       setInviteSent(true)
       setInviteEmail('')
       setPendingInviteeEmail(sentTo)
+      supabase.functions.invoke('send-invite-email', {
+        body: { invited_email: sentTo, inviter_name: name || email }
+      }).catch(() => {})
     } catch (err: any) {
       setError(err.message)
     }
