@@ -101,12 +101,15 @@ export default function AddTransactionScreen() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
+    const { data: householdIds } = await supabase.rpc('get_household_user_ids')
+    const userIds: string[] = householdIds || [user.id]
+
     const [{ data: cats }, { data: accs }, { data: profile }, { data: catDefaults }, { data: income }] = await Promise.all([
-      supabase.from('budget_categories').select('id, label, icon').eq('user_id', user.id),
-      supabase.from('accounts').select('id, label, type').eq('user_id', user.id),
+      supabase.from('budget_categories').select('id, label, icon').in('user_id', userIds),
+      supabase.from('accounts').select('id, label, type').in('user_id', userIds),
       supabase.from('profiles').select('default_account_id, budget_cycle').eq('id', user.id).single(),
       supabase.from('category_account_defaults').select('category_id, account_id').eq('user_id', user.id),
-      supabase.from('income_sources').select('*').eq('user_id', user.id),
+      supabase.from('income_sources').select('*').in('user_id', userIds),
     ])
 
     if (cats) setCategories(cats)
