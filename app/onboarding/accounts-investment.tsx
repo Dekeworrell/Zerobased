@@ -1,6 +1,7 @@
 import { router } from 'expo-router'
 import { useState } from 'react'
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+
 import CurrencyInput from '../../components/CurrencyInput'
 import KeyboardScrollView from '../../components/KeyboardScrollView'
 import { Colors } from '../../constants/colors'

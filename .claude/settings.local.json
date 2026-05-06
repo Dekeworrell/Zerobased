@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(claude mcp *)",
+      "mcp__supabase__get_advisors",
+      "mcp__supabase__list_migrations",
+      "mcp__supabase__execute_sql",
+      "mcp__supabase__apply_migration",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "PowerShell(New-Item *)",
+      "mcp__supabase__deploy_edge_function"
+    ]
+  }
+}
