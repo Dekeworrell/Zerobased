@@ -58,6 +58,7 @@ export default function AddTransactionScreen() {
   const [showMoreIncomeAccounts, setShowMoreIncomeAccounts] = useState(false)
   const [showMoreAccounts, setShowMoreAccounts] = useState(false)
   const [showMoreTransferToAccounts, setShowMoreTransferToAccounts] = useState(false)
+  const [householdUserIds, setHouseholdUserIds] = useState<string[]>([])
   const [showFromLiability, setShowFromLiability] = useState(false)
   const [showFromRegistered, setShowFromRegistered] = useState(false)
   const [showToRegistered, setShowToRegistered] = useState(false)
@@ -103,6 +104,7 @@ export default function AddTransactionScreen() {
 
     const { data: householdIds } = await supabase.rpc('get_household_user_ids')
     const userIds: string[] = householdIds || [user.id]
+    setHouseholdUserIds(userIds)
 
     const [{ data: cats }, { data: accs }, { data: profile }, { data: catDefaults }, { data: income }] = await Promise.all([
       supabase.from('budget_categories').select('id, label, icon').in('user_id', userIds),
@@ -318,12 +320,12 @@ export default function AddTransactionScreen() {
       try {
         if (profile?.notifications_enabled && type !== 'income' && selectedCategory) {
           const { data: cats } = await supabase.from('budget_categories').select('*')
-            .eq('user_id', user.id).eq('id', selectedCategory.id)
+            .eq('id', selectedCategory.id)
           const now = new Date()
           const effectivePeriodStart = payPeriodStart ?? new Date(now.getFullYear(), now.getMonth(), 1)
           const effectivePeriodEnd = payPeriodEnd ?? new Date(now.getFullYear(), now.getMonth() + 1, 0)
           const { data: txns } = await supabase.from('transactions').select('category_id, amount, type')
-            .eq('user_id', user.id).eq('type', 'expense').eq('category_id', selectedCategory.id)
+            .in('user_id', householdUserIds).eq('type', 'expense').eq('category_id', selectedCategory.id)
             .gte('date', effectivePeriodStart.toISOString().split('T')[0])
             .lte('date', effectivePeriodEnd.toISOString().split('T')[0])
           if (cats && txns) await checkBudgetAndNotify(cats, txns, profile.notify_at_percent_1 || 80, profile.notify_at_percent_2 || 90, true, effectivePeriodStart, effectivePeriodEnd)
