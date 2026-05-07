@@ -1,8 +1,8 @@
 import { router, useFocusEffect } from 'expo-router'
 import { useCallback, useState } from 'react'
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist'
-import { GestureHandlerRootView } from 'react-native-gesture-handler'
+import { GestureHandlerRootView, ScrollView } from 'react-native-gesture-handler'
 import CurrencyInput from '../components/CurrencyInput'
 import { ASSET_TYPE_OPTIONS, LIABILITY_ACCOUNTS as LIABILITY_TYPE_OPTIONS, getAccountIcon } from '../constants/accounts'
 import { isLiabilityAccount } from '../constants/categories'
@@ -122,7 +122,6 @@ export default function AccountsScreen() {
       } else {
         setAssets(prev => [...prev, data])
       }
-      setShowAddType(null)
     }
   }
 
@@ -206,7 +205,7 @@ export default function AccountsScreen() {
             onPress={() => setShowAddType(showAddType === 'asset' ? null : 'asset')}
           >
             <Text style={styles.addSmallBtnText}>
-              {showAddType === 'asset' ? '− Cancel' : '+ Add asset'}
+              {showAddType === 'asset' ? '− Hide' : '+ Add asset'}
             </Text>
           </TouchableOpacity>
           {showAddType === 'asset' && (
@@ -241,7 +240,7 @@ export default function AccountsScreen() {
             onPress={() => setShowAddType(showAddType === 'liability' ? null : 'liability')}
           >
             <Text style={styles.addSmallBtnText}>
-              {showAddType === 'liability' ? '− Cancel' : '+ Add liability'}
+              {showAddType === 'liability' ? '− Hide' : '+ Add liability'}
             </Text>
           </TouchableOpacity>
           {showAddType === 'liability' && (
