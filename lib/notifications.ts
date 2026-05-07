@@ -106,7 +106,9 @@ export async function checkBudgetAndNotify(
   transactions: any[],
   notifyAt1: number,
   notifyAt2: number,
-  notificationsEnabled: boolean
+  notificationsEnabled: boolean,
+  periodStart?: Date | null,
+  periodEnd?: Date | null,
 ) {
   if (!notificationsEnabled) return
 
@@ -119,8 +121,26 @@ export async function checkBudgetAndNotify(
     .eq('id', user.id)
     .single()
 
-  const lastNotifiedCategory = profile?.last_notified_category || ''
-  const lastNotifiedThreshold = profile?.last_notified_threshold || 0
+  // last_notified_category stores a JSON map: { _period: "2026-05-01", catId: threshold, ... }
+  // Legacy format (plain category ID string) is migrated on first write.
+  const periodKey = periodStart ? periodStart.toISOString().split('T')[0] : 'all'
+  let notifiedMap: Record<string, any> = {}
+  try {
+    const raw = profile?.last_notified_category || ''
+    if (raw.startsWith('{')) {
+      notifiedMap = JSON.parse(raw)
+    } else if (raw) {
+      // Migrate legacy single-category format
+      notifiedMap = { _period: periodKey, [raw]: profile?.last_notified_threshold || 0 }
+    }
+  } catch {}
+
+  // Reset map when a new budget period starts
+  if (notifiedMap._period !== periodKey) {
+    notifiedMap = { _period: periodKey }
+  }
+
+  let mapUpdated = false
 
   for (const cat of categories) {
     if (cat.category_type === 'fixed') continue
@@ -134,34 +154,39 @@ export async function checkBudgetAndNotify(
 
     const percentUsed = (spent / budgeted) * 100
 
-    let thresholdReached = 0
-    if (percentUsed >= 100) thresholdReached = 100
-    else if (notifyAt2 && percentUsed >= notifyAt2) thresholdReached = notifyAt2
-    else if (notifyAt1 && percentUsed >= notifyAt1) thresholdReached = notifyAt1
+    // Build all milestones: user-set alerts + app-programmed 10% increments from 100%.
+    const milestoneSet = new Set<number>()
+    if (notifyAt1) milestoneSet.add(notifyAt1)
+    if (notifyAt2) milestoneSet.add(notifyAt2)
+    const highestIncrement = Math.floor(percentUsed / 10) * 10
+    for (let t = 100; t <= highestIncrement; t += 10) milestoneSet.add(t)
+    const milestones = Array.from(milestoneSet).sort((a, b) => a - b)
 
-    if (thresholdReached === 0) continue
+    // Find the highest milestone already crossed at the current spend level.
+    const crossed = milestones.filter(t => t <= percentUsed)
+    if (crossed.length === 0) continue
+    const thresholdToFire = crossed[crossed.length - 1]
 
-    // Skip if already notified for this category + threshold combo
-    if (lastNotifiedCategory === cat.id && lastNotifiedThreshold >= thresholdReached) continue
+    // Only fire if this is a new high — i.e. not yet notified at this level this period.
+    const alreadyNotified: number = notifiedMap[cat.id] || 0
+    if (thresholdToFire <= alreadyNotified) continue
 
-    // Fire the notification
-    if (thresholdReached >= 100) {
-      const overPercent = percentUsed - 100
-      if (overPercent > 0) {
-        await scheduleBudgetOver(cat.label, overPercent)
-      } else {
-        await scheduleBudgetFull(cat.label)
-      }
+    if (thresholdToFire > 100) {
+      await scheduleBudgetOver(cat.label, percentUsed - 100)
+    } else if (thresholdToFire === 100) {
+      await scheduleBudgetFull(cat.label)
     } else {
-      await scheduleBudgetWarning(cat.label, percentUsed, thresholdReached)
+      await scheduleBudgetWarning(cat.label, percentUsed, thresholdToFire)
     }
 
-    // Save that we notified for this category + threshold
-    await supabase.from('profiles').update({
-      last_notified_category: cat.id,
-      last_notified_threshold: thresholdReached,
-    }).eq('id', user.id)
+    notifiedMap[cat.id] = thresholdToFire
+    mapUpdated = true
+  }
 
-    break // One notification per transaction save to avoid spam
+  if (mapUpdated) {
+    await supabase.from('profiles').update({
+      last_notified_category: JSON.stringify(notifiedMap),
+      last_notified_threshold: 0,
+    }).eq('id', user.id)
   }
 }

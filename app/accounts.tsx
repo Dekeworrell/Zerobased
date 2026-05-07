@@ -1,7 +1,7 @@
 import { router, useFocusEffect } from 'expo-router'
 import { useCallback, useState } from 'react'
 import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
-import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist'
+import { NestableDraggableFlatList, NestableScrollContainer, RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import CurrencyInput from '../components/CurrencyInput'
 import { ASSET_TYPE_OPTIONS, LIABILITY_ACCOUNTS as LIABILITY_TYPE_OPTIONS, getAccountIcon } from '../constants/accounts'
@@ -185,104 +185,96 @@ export default function AccountsScreen() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#f2f4f2' }}>
-      <DraggableFlatList
-        data={[]}
-        renderItem={() => null}
-        keyExtractor={() => ''}
-        scrollEnabled={true}
-        showsVerticalScrollIndicator={true}
-        ListHeaderComponent={
-          <View style={styles.content}>
-            <Text style={styles.title}>Accounts</Text>
-            <Text style={styles.dragHint}>Hold ☰ to drag and reorder</Text>
+      <NestableScrollContainer showsVerticalScrollIndicator={true}>
+        <View style={styles.content}>
+          <Text style={styles.title}>Accounts</Text>
+          <Text style={styles.dragHint}>Hold ☰ to drag and reorder</Text>
 
-            <Text style={styles.sectionTitle}>Assets</Text>
-            <DraggableFlatList
-              data={assets}
-              onDragEnd={({ data }) => {
-                setAssets(data)
-                saveSortOrder(data)
-              }}
-              keyExtractor={(item) => item.id}
-              renderItem={renderAccount}
-              scrollEnabled={false}
-              activationDistance={5}
-            />
-            <TouchableOpacity
-              style={styles.addSmallBtn}
-              onPress={() => setShowAddType(showAddType === 'asset' ? null : 'asset')}
-            >
-              <Text style={styles.addSmallBtnText}>
-                {showAddType === 'asset' ? '− Cancel' : '+ Add asset'}
-              </Text>
-            </TouchableOpacity>
-            {showAddType === 'asset' && (
-              <View style={styles.typeGrid}>
-                {[...ASSET_TYPE_OPTIONS].sort((a, b) => a.label.localeCompare(b.label)).map(type => (
-                  <TouchableOpacity
-                    key={type.id}
-                    style={styles.typeChip}
-                    onPress={() => addAccount(type.id, type.label)}
-                  >
-                    <Text style={styles.typeChipIcon}>{type.icon}</Text>
-                    <Text style={styles.typeChipLabel}>{type.label}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
+          <Text style={styles.sectionTitle}>Assets</Text>
+          <NestableDraggableFlatList
+            data={assets}
+            onDragEnd={({ data }) => {
+              setAssets(data)
+              saveSortOrder(data)
+            }}
+            keyExtractor={(item) => item.id}
+            renderItem={renderAccount}
+            activationDistance={5}
+          />
+          <TouchableOpacity
+            style={styles.addSmallBtn}
+            onPress={() => setShowAddType(showAddType === 'asset' ? null : 'asset')}
+          >
+            <Text style={styles.addSmallBtnText}>
+              {showAddType === 'asset' ? '− Cancel' : '+ Add asset'}
+            </Text>
+          </TouchableOpacity>
+          {showAddType === 'asset' && (
+            <View style={styles.typeGrid}>
+              {[...ASSET_TYPE_OPTIONS].sort((a, b) => a.label.localeCompare(b.label)).map(type => (
+                <TouchableOpacity
+                  key={type.id}
+                  style={styles.typeChip}
+                  onPress={() => addAccount(type.id, type.label)}
+                >
+                  <Text style={styles.typeChipIcon}>{type.icon}</Text>
+                  <Text style={styles.typeChipLabel}>{type.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
 
-            <Text style={styles.sectionTitle}>Liabilities</Text>
-            <DraggableFlatList
-              data={liabilities}
-              onDragEnd={({ data }) => {
-                setLiabilities(data)
-                saveSortOrder(data)
-              }}
-              keyExtractor={(item) => item.id}
-              renderItem={renderAccount}
-              scrollEnabled={false}
-              activationDistance={5}
-            />
-            <TouchableOpacity
-              style={styles.addSmallBtn}
-              onPress={() => setShowAddType(showAddType === 'liability' ? null : 'liability')}
-            >
-              <Text style={styles.addSmallBtnText}>
-                {showAddType === 'liability' ? '− Cancel' : '+ Add liability'}
-              </Text>
-            </TouchableOpacity>
-            {showAddType === 'liability' && (
-              <View style={styles.typeGrid}>
-                {[...LIABILITY_TYPE_OPTIONS].sort((a, b) => a.label.localeCompare(b.label)).map(type => (
-                  <TouchableOpacity
-                    key={type.id}
-                    style={styles.typeChip}
-                    onPress={() => addAccount(type.id, type.label)}
-                  >
-                    <Text style={styles.typeChipIcon}>{type.icon}</Text>
-                    <Text style={styles.typeChipLabel}>{type.label}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
+          <Text style={styles.sectionTitle}>Liabilities</Text>
+          <NestableDraggableFlatList
+            data={liabilities}
+            onDragEnd={({ data }) => {
+              setLiabilities(data)
+              saveSortOrder(data)
+            }}
+            keyExtractor={(item) => item.id}
+            renderItem={renderAccount}
+            activationDistance={5}
+          />
+          <TouchableOpacity
+            style={styles.addSmallBtn}
+            onPress={() => setShowAddType(showAddType === 'liability' ? null : 'liability')}
+          >
+            <Text style={styles.addSmallBtnText}>
+              {showAddType === 'liability' ? '− Cancel' : '+ Add liability'}
+            </Text>
+          </TouchableOpacity>
+          {showAddType === 'liability' && (
+            <View style={styles.typeGrid}>
+              {[...LIABILITY_TYPE_OPTIONS].sort((a, b) => a.label.localeCompare(b.label)).map(type => (
+                <TouchableOpacity
+                  key={type.id}
+                  style={styles.typeChip}
+                  onPress={() => addAccount(type.id, type.label)}
+                >
+                  <Text style={styles.typeChipIcon}>{type.icon}</Text>
+                  <Text style={styles.typeChipLabel}>{type.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
 
-            {error ? <Text style={styles.error}>{error}</Text> : null}
-            {success ? <Text style={styles.successText}>✅ Balances saved!</Text> : null}
-
-            <TouchableOpacity
-              style={[styles.primaryButton, saving && styles.disabled]}
-              onPress={saveBalances}
-              disabled={saving}
-            >
-              {saving
-                ? <ActivityIndicator color={Colors.text} />
-                : <Text style={styles.primaryButtonText}>Save balances</Text>
-              }
-            </TouchableOpacity>
-            <View style={{ height: 40 }} />
-          </View>
-        }
-      />
+          {error ? <Text style={styles.error}>{error}</Text> : null}
+          {success ? <Text style={styles.successText}>✅ Balances saved!</Text> : null}
+          <View style={{ height: 100 }} />
+        </View>
+      </NestableScrollContainer>
+      <View style={styles.floatingButton}>
+        <TouchableOpacity
+          style={[styles.primaryButton, saving && styles.disabled]}
+          onPress={saveBalances}
+          disabled={saving}
+        >
+          {saving
+            ? <ActivityIndicator color={Colors.text} />
+            : <Text style={styles.primaryButtonText}>Save balances</Text>
+          }
+        </TouchableOpacity>
+      </View>
     </GestureHandlerRootView>
   )
 }
@@ -438,6 +430,19 @@ const styles = StyleSheet.create({
     fontSize: 15,
     textAlign: 'center',
     fontWeight: '500',
+  },
+  floatingButton: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#f2f4f2',
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    paddingBottom: 32,
+    borderTopWidth: 1,
+    borderTopColor: '#e3e8e3',
+    alignItems: 'center',
   },
   primaryButton: {
     backgroundColor: Colors.primary,

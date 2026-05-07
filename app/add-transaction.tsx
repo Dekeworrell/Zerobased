@@ -318,8 +318,14 @@ export default function AddTransactionScreen() {
       try {
         if (profile?.notifications_enabled && type !== 'income') {
           const { data: cats } = await supabase.from('budget_categories').select('*').eq('user_id', user.id)
-          const { data: txns } = await supabase.from('transactions').select('category_id, amount, type').eq('user_id', user.id).eq('type', 'expense')
-          if (cats && txns) await checkBudgetAndNotify(cats, txns, profile.notify_at_percent_1 || 80, profile.notify_at_percent_2 || 90, true)
+          const now = new Date()
+          const effectivePeriodStart = payPeriodStart ?? new Date(now.getFullYear(), now.getMonth(), 1)
+          const effectivePeriodEnd = payPeriodEnd ?? new Date(now.getFullYear(), now.getMonth() + 1, 0)
+          const { data: txns } = await supabase.from('transactions').select('category_id, amount, type')
+            .eq('user_id', user.id).eq('type', 'expense')
+            .gte('date', effectivePeriodStart.toISOString().split('T')[0])
+            .lte('date', effectivePeriodEnd.toISOString().split('T')[0])
+          if (cats && txns) await checkBudgetAndNotify(cats, txns, profile.notify_at_percent_1 || 80, profile.notify_at_percent_2 || 90, true, effectivePeriodStart, effectivePeriodEnd)
         }
         if (type === 'income' && profile?.notifications_enabled) {
           const { data: incomeData } = await supabase.from('income_sources').select('next_payday, frequency').eq('user_id', user.id).single()
