@@ -126,9 +126,9 @@ export default function SettingsScreen() {
       setHouseholdId(data.household_id)
       setPendingInvite(null)
       setPartnerEmail('Your partner')
-      setSuccess(true)
-      setTimeout(() => setSuccess(false), 2000)
       supabase.functions.invoke('notify-invite-accepted').catch(() => {})
+      // Route the new household member to set up their own income only
+      router.push('/onboarding/income?from=household_join')
     } catch (err: any) {
       setError(err.message)
     }

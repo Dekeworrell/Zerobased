@@ -1,6 +1,6 @@
 import { router } from 'expo-router'
-import { useState } from 'react'
-import { ActivityIndicator, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { useEffect, useRef, useState } from 'react'
+import { ActivityIndicator, Animated, Dimensions, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { Colors } from '../constants/colors'
 import { toMonthly } from '../lib/store'
 import { supabase } from '../lib/supabase'
@@ -15,13 +15,25 @@ type IncomeSource = {
   next_payday: string
 }
 
+type Account = {
+  id: string
+  label: string
+  type: string
+}
+
 type Props = {
   visible: boolean
   incomeSources: IncomeSource[]
+  accounts: Account[]
+  defaultAccountId: string | null
   onComplete: () => void
 }
 
-export default function PaydayModal({ visible, incomeSources, onComplete }: Props) {
+const PARTICLES = ['💸', '✨', '🎉', '💵']
+const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window')
+const PARTICLE_X = [0.22, 0.38, 0.55, 0.72].map(p => SCREEN_W * p)
+
+export default function PaydayModal({ visible, incomeSources, accounts, defaultAccountId, onComplete }: Props) {
   const variableSources = incomeSources.filter(s => s.income_type === 'variable')
   const fixedSources = incomeSources.filter(s => s.income_type === 'fixed')
 
@@ -33,12 +45,47 @@ export default function PaydayModal({ visible, incomeSources, onComplete }: Prop
   const [error, setError] = useState('')
   const [confirmedActual, setConfirmedActual] = useState(0)
   const [confirmedBudgeted, setConfirmedBudgeted] = useState(0)
+  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(defaultAccountId)
+  const [makeDefault, setMakeDefault] = useState(false)
+
+  const emojiScale = useRef(new Animated.Value(0.1)).current
+  const particleAnims = useRef(
+    PARTICLES.map(() => ({ y: new Animated.Value(0), opacity: new Animated.Value(0) }))
+  ).current
+
+  useEffect(() => {
+    if (!visible) return
+    setStep('payday')
+    setVariableAmounts({})
+    setError('')
+    setSelectedAccountId(defaultAccountId)
+    setMakeDefault(false)
+
+    emojiScale.setValue(0.1)
+    Animated.spring(emojiScale, { toValue: 1, friction: 4, tension: 50, useNativeDriver: true }).start()
+
+    particleAnims.forEach((anim, i) => {
+      anim.y.setValue(0)
+      anim.opacity.setValue(0)
+      Animated.sequence([
+        Animated.delay(i * 100),
+        Animated.parallel([
+          Animated.timing(anim.opacity, { toValue: 1, duration: 150, useNativeDriver: true }),
+          Animated.timing(anim.y, { toValue: -(100 + i * 25), duration: 1100, useNativeDriver: true }),
+        ]),
+        Animated.timing(anim.opacity, { toValue: 0, duration: 350, useNativeDriver: true }),
+      ]).start()
+    })
+  }, [visible])
 
   const today = new Date()
-  const offset = today.getTimezoneOffset()
-  const dateStr = new Date(today.getTime() - offset * 60 * 1000).toISOString().split('T')[0]
+  const dateStr = new Date(today.getTime() - today.getTimezoneOffset() * 60 * 1000).toISOString().split('T')[0]
 
   async function handleConfirm() {
+    if (!selectedAccountId) {
+      setError('Please select an account to deposit your pay into.')
+      return
+    }
     setSaving(true)
     setError('')
 
@@ -48,110 +95,69 @@ export default function PaydayModal({ visible, incomeSources, onComplete }: Prop
 
       let totalBudgeted = 0
       let totalActual = 0
+      let balanceDelta = 0
 
-      // Get total budgeted from categories (the template)
       const { data: cats } = await supabase
-        .from('budget_categories')
-        .select('budgeted_amount, frequency')
-        .eq('user_id', user.id)
-      if (cats) {
-        cats.forEach((c: any) => {
-          totalBudgeted += toMonthly(c.budgeted_amount, c.frequency) / 2
-        })
-      }
+        .from('budget_categories').select('budgeted_amount, frequency').eq('user_id', user.id)
+      if (cats) cats.forEach((c: any) => { totalBudgeted += toMonthly(c.budgeted_amount, c.frequency) / 2 })
 
-      // Auto-log fixed income sources
       for (const source of fixedSources) {
         await supabase.from('transactions').insert({
-          user_id: user.id,
-          label: source.label,
-          amount: source.amount,
-          date: dateStr,
-          type: 'income',
-          is_unexpected: false,
-          category_id: null,
+          user_id: user.id, label: source.label, amount: source.amount,
+          date: dateStr, type: 'income', is_unexpected: false, category_id: null,
         })
-
-        // Find default account and update balance
-        const { data: profile } = await supabase
-          .from('profiles').select('default_account_id').eq('id', user.id).single()
-        if (profile?.default_account_id) {
-          const { data: acc } = await supabase
-            .from('accounts').select('balance').eq('id', profile.default_account_id).single()
-          if (acc) {
-            const newBalance = (parseFloat(acc.balance) || 0) + source.amount
-            await supabase.from('accounts').update({ balance: newBalance }).eq('id', profile.default_account_id)
-          }
-        }
-
         totalActual += source.amount
+        balanceDelta += source.amount
       }
 
-      // Log variable income with user-entered amounts
       for (const source of variableSources) {
         const actualAmount = parseFloat(variableAmounts[source.id] || '0') || 0
         if (actualAmount > 0) {
           await supabase.from('transactions').insert({
-            user_id: user.id,
-            label: source.label,
-            amount: actualAmount,
-            date: dateStr,
-            type: 'income',
-            is_unexpected: false,
-            category_id: null,
+            user_id: user.id, label: source.label, amount: actualAmount,
+            date: dateStr, type: 'income', is_unexpected: false, category_id: null,
           })
-
-          const { data: profile } = await supabase
-            .from('profiles').select('default_account_id').eq('id', user.id).single()
-          if (profile?.default_account_id) {
-            const { data: acc } = await supabase
-              .from('accounts').select('balance').eq('id', profile.default_account_id).single()
-            if (acc) {
-              const newBalance = (parseFloat(acc.balance) || 0) + actualAmount
-              await supabase.from('accounts').update({ balance: newBalance }).eq('id', profile.default_account_id)
-            }
-          }
+          totalActual += actualAmount
+          balanceDelta += actualAmount
         }
-        totalActual += actualAmount
       }
 
-      // Mark payday as checked today — do this before anything else so re-renders don't re-trigger
+      if (balanceDelta > 0) {
+        const { data: acc } = await supabase.from('accounts').select('balance').eq('id', selectedAccountId).single()
+        if (acc) {
+          await supabase.from('accounts')
+            .update({ balance: (parseFloat(acc.balance) || 0) + balanceDelta })
+            .eq('id', selectedAccountId)
+        }
+      }
+
+      if (makeDefault) {
+        await supabase.from('profiles').update({ default_account_id: selectedAccountId }).eq('id', user.id)
+      }
+
       await supabase.from('profiles').update({ last_payday_check: dateStr }).eq('id', user.id)
 
-      // Advance next_payday for each income source
       for (const source of incomeSources) {
         if (!source.next_payday) continue
         let periodDays = 14
         if (source.frequency === 'weekly') periodDays = 7
         if (source.frequency === 'monthly') periodDays = 30
         if (source.frequency === 'semimonthly') periodDays = 15
-
         const current = new Date(source.next_payday.split('|')[0] + 'T12:00:00')
         const todayMid = new Date()
         todayMid.setHours(12, 0, 0, 0)
-        while (current <= todayMid) {
-          current.setDate(current.getDate() + periodDays)
-        }
-        const nextPaydayStr = current.toISOString().split('T')[0]
-        await supabase.from('income_sources').update({ next_payday: nextPaydayStr }).eq('id', source.id)
+        while (current <= todayMid) current.setDate(current.getDate() + periodDays)
+        await supabase.from('income_sources').update({ next_payday: current.toISOString().split('T')[0] }).eq('id', source.id)
       }
 
-      // Small delay to ensure the profile update is committed before dashboard reloads
       await new Promise(resolve => setTimeout(resolve, 300))
 
       setConfirmedActual(totalActual)
       setConfirmedBudgeted(totalBudgeted)
       const diff = totalActual - totalBudgeted
-
-      if (diff < -1) {
-        setShortfallAmount(Math.abs(diff))
-        setStep('shortfall')
-      } else if (diff > 1) {
-        setExtraAmount(diff)
-        setStep('extra')
-      } else {
-        onComplete()
-      }
+      if (diff < -1) { setShortfallAmount(Math.abs(diff)); setStep('shortfall') }
+      else if (diff > 1) { setExtraAmount(diff); setStep('extra') }
+      else onComplete()
 
     } catch (err: any) {
       setError(err.message)
@@ -167,7 +173,7 @@ export default function PaydayModal({ visible, incomeSources, onComplete }: Prop
             <Text style={styles.emoji}>📉</Text>
             <Text style={styles.title}>You're ${shortfallAmount.toLocaleString('en-CA', { maximumFractionDigits: 0 })} short this cycle</Text>
             <Text style={styles.body}>
-              Your take-home was less than expected. Your budget now reflects your actual pay. We recommend reviewing your budget to find savings — or carry the shortfall and we'll track it in your reports.
+              Your take-home was less than expected. We recommend reviewing your budget to find savings — or carry the shortfall and we'll track it in your reports.
             </Text>
             <TouchableOpacity
               style={styles.primaryBtn}
@@ -175,12 +181,7 @@ export default function PaydayModal({ visible, incomeSources, onComplete }: Prop
                 onComplete()
                 setTimeout(() => router.push({
                   pathname: '/budget-adjust',
-                  params: {
-                    actualPay: confirmedActual.toString(),
-                    expectedPay: confirmedBudgeted.toString(),
-                    periodStart: dateStr,
-                    periodEnd: dateStr,
-                  }
+                  params: { actualPay: confirmedActual.toString(), expectedPay: confirmedBudgeted.toString(), periodStart: dateStr, periodEnd: dateStr },
                 }), 300)
               }}
             >
@@ -203,7 +204,7 @@ export default function PaydayModal({ visible, incomeSources, onComplete }: Prop
             <Text style={styles.emoji}>🎉</Text>
             <Text style={styles.title}>Extra ${extraAmount.toLocaleString('en-CA', { maximumFractionDigits: 0 })} this cycle!</Text>
             <Text style={styles.body}>
-              Nice! You earned more than expected. Your budget now shows the extra cash — consider paying down high-interest debt first, then put the rest toward your goals.
+              Nice! You earned more than expected. Consider paying down high-interest debt first, then put the rest toward your goals.
             </Text>
             <TouchableOpacity
               style={styles.primaryBtn}
@@ -211,12 +212,7 @@ export default function PaydayModal({ visible, incomeSources, onComplete }: Prop
                 onComplete()
                 setTimeout(() => router.push({
                   pathname: '/budget-adjust',
-                  params: {
-                    actualPay: confirmedActual.toString(),
-                    expectedPay: confirmedBudgeted.toString(),
-                    periodStart: dateStr,
-                    periodEnd: dateStr,
-                  }
+                  params: { actualPay: confirmedActual.toString(), expectedPay: confirmedBudgeted.toString(), periodStart: dateStr, periodEnd: dateStr },
                 }), 300)
               }}
             >
@@ -231,12 +227,32 @@ export default function PaydayModal({ visible, incomeSources, onComplete }: Prop
     )
   }
 
+  const selectedAccount = accounts.find(a => a.id === selectedAccountId)
+
   return (
     <Modal visible={visible} transparent animationType="slide">
       <View style={styles.overlay}>
+        {/* Celebratory particles floating up behind the modal */}
+        {particleAnims.map((anim, i) => (
+          <Animated.Text
+            key={i}
+            style={[styles.particle, {
+              left: PARTICLE_X[i],
+              top: SCREEN_H * 0.38,
+              opacity: anim.opacity,
+              transform: [{ translateY: anim.y }],
+            }]}
+          >
+            {PARTICLES[i]}
+          </Animated.Text>
+        ))}
+
         <View style={styles.modal}>
-          <Text style={styles.emoji}>💰</Text>
-          <Text style={styles.title}>It's payday!</Text>
+          <Animated.Text style={[styles.emoji, { transform: [{ scale: emojiScale }] }]}>
+            💰
+          </Animated.Text>
+          <Text style={styles.title}>It's Payday! 🎉</Text>
+          <Text style={styles.subtitle}>How much did you get paid?</Text>
 
           {fixedSources.length > 0 && (
             <View style={styles.fixedList}>
@@ -258,7 +274,7 @@ export default function PaydayModal({ visible, incomeSources, onComplete }: Prop
 
           {variableSources.map(source => (
             <View key={source.id} style={{ marginBottom: 12 }}>
-              <Text style={styles.fieldLabel}>{source.label} — how much did you get paid?</Text>
+              <Text style={styles.fieldLabel}>{source.label} — actual amount</Text>
               <CurrencyInput
                 style={styles.input}
                 placeholder={`Expected $${source.amount.toLocaleString('en-CA', { maximumFractionDigits: 2 })}`}
@@ -267,6 +283,33 @@ export default function PaydayModal({ visible, incomeSources, onComplete }: Prop
               />
             </View>
           ))}
+
+          <Text style={styles.fieldLabel}>Deposit to account</Text>
+          <View style={styles.accountList}>
+            {accounts.map(acc => (
+              <TouchableOpacity
+                key={acc.id}
+                style={[styles.accountRow, selectedAccountId === acc.id && styles.accountRowActive]}
+                onPress={() => setSelectedAccountId(acc.id)}
+              >
+                <Text style={[styles.accountRowText, selectedAccountId === acc.id && styles.accountRowTextActive]}>
+                  🏦 {acc.label}
+                </Text>
+                {selectedAccountId === acc.id && <Text style={styles.accountRowCheck}>✓</Text>}
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {selectedAccountId && selectedAccountId !== defaultAccountId && (
+            <TouchableOpacity style={styles.defaultToggle} onPress={() => setMakeDefault(!makeDefault)}>
+              <View style={[styles.checkbox, makeDefault && styles.checkboxActive]}>
+                {makeDefault && <Text style={styles.checkboxCheck}>✓</Text>}
+              </View>
+              <Text style={styles.defaultToggleText}>
+                Set {selectedAccount?.label} as my default account
+              </Text>
+            </TouchableOpacity>
+          )}
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
@@ -302,9 +345,33 @@ const styles = StyleSheet.create({
     maxWidth: 480,
     gap: 12,
   },
-  emoji: { fontSize: 36, textAlign: 'center' },
-  title: { fontSize: 22, fontWeight: 'bold', color: Colors.text, textAlign: 'center' },
-  body: { fontSize: 15, color: Colors.textSecondary, textAlign: 'center', lineHeight: 22 },
+  emoji: {
+    fontSize: 48,
+    textAlign: 'center',
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: Colors.text,
+    textAlign: 'center',
+  },
+  subtitle: {
+    fontSize: 15,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    marginTop: -4,
+  },
+  body: {
+    fontSize: 15,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  particle: {
+    position: 'absolute',
+    fontSize: 26,
+    zIndex: 10,
+  },
   fixedList: { gap: 8 },
   fixedRow: {
     backgroundColor: Colors.primary + '22',
@@ -326,7 +393,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   autoTagText: { fontSize: 11, color: Colors.text, fontWeight: '600' },
-  fieldLabel: { fontSize: 13, color: Colors.textSecondary, marginBottom: 6 },
+  fieldLabel: { fontSize: 13, color: Colors.textSecondary, marginBottom: 4 },
   input: {
     backgroundColor: '#f2f4f2',
     borderWidth: 1,
@@ -339,6 +406,46 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: Colors.text,
   },
+  accountList: { gap: 8 },
+  accountRow: {
+    backgroundColor: '#f2f4f2',
+    borderWidth: 1,
+    borderColor: '#e3e8e3',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  accountRowActive: {
+    backgroundColor: Colors.primary + '22',
+    borderColor: Colors.primary,
+  },
+  accountRowText: { fontSize: 15, color: Colors.text },
+  accountRowTextActive: { fontWeight: '600', color: Colors.text },
+  accountRowCheck: { fontSize: 14, color: Colors.primary, fontWeight: '700' },
+  defaultToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 4,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 5,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  checkboxCheck: { fontSize: 12, color: Colors.text, fontWeight: '700' },
+  defaultToggleText: { fontSize: 13, color: Colors.textSecondary, flex: 1 },
   error: { color: Colors.danger, fontSize: 14, textAlign: 'center' },
   primaryBtn: {
     backgroundColor: Colors.primary,
@@ -349,9 +456,6 @@ const styles = StyleSheet.create({
   },
   disabled: { opacity: 0.4 },
   primaryBtnText: { color: Colors.text, fontSize: 16, fontWeight: '600' },
-  secondaryBtn: {
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
+  secondaryBtn: { paddingVertical: 12, alignItems: 'center' },
   secondaryBtnText: { color: Colors.textSecondary, fontSize: 15 },
 })

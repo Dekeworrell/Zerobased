@@ -90,18 +90,19 @@ export default function DashboardScreen() {
       setBudgetCycle(cycle)
       if (profile?.default_account_id) setGlobalDefaultAccountId(profile.default_account_id)
 
-      // Payday check
+      // Payday check — only fires for the current user's own income sources
       const now = new Date()
       const todayStr = new Date(now.getTime() - now.getTimezoneOffset() * 60 * 1000).toISOString().split('T')[0]
       const lastCheck = profile?.last_payday_check || ''
-      if (lastCheck !== todayStr && !showPaydayModal && !paydayShownRef.current && income && income.length > 0) {
-        const isPayday = income.some((s: any) => {
+      const myIncome = (income || []).filter((s: any) => s.user_id === user.id)
+      if (lastCheck !== todayStr && !showPaydayModal && !paydayShownRef.current && myIncome.length > 0) {
+        const isPayday = myIncome.some((s: any) => {
           if (!s.next_payday) return false
           const paydays = s.next_payday.split('|')
           return paydays.some((d: string) => d === todayStr)
         })
         if (isPayday) {
-          setPaydayIncomeSources(income.map((s: any) => ({
+          setPaydayIncomeSources(myIncome.map((s: any) => ({
             ...s,
             income_type: s.income_type || 'fixed',
           })))
@@ -425,6 +426,8 @@ export default function DashboardScreen() {
       <PaydayModal
         visible={showPaydayModal}
         incomeSources={paydayIncomeSources}
+        accounts={accounts}
+        defaultAccountId={globalDefaultAccountId}
         onComplete={() => { setShowPaydayModal(false); loadDashboard() }}
       />
     )}

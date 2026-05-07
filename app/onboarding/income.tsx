@@ -40,7 +40,12 @@ export default function IncomeScreen() {
   const pickerWidth = Math.min(windowWidth, 500) - 104
   const { from } = useLocalSearchParams<{ from?: string }>()
   const isEditing = from === 'dashboard'
-  const [loading, setLoading] = useState(isEditing)
+  const isHouseholdJoin = from === 'household_join'
+  const [loading, setLoading] = useState(isEditing || isHouseholdJoin)
+  // Partner income (household editing only)
+  const [partnerSources, setPartnerSources] = useState<IncomeSource[]>([])
+  const [partnerId, setPartnerId] = useState<string | null>(null)
+  const [partnerName, setPartnerName] = useState<string>('Partner')
   const [saving, setSaving] = useState(false)
   const [showPaydayPicker, setShowPaydayPicker] = useState<number | null>(null)
   const [showSecondPaydayPicker, setShowSecondPaydayPicker] = useState<number | null>(null)
@@ -50,7 +55,7 @@ export default function IncomeScreen() {
   ])
 
   useEffect(() => {
-    if (isEditing) {
+    if (isEditing || isHouseholdJoin) {
       loadExistingIncome()
     } else {
       const saved = getOnboardingData().incomeSources
@@ -60,45 +65,72 @@ export default function IncomeScreen() {
     }
   }, [])
 
+  function parseSourceRow(s: any): IncomeSource {
+    const dates = (s.next_payday || '').split('|')
+    const storedDate = dates[0] || ''
+    let nextPayday = storedDate
+    if (storedDate) {
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      let periodDays = 14
+      if (s.frequency === 'weekly') periodDays = 7
+      if (s.frequency === 'monthly') periodDays = 30
+      if (s.frequency === 'semimonthly') periodDays = 15
+      const d = new Date(storedDate + 'T12:00:00')
+      while (d < today) d.setDate(d.getDate() + periodDays)
+      nextPayday = d.toISOString().split('T')[0]
+    }
+    return {
+      id: s.id,
+      label: s.label,
+      amount: s.amount.toString(),
+      frequency: s.frequency,
+      type: s.type,
+      income_type: s.income_type || 'fixed',
+      next_payday: nextPayday,
+      second_payday: dates[1] || '',
+    }
+  }
+
   async function loadExistingIncome() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
-    const { data } = await supabase
-      .from('income_sources')
-      .select('*')
-      .eq('user_id', user.id)
-
-    if (data && data.length > 0) {
-      setSources(data.map((s: any) => {
-        const dates = (s.next_payday || '').split('|')
-        const storedDate = dates[0] || ''
-        let nextPayday = storedDate
-        if (storedDate) {
-          const today = new Date()
-          today.setHours(0, 0, 0, 0)
-          let periodDays = 14
-          if (s.frequency === 'weekly') periodDays = 7
-          if (s.frequency === 'monthly') periodDays = 30
-          if (s.frequency === 'semimonthly') periodDays = 15
-          const d = new Date(storedDate + 'T12:00:00')
-          while (d < today) {
-            d.setDate(d.getDate() + periodDays)
-          }
-          nextPayday = d.toISOString().split('T')[0]
-        }
-        return {
-          id: s.id,
-          label: s.label,
-          amount: s.amount.toString(),
-          frequency: s.frequency,
-          type: s.type,
-          income_type: s.income_type || 'fixed',
-          next_payday: nextPayday,
-          second_payday: dates[1] || '',
-        }
-      }))
+    // For household_join mode: just load current user's existing income (may be empty)
+    if (isHouseholdJoin) {
+      const { data } = await supabase.from('income_sources').select('*').eq('user_id', user.id)
+      if (data && data.length > 0) setSources(data.map(parseSourceRow))
+      else setSources([{ label: 'My income', amount: '', frequency: 'biweekly', type: 'employment', income_type: 'fixed', next_payday: '', second_payday: '' }])
+      setLoading(false)
+      return
     }
+
+    // Dashboard editing: load current user + partner income
+    const { data: householdIds } = await supabase.rpc('get_household_user_ids')
+    const userIds: string[] = householdIds || [user.id]
+    const partnerIds = userIds.filter(id => id !== user.id)
+
+    const { data } = await supabase.from('income_sources').select('*').in('user_id', userIds)
+
+    const myRows = (data || []).filter((s: any) => s.user_id === user.id)
+    const partnerRows = (data || []).filter((s: any) => s.user_id !== user.id)
+
+    setSources(myRows.length > 0
+      ? myRows.map(parseSourceRow)
+      : [{ label: 'My income', amount: '', frequency: 'biweekly', type: 'employment', income_type: 'fixed', next_payday: '', second_payday: '' }]
+    )
+
+    if (partnerIds.length > 0) {
+      setPartnerId(partnerIds[0])
+      setPartnerSources(partnerRows.length > 0
+        ? partnerRows.map(parseSourceRow)
+        : [{ label: "Partner's income", amount: '', frequency: 'biweekly', type: 'employment', income_type: 'fixed', next_payday: '', second_payday: '' }]
+      )
+      // Use the household RPC (profiles RLS only allows reading own row)
+      const { data: members } = await supabase.rpc('get_household_members')
+      if (members && members.length > 0) setPartnerName(members[0].name || 'Partner')
+    }
+
     setLoading(false)
   }
 
@@ -109,52 +141,89 @@ export default function IncomeScreen() {
   }
 
   function addSource() {
-    setSources([...sources, {
-      label: 'Additional income',
-      amount: '',
-      frequency: 'monthly',
-      type: 'other',
-      income_type: 'fixed',
-      next_payday: '',
-      second_payday: '',
-    }])
+    setSources([...sources, { label: 'Additional income', amount: '', frequency: 'monthly', type: 'other', income_type: 'fixed', next_payday: '', second_payday: '' }])
   }
 
   function removeSource(index: number) {
     setSources(sources.filter((_, i) => i !== index))
   }
 
+  function updatePartnerSource(index: number, field: keyof IncomeSource, value: string) {
+    const updated = [...partnerSources]
+    updated[index] = { ...updated[index], [field]: value }
+    setPartnerSources(updated)
+  }
+
+  function addPartnerSource() {
+    setPartnerSources([...partnerSources, { label: 'Additional income', amount: '', frequency: 'monthly', type: 'other', income_type: 'fixed', next_payday: '', second_payday: '' }])
+  }
+
+  function removePartnerSource(index: number) {
+    setPartnerSources(partnerSources.filter((_, i) => i !== index))
+  }
+
+  function buildInsertRow(s: IncomeSource, userId: string) {
+    return {
+      user_id: userId,
+      label: s.label,
+      amount: parseFloat(s.amount) || 0,
+      frequency: s.frequency,
+      type: s.type,
+      income_type: s.income_type || 'fixed',
+      next_payday: s.frequency === 'semimonthly' && s.second_payday
+        ? `${s.next_payday}|${s.second_payday}`
+        : s.next_payday || null,
+    }
+  }
+
+  async function handleSkipNoIncome() {
+    if (isEditing || isHouseholdJoin) {
+      setSaving(true)
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+        await supabase.from('income_sources').delete().eq('user_id', user.id)
+        router.replace('/dashboard')
+      } catch (err) { console.error(err) }
+      setSaving(false)
+    } else {
+      setIncomeSources([])
+      router.push('/onboarding/expenses')
+    }
+  }
+
   async function handleContinue() {
-    const missing = sources.find(s => !s.next_payday)
-    if (missing) {
-      setPaydayError('Please choose your next payday date before continuing.')
+    const allMySources = sources.filter(s => s.next_payday || parseFloat(s.amount) > 0)
+    const allPartnerSources = partnerSources.filter(s => s.next_payday || parseFloat(s.amount) > 0)
+
+    const missingPayday = allMySources.find(s => !s.next_payday)
+    const missingPartnerPayday = allPartnerSources.find(s => !s.next_payday)
+    if (missingPayday || missingPartnerPayday) {
+      setPaydayError('Please choose a next payday date for each income source, or use "I have no income" to skip.')
       return
     }
     setPaydayError('')
-    if (isEditing) {
+
+    if (isEditing || isHouseholdJoin) {
       setSaving(true)
       try {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return
 
+        // Save current user's income
         await supabase.from('income_sources').delete().eq('user_id', user.id)
-        await supabase.from('income_sources').insert(
-          sources.map(s => ({
-            user_id: user.id,
-            label: s.label,
-            amount: parseFloat(s.amount) || 0,
-            frequency: s.frequency,
-            type: s.type,
-            income_type: s.income_type || 'fixed',
-            next_payday: s.frequency === 'semimonthly' && s.second_payday
-              ? `${s.next_payday}|${s.second_payday}`
-              : s.next_payday || null,
-          }))
-        )
+        if (allMySources.length > 0) {
+          await supabase.from('income_sources').insert(allMySources.map(s => buildInsertRow(s, user.id)))
+        }
+
+        // Save partner's income (dashboard editing only, not household_join)
+        if (isEditing && partnerId && allPartnerSources.length > 0) {
+          await supabase.from('income_sources').delete().eq('user_id', partnerId)
+          await supabase.from('income_sources').insert(allPartnerSources.map(s => buildInsertRow(s, partnerId)))
+        }
+
         router.replace('/dashboard')
-      } catch (err) {
-        console.error(err)
-      }
+      } catch (err) { console.error(err) }
       setSaving(false)
     } else {
       setIncomeSources(sources)
@@ -173,7 +242,7 @@ export default function IncomeScreen() {
   return (
     <>
       <KeyboardScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-      <TouchableOpacity onPress={() => isEditing ? router.replace('/dashboard') : router.back()} style={styles.backButton}>
+      <TouchableOpacity onPress={() => (isEditing || isHouseholdJoin) ? router.replace('/dashboard') : router.back()} style={styles.backButton}>
         <Text style={styles.backText}>← Back</Text>
       </TouchableOpacity>
       {!isEditing && (
@@ -185,8 +254,19 @@ export default function IncomeScreen() {
         </View>
       )}
       {isEditing && <Text style={styles.step}>Edit income</Text>}
-      <Text style={styles.title}>How much do you bring home?</Text>
-      <Text style={styles.subtitle}>Enter your take-home pay after tax. Add multiple sources if you have them.</Text>
+      {isHouseholdJoin && <Text style={styles.step}>Your income</Text>}
+      <Text style={styles.title}>
+        {isHouseholdJoin ? 'Set up your income' : 'How much do you bring home?'}
+      </Text>
+      <Text style={styles.subtitle}>
+        {isHouseholdJoin
+          ? 'Add your personal take-home income for the shared budget. You can skip this if all household income comes from your partner.'
+          : 'Enter your take-home pay after tax. Add multiple sources if you have them.'}
+      </Text>
+
+      {isEditing && partnerId && (
+        <Text style={styles.sectionHeader}>Your income</Text>
+      )}
 
       <View style={styles.sourceList}>
         {sources.map((source, index) => (
@@ -401,6 +481,131 @@ export default function IncomeScreen() {
         <Text style={styles.addButtonText}>+ Add another income source</Text>
       </TouchableOpacity>
 
+      <TouchableOpacity style={styles.skipButton} onPress={handleSkipNoIncome} disabled={saving}>
+        <Text style={styles.skipButtonText}>I have no income</Text>
+      </TouchableOpacity>
+
+      {/* Partner income section — shown only when editing from dashboard with a household partner */}
+      {isEditing && partnerId && (
+        <>
+          <Text style={styles.sectionHeader}>{partnerName}'s income</Text>
+          <View style={styles.sourceList}>
+            {partnerSources.map((source, index) => (
+              <View key={index} style={[styles.sourceCard, styles.partnerCard]}>
+                <View style={styles.cardHeader}>
+                  <TextInput
+                    style={styles.sourceLabel}
+                    value={source.label}
+                    onChangeText={(val) => updatePartnerSource(index, 'label', val)}
+                    placeholderTextColor={Colors.textSecondary}
+                  />
+                  {partnerSources.length > 1 && (
+                    <TouchableOpacity onPress={() => removePartnerSource(index)}>
+                      <Text style={styles.removeBtn}>✕</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+
+                <Text style={styles.fieldLabel}>Amount (after tax)</Text>
+                <CurrencyInput
+                  style={styles.input}
+                  placeholder="$0.00"
+                  value={source.amount}
+                  onChangeText={(val) => updatePartnerSource(index, 'amount', val)}
+                />
+
+                <Text style={styles.fieldLabel}>Pay frequency</Text>
+                <View style={styles.chipRow}>
+                  {PAY_FREQUENCIES.map((freq) => (
+                    <TouchableOpacity
+                      key={freq.id}
+                      style={[styles.chip, source.frequency === freq.id && styles.chipActive]}
+                      onPress={() => updatePartnerSource(index, 'frequency', freq.id)}
+                    >
+                      <Text style={[styles.chipText, source.frequency === freq.id && styles.chipTextActive]}>
+                        {freq.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                <Text style={styles.fieldLabel}>Next payday</Text>
+                {Platform.OS === 'web' ? (
+                  <input
+                    type="date"
+                    value={source.next_payday}
+                    min={new Date().toISOString().split('T')[0]}
+                    onChange={(e) => updatePartnerSource(index, 'next_payday', e.target.value)}
+                    style={{
+                      backgroundColor: Colors.card,
+                      border: `2px solid ${source.next_payday ? Colors.primary : Colors.border}`,
+                      borderRadius: 12,
+                      padding: '14px 16px',
+                      fontSize: 16,
+                      color: Colors.text,
+                      width: '100%',
+                      boxSizing: 'border-box' as any,
+                      marginBottom: 8,
+                      cursor: 'pointer',
+                    }}
+                  />
+                ) : (
+                  <TouchableOpacity
+                    style={styles.dateButton}
+                    onPress={() => setShowPaydayPicker(-(index + 1))}
+                  >
+                    <Text style={styles.dateButtonText}>
+                      📅 {source.next_payday || 'Select date'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                {showPaydayPicker === -(index + 1) && (
+                  <View style={{ backgroundColor: '#ffffff', borderRadius: 16, borderWidth: 1, borderColor: '#e3e8e3', overflow: 'hidden', alignSelf: 'stretch' }}>
+                    <DateTimePicker
+                      value={source.next_payday ? new Date(source.next_payday + 'T12:00:00') : new Date()}
+                      mode="date"
+                      display="spinner"
+                      themeVariant="light"
+                      minimumDate={new Date()}
+                      style={{ width: pickerWidth }}
+                      onChange={(event, selectedDate) => {
+                        if (selectedDate) {
+                          const offset = selectedDate.getTimezoneOffset()
+                          const local = new Date(selectedDate.getTime() - offset * 60 * 1000)
+                          updatePartnerSource(index, 'next_payday', local.toISOString().split('T')[0])
+                        }
+                      }}
+                    />
+                    <TouchableOpacity style={styles.datePickerDoneBtn} onPress={() => setShowPaydayPicker(null)}>
+                      <Text style={styles.datePickerDoneBtnText}>Done</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                <Text style={styles.fieldLabel}>Pay amount</Text>
+                <View style={styles.chipRow}>
+                  <TouchableOpacity
+                    style={[styles.chip, source.income_type === 'fixed' && styles.chipActive]}
+                    onPress={() => updatePartnerSource(index, 'income_type', 'fixed')}
+                  >
+                    <Text style={[styles.chipText, source.income_type === 'fixed' && styles.chipTextActive]}>📅 Fixed</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.chip, source.income_type === 'variable' && styles.chipActive]}
+                    onPress={() => updatePartnerSource(index, 'income_type', 'variable')}
+                  >
+                    <Text style={[styles.chipText, source.income_type === 'variable' && styles.chipTextActive]}>📊 Variable</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))}
+          </View>
+          <TouchableOpacity style={styles.addButton} onPress={addPartnerSource}>
+            <Text style={styles.addButtonText}>+ Add another source for {partnerName}</Text>
+          </TouchableOpacity>
+        </>
+      )}
+
       {paydayError ? (
         <View style={styles.paydayError}>
           <Text style={styles.paydayErrorText}>⚠️ {paydayError}</Text>
@@ -416,7 +621,7 @@ export default function IncomeScreen() {
         disabled={saving}
       >
         <Text style={styles.primaryButtonText}>
-          {saving ? 'Saving...' : isEditing ? 'Save & return to dashboard' : 'Continue'}
+          {saving ? 'Saving...' : (isEditing || isHouseholdJoin) ? 'Save & go to dashboard' : 'Continue'}
         </Text>
       </TouchableOpacity>
     </View>
@@ -552,12 +757,33 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 8,
   },
   addButtonText: {
     color: Colors.primary,
     fontSize: 15,
     fontWeight: '500',
+  },
+  skipButton: {
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  skipButtonText: {
+    color: Colors.textSecondary,
+    fontSize: 14,
+    textDecorationLine: 'underline',
+  },
+  sectionHeader: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.text,
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  partnerCard: {
+    borderColor: Colors.primary + '66',
+    backgroundColor: Colors.primary + '08',
   },
   primaryButton: {
     backgroundColor: Colors.primary,
