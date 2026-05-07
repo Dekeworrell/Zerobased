@@ -1,7 +1,7 @@
 import { router, useFocusEffect } from 'expo-router'
 import { useCallback, useState } from 'react'
-import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
-import { NestableDraggableFlatList, NestableScrollContainer, RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist'
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import CurrencyInput from '../components/CurrencyInput'
 import { ASSET_TYPE_OPTIONS, LIABILITY_ACCOUNTS as LIABILITY_TYPE_OPTIONS, getAccountIcon } from '../constants/accounts'
@@ -185,13 +185,12 @@ export default function AccountsScreen() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#f2f4f2' }}>
-      <NestableScrollContainer showsVerticalScrollIndicator={true}>
-        <View style={styles.content}>
+      <ScrollView showsVerticalScrollIndicator={true} contentContainerStyle={styles.content}>
           <Text style={styles.title}>Accounts</Text>
           <Text style={styles.dragHint}>Hold ☰ to drag and reorder</Text>
 
           <Text style={styles.sectionTitle}>Assets</Text>
-          <NestableDraggableFlatList
+          <DraggableFlatList
             data={assets}
             onDragEnd={({ data }) => {
               setAssets(data)
@@ -200,6 +199,7 @@ export default function AccountsScreen() {
             keyExtractor={(item) => item.id}
             renderItem={renderAccount}
             activationDistance={5}
+            scrollEnabled={false}
           />
           <TouchableOpacity
             style={styles.addSmallBtn}
@@ -225,7 +225,7 @@ export default function AccountsScreen() {
           )}
 
           <Text style={styles.sectionTitle}>Liabilities</Text>
-          <NestableDraggableFlatList
+          <DraggableFlatList
             data={liabilities}
             onDragEnd={({ data }) => {
               setLiabilities(data)
@@ -234,6 +234,7 @@ export default function AccountsScreen() {
             keyExtractor={(item) => item.id}
             renderItem={renderAccount}
             activationDistance={5}
+            scrollEnabled={false}
           />
           <TouchableOpacity
             style={styles.addSmallBtn}
@@ -261,8 +262,7 @@ export default function AccountsScreen() {
           {error ? <Text style={styles.error}>{error}</Text> : null}
           {success ? <Text style={styles.successText}>✅ Balances saved!</Text> : null}
           <View style={{ height: 100 }} />
-        </View>
-      </NestableScrollContainer>
+      </ScrollView>
       <View style={styles.floatingButton}>
         <TouchableOpacity
           style={[styles.primaryButton, saving && styles.disabled]}
