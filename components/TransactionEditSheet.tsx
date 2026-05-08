@@ -44,7 +44,7 @@ export default function TransactionEditSheet({ visible, transaction, categories,
     if (transaction && visible) {
       setAmount(transaction.amount.toString())
       setLabel(transaction.label)
-      setDate(new Date(transaction.date + 'T12:00:00'))
+      setDate(new Date(transaction.date.split('T')[0] + 'T12:00:00'))
       setSelectedCategoryId(transaction.category_id)
       setShowCategoryPicker(false)
       setShowDatePicker(false)
