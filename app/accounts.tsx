@@ -24,6 +24,7 @@ type ListItem =
 export default function AccountsScreen() {
   const [listData, setListData] = useState<ListItem[]>([])
   const [loading, setLoading] = useState(true)
+  const [subscriptionTier, setSubscriptionTier] = useState<'free' | 'pro' | null>(null)
   const [saving, setSaving] = useState(false)
   const [showAddType, setShowAddType] = useState<'asset' | 'liability' | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -48,6 +49,14 @@ export default function AccountsScreen() {
   async function loadAccounts() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { router.replace('/'); return }
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('subscription_tier')
+      .eq('id', user.id)
+      .single()
+    setSubscriptionTier((profile?.subscription_tier as 'free' | 'pro') ?? 'free')
+
     const { data: householdIds } = await supabase.rpc('get_household_user_ids')
     const userIds: string[] = householdIds || [user.id]
 
@@ -190,6 +199,20 @@ export default function AccountsScreen() {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    )
+  }
+
+  if (subscriptionTier === 'free') {
+    return (
+      <View style={styles.lockedContainer}>
+        <View style={styles.upgradeCard}>
+          <Text style={styles.upgradeCardTitle}>Track your accounts, debts and net worth.</Text>
+          <Text style={styles.upgradeCardBody}>Available on Zerobased Pro.</Text>
+          <TouchableOpacity style={styles.upgradeButton} onPress={() => router.push('/upgrade')}>
+            <Text style={styles.upgradeButtonText}>Upgrade to Pro</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     )
   }
@@ -345,4 +368,10 @@ const styles = StyleSheet.create({
   primaryButton: { backgroundColor: Colors.primary, paddingVertical: 16, borderRadius: 12, alignItems: 'center', width: '100%', maxWidth: 500 },
   disabled: { opacity: 0.4 },
   primaryButtonText: { color: Colors.text, fontSize: 16, fontWeight: '600' },
+  lockedContainer: { flex: 1, backgroundColor: '#f2f4f2', alignItems: 'center', justifyContent: 'center', padding: 24 },
+  upgradeCard: { backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.border, borderRadius: 16, padding: 20, alignItems: 'center', gap: 8, width: '100%', maxWidth: 400 },
+  upgradeCardTitle: { fontSize: 15, fontWeight: '600', color: Colors.text, textAlign: 'center' },
+  upgradeCardBody: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center' },
+  upgradeButton: { backgroundColor: Colors.primary, paddingVertical: 12, paddingHorizontal: 24, borderRadius: 10, marginTop: 8 },
+  upgradeButtonText: { color: Colors.text, fontSize: 15, fontWeight: '600' },
 })

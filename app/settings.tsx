@@ -28,6 +28,8 @@ export default function SettingsScreen() {
   const [pendingInvite, setPendingInvite] = useState<any>(null)
   const [pendingInviteeEmail, setPendingInviteeEmail] = useState('')
   const [householdLoading, setHouseholdLoading] = useState(false)
+  const [subscriptionTier, setSubscriptionTier] = useState<'free' | 'pro'>('free')
+  const [showPayCycleLock, setShowPayCycleLock] = useState(false)
 
   useEffect(() => {
     loadProfile()
@@ -56,6 +58,7 @@ export default function SettingsScreen() {
       setNotifyAt1(profile.notify_at_percent_1 ?? 80)
       setNotifyAt2(profile.notify_at_percent_2 ?? 90)
       setHouseholdId(profile.household_id || null)
+      setSubscriptionTier((profile.subscription_tier as 'free' | 'pro') ?? 'free')
 
       if (profile.household_id) {
         const { data: members } = await supabase.rpc('get_household_members')
@@ -290,15 +293,37 @@ async function sendInvite() {
               📅 Calendar month
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.methodBtn, budgetCycleLocal === 'paycycle' && styles.methodBtnActive]}
-            onPress={() => setBudgetCycleLocal('paycycle')}
-          >
-            <Text style={[styles.methodBtnText, budgetCycleLocal === 'paycycle' && styles.methodBtnTextActive]}>
-              💰 Pay cycle
-            </Text>
-          </TouchableOpacity>
+          {subscriptionTier === 'free' ? (
+            <TouchableOpacity
+              style={[styles.methodBtn, styles.methodBtnLocked]}
+              onPress={() => setShowPayCycleLock(v => !v)}
+            >
+              <View style={styles.lockedBtnInner}>
+                <Text style={styles.methodBtnText}>💰 Pay cycle</Text>
+                <View style={styles.lockBadge}>
+                  <Text style={styles.lockBadgeText}>🔒 Pro</Text>
+                </View>
+              </View>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={[styles.methodBtn, budgetCycleLocal === 'paycycle' && styles.methodBtnActive]}
+              onPress={() => setBudgetCycleLocal('paycycle')}
+            >
+              <Text style={[styles.methodBtnText, budgetCycleLocal === 'paycycle' && styles.methodBtnTextActive]}>
+                💰 Pay cycle
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
+        {subscriptionTier === 'free' && showPayCycleLock && (
+          <View style={styles.upgradeCard}>
+            <Text style={styles.upgradeCardTitle}>Pay cycle budgeting is a Zerobased Pro feature.</Text>
+            <TouchableOpacity style={styles.upgradeButton} onPress={() => router.push('/upgrade')}>
+              <Text style={styles.upgradeButtonText}>Upgrade to Pro</Text>
+            </TouchableOpacity>
+          </View>
+        )}
         {trackingMethod === 'bank' && (
           <View style={styles.infoBox}>
             <Text style={styles.infoText}>
@@ -396,7 +421,15 @@ async function sendInvite() {
 <View style={styles.section}>
         <Text style={styles.sectionTitle}>Household</Text>
 
-        {householdId && (partnerEmail || pendingInviteeEmail) ? (
+        {subscriptionTier === 'free' ? (
+          <View style={styles.upgradeCard}>
+            <Text style={styles.upgradeCardTitle}>Share your budget with a partner.</Text>
+            <Text style={styles.upgradeCardBody}>Available on Zerobased Pro.</Text>
+            <TouchableOpacity style={styles.upgradeButton} onPress={() => router.push('/upgrade')}>
+              <Text style={styles.upgradeButtonText}>Upgrade to Pro</Text>
+            </TouchableOpacity>
+          </View>
+        ) : householdId && (partnerEmail || pendingInviteeEmail) ? (
           <>
             <View style={styles.partnerCard}>
               <Text style={styles.partnerIcon}>{partnerEmail ? '👫' : '⏳'}</Text>
@@ -847,5 +880,56 @@ const styles = StyleSheet.create({
     color: Colors.danger,
     fontSize: 14,
     fontWeight: '500',
+  },
+  methodBtnLocked: {
+    opacity: 0.7,
+  },
+  lockedBtnInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  lockBadge: {
+    backgroundColor: Colors.border,
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  lockBadgeText: {
+    fontSize: 10,
+    color: Colors.textSecondary,
+    fontWeight: '600',
+  },
+  upgradeCard: {
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 16,
+    padding: 20,
+    alignItems: 'center',
+    gap: 8,
+  },
+  upgradeCardTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: Colors.text,
+    textAlign: 'center',
+  },
+  upgradeCardBody: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+  },
+  upgradeButton: {
+    backgroundColor: Colors.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 10,
+    marginTop: 8,
+  },
+  upgradeButtonText: {
+    color: Colors.text,
+    fontSize: 15,
+    fontWeight: '600',
   },
 })

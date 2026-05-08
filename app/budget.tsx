@@ -9,6 +9,9 @@ import { Colors } from '../constants/colors'
 import { calculateBudgetStatus, toMonthly } from '../lib/store'
 import { supabase } from '../lib/supabase'
 
+const FREE_TIER_LIMIT = 8
+const FREE_TIER_NUDGE_AT = 7
+
 type Category = {
   id: string
   label: string
@@ -25,6 +28,7 @@ export default function BudgetScreen() {
   const [saving, setSaving] = useState(false)
   const [categories, setCategories] = useState<Category[]>([])
   const [monthlyIncome, setMonthlyIncome] = useState(0)
+  const [subscriptionTier, setSubscriptionTier] = useState<'free' | 'pro'>('free')
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
 
@@ -36,6 +40,14 @@ export default function BudgetScreen() {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.replace('/'); return }
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('subscription_tier')
+        .eq('id', user.id)
+        .single()
+      setSubscriptionTier((profile?.subscription_tier as 'free' | 'pro') ?? 'free')
+
       const { data: householdIds } = await supabase.rpc('get_household_user_ids')
       const userIds: string[] = householdIds || [user.id]
 
@@ -278,21 +290,48 @@ export default function BudgetScreen() {
     </View>
   )
 
+  const atNudge = subscriptionTier === 'free' && categories.length === FREE_TIER_NUDGE_AT
+  const atLimit = subscriptionTier === 'free' && categories.length >= FREE_TIER_LIMIT
+
   const footerComponent = (
     <View style={styles.footerContent}>
-      <Text style={styles.addLabel}>Add a category</Text>
-      <View style={styles.typeGrid}>
-        {EXPENSE_CATEGORIES.sort((a, b) => a.label.localeCompare(b.label)).map((category) => (
+      {atNudge && (
+        <View style={styles.nudgeBanner}>
+          <Text style={styles.nudgeText}>
+            1 category left on your Free plan — Zerobased Pro has unlimited
+          </Text>
+        </View>
+      )}
+      {atLimit ? (
+        <View style={styles.upgradeCard}>
+          <Text style={styles.upgradeCardTitle}>You've reached your Free plan limit.</Text>
+          <Text style={styles.upgradeCardBody}>
+            Upgrade to Zerobased Pro for unlimited categories.
+          </Text>
           <TouchableOpacity
-            key={category.id}
-            style={styles.typeChip}
-            onPress={() => addCategory(category)}
+            style={styles.upgradeButton}
+            onPress={() => router.push('/upgrade')}
           >
-            <Text style={styles.typeChipIcon}>{category.icon}</Text>
-            <Text style={styles.typeChipLabel}>{category.label}</Text>
+            <Text style={styles.upgradeButtonText}>Upgrade to Pro</Text>
           </TouchableOpacity>
-        ))}
-      </View>
+        </View>
+      ) : (
+        <>
+          <Text style={styles.addLabel}>Add a category</Text>
+          <View style={styles.typeGrid}>
+            {EXPENSE_CATEGORIES.sort((a, b) => a.label.localeCompare(b.label)).map((category) => (
+              <TouchableOpacity
+                key={category.id}
+                style={styles.typeChip}
+                onPress={() => addCategory(category)}
+              >
+                <Text style={styles.typeChipIcon}>{category.icon}</Text>
+                <Text style={styles.typeChipLabel}>{category.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </>
+      )}
       {error ? <Text style={styles.error}>{error}</Text> : null}
       {success ? <Text style={styles.successText}>✅ Budget saved!</Text> : null}
       <View style={{ height: 80 }} />
@@ -545,5 +584,50 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#e3e8e3',
     alignItems: 'center',
+  },
+  nudgeBanner: {
+    backgroundColor: Colors.info + '18',
+    borderWidth: 1,
+    borderColor: Colors.info + '44',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  nudgeText: {
+    fontSize: 13,
+    color: Colors.info,
+    textAlign: 'center',
+  },
+  upgradeCard: {
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 16,
+    padding: 20,
+    alignItems: 'center',
+    gap: 8,
+  },
+  upgradeCardTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: Colors.text,
+    textAlign: 'center',
+  },
+  upgradeCardBody: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+  },
+  upgradeButton: {
+    backgroundColor: Colors.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 10,
+    marginTop: 8,
+  },
+  upgradeButtonText: {
+    color: Colors.text,
+    fontSize: 15,
+    fontWeight: '600',
   },
 })

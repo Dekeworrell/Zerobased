@@ -81,6 +81,7 @@ export default function ReportsScreen() {
   const [goals, setGoals] = useState<string[]>([])
   const [primaryGoal, setPrimaryGoal] = useState('')
   const [ivMode, setIvMode] = useState<'bar' | 'line'>('bar')
+  const [subscriptionTier, setSubscriptionTier] = useState<'free' | 'pro' | null>(null)
 
   useFocusEffect(
     useCallback(() => {
@@ -109,7 +110,7 @@ export default function ReportsScreen() {
         { data: cats },
         { data: snaps },
       ] = await Promise.all([
-        supabase.from('profiles').select('goals, primary_goal').eq('id', user.id).single(),
+        supabase.from('profiles').select('goals, primary_goal, subscription_tier').eq('id', user.id).single(),
         supabase.from('income_sources').select('*').in('user_id', userIds),
         supabase.from('accounts').select('*').in('user_id', userIds),
         supabase.from('transactions')
@@ -129,6 +130,7 @@ export default function ReportsScreen() {
       if (profile) {
         setGoals(profile.goals || [])
         setPrimaryGoal(profile.primary_goal || '')
+        setSubscriptionTier((profile.subscription_tier as 'free' | 'pro') ?? 'free')
       }
 
       // Income
@@ -292,6 +294,20 @@ export default function ReportsScreen() {
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={Colors.primary} />
         <Text style={styles.loadingText}>Loading your reports...</Text>
+      </View>
+    )
+  }
+
+  if (subscriptionTier === 'free') {
+    return (
+      <View style={styles.lockedContainer}>
+        <View style={styles.upgradeCard}>
+          <Text style={styles.upgradeCardTitle}>Detailed reports and spending insights.</Text>
+          <Text style={styles.upgradeCardBody}>Available on Zerobased Pro.</Text>
+          <TouchableOpacity style={styles.upgradeButton} onPress={() => router.push('/upgrade')}>
+            <Text style={styles.upgradeButtonText}>Upgrade to Pro</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     )
   }
@@ -785,4 +801,10 @@ const styles = StyleSheet.create({
   avlBarLiability: { height: '100%', backgroundColor: '#e05252', borderRadius: 5 },
   avlBarLabels: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },
   avlBarLabel: { fontSize: 10, color: Colors.textSecondary },
+  lockedContainer: { flex: 1, backgroundColor: '#f2f4f2', alignItems: 'center', justifyContent: 'center', padding: 24 },
+  upgradeCard: { backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.border, borderRadius: 16, padding: 20, alignItems: 'center', gap: 8, width: '100%', maxWidth: 400 },
+  upgradeCardTitle: { fontSize: 15, fontWeight: '600', color: Colors.text, textAlign: 'center' },
+  upgradeCardBody: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center' },
+  upgradeButton: { backgroundColor: Colors.primary, paddingVertical: 12, paddingHorizontal: 24, borderRadius: 10, marginTop: 8 },
+  upgradeButtonText: { color: Colors.text, fontSize: 15, fontWeight: '600' },
 })
