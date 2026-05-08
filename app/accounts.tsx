@@ -2,7 +2,7 @@ import { router, useFocusEffect } from 'expo-router'
 import { useCallback, useState } from 'react'
 import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist'
-import { GestureHandlerRootView } from 'react-native-gesture-handler'
+import { GestureHandlerRootView, Pressable as GHPressable } from 'react-native-gesture-handler'
 import CurrencyInput from '../components/CurrencyInput'
 import { ASSET_TYPE_OPTIONS, LIABILITY_ACCOUNTS as LIABILITY_TYPE_OPTIONS, getAccountIcon } from '../constants/accounts'
 import { isLiabilityAccount } from '../constants/categories'
@@ -140,9 +140,9 @@ export default function AccountsScreen() {
       <ScaleDecorator>
         <View style={[styles.accountRow, isActive && styles.accountRowActive]}>
           <View style={styles.accountLeft}>
-            <TouchableOpacity onLongPress={drag} delayLongPress={150} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <GHPressable onLongPress={drag} delayLongPress={150} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
               <Text style={styles.dragHandle}>☰</Text>
-            </TouchableOpacity>
+            </GHPressable>
             <Text style={styles.accountIcon}>{getAccountIcon(account.type)}</Text>
             {isEditing ? (
               <TextInput

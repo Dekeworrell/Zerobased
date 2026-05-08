@@ -2,7 +2,7 @@ import { router } from 'expo-router'
 import { useEffect, useState } from 'react'
 import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist'
-import { GestureHandlerRootView } from 'react-native-gesture-handler'
+import { GestureHandlerRootView, Pressable as GHPressable } from 'react-native-gesture-handler'
 import CurrencyInput from '../components/CurrencyInput'
 import { EXPENSE_CATEGORIES } from '../constants/categories'
 import { Colors } from '../constants/colors'
@@ -191,9 +191,9 @@ export default function BudgetScreen() {
       <ScaleDecorator>
         <View style={[styles.categoryRow, isActive && styles.categoryRowActive]}>
           <View style={styles.categoryTopRow}>
-            <TouchableOpacity onLongPress={drag} delayLongPress={200}>
+            <GHPressable onLongPress={drag} delayLongPress={200}>
               <Text style={styles.dragHandle}>☰</Text>
-            </TouchableOpacity>
+            </GHPressable>
             <Text style={styles.categoryIcon}>{cat.icon}</Text>
             <TextInput
               style={styles.categoryLabel}
