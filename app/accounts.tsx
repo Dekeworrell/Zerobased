@@ -1,6 +1,6 @@
 import { router, useFocusEffect } from 'expo-router'
 import { useCallback, useState } from 'react'
-import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { ActivityIndicator, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist'
 import { GestureHandlerRootView, Pressable as GHPressable } from 'react-native-gesture-handler'
 import CurrencyInput from '../components/CurrencyInput'
@@ -140,9 +140,20 @@ export default function AccountsScreen() {
       <ScaleDecorator>
         <View style={[styles.accountRow, isActive && styles.accountRowActive]}>
           <View style={styles.accountLeft}>
-            <GHPressable onLongPress={drag} delayLongPress={150} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-              <Text style={styles.dragHandle}>☰</Text>
-            </GHPressable>
+            {Platform.OS === 'web' ? (
+              <span
+                onPointerDown={(e: any) => {
+                  e.preventDefault()
+                  e.currentTarget.releasePointerCapture(e.pointerId)
+                  drag()
+                }}
+                style={{ cursor: 'grab', touchAction: 'none', userSelect: 'none', fontSize: 18, color: Colors.textSecondary, padding: 4 } as any}
+              >☰</span>
+            ) : (
+              <GHPressable onLongPress={drag} delayLongPress={150} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <Text style={styles.dragHandle}>☰</Text>
+              </GHPressable>
+            )}
             <Text style={styles.accountIcon}>{getAccountIcon(account.type)}</Text>
             {isEditing ? (
               <TextInput

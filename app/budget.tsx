@@ -1,6 +1,6 @@
 import { router } from 'expo-router'
 import { useEffect, useState } from 'react'
-import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { ActivityIndicator, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist'
 import { GestureHandlerRootView, Pressable as GHPressable } from 'react-native-gesture-handler'
 import CurrencyInput from '../components/CurrencyInput'
@@ -191,9 +191,20 @@ export default function BudgetScreen() {
       <ScaleDecorator>
         <View style={[styles.categoryRow, isActive && styles.categoryRowActive]}>
           <View style={styles.categoryTopRow}>
-            <GHPressable onLongPress={drag} delayLongPress={200}>
-              <Text style={styles.dragHandle}>☰</Text>
-            </GHPressable>
+            {Platform.OS === 'web' ? (
+              <span
+                onPointerDown={(e: any) => {
+                  e.preventDefault()
+                  e.currentTarget.releasePointerCapture(e.pointerId)
+                  drag()
+                }}
+                style={{ cursor: 'grab', touchAction: 'none', userSelect: 'none', fontSize: 18, color: Colors.textSecondary, padding: 4 } as any}
+              >☰</span>
+            ) : (
+              <GHPressable onLongPress={drag} delayLongPress={200}>
+                <Text style={styles.dragHandle}>☰</Text>
+              </GHPressable>
+            )}
             <Text style={styles.categoryIcon}>{cat.icon}</Text>
             <TextInput
               style={styles.categoryLabel}
