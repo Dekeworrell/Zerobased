@@ -99,7 +99,8 @@ export default function AddTransactionScreen() {
   }, [activeTab, historyView, selectedCategory?.id])
 
   async function loadData() {
-    const { data: { user } } = await supabase.auth.getUser()
+    const { data: { session } } = await supabase.auth.getSession()
+    const user = session?.user
     if (!user) return
 
     const { data: householdIds } = await supabase.rpc('get_household_user_ids')
@@ -171,7 +172,8 @@ export default function AddTransactionScreen() {
   async function loadHistory(catId: string, view: 'cycle' | 'monthly') {
     setHistoryLoading(true)
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: { session } } = await supabase.auth.getSession()
+      const user = session?.user
       if (!user) return
 
       const now = new Date()
@@ -250,8 +252,9 @@ export default function AddTransactionScreen() {
     setSaving(true)
     setError('')
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Not logged in')
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user) throw new Error('Not logged in')
+      const user = session.user
 
       const parsedAmount = parseFloat(amount)
 

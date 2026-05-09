@@ -51,7 +51,7 @@ export default function AccountsDebtScreen() {
       return !DEBT_ACCOUNTS.some(d => a.type === d.id || a.type.startsWith(d.id + '_'))
     })
     setAccounts([...nonDebtAccounts, ...accounts])
-    router.push('/onboarding/accounts-investment')
+    router.replace('/onboarding/accounts-investment')
   }
 
   return (

@@ -20,24 +20,44 @@ Deno.serve(async (req) => {
       })
     }
 
-    const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    })
-
+    // Decode JWT payload to get email — no network call needed
     const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token)
-    if (userError || !user) {
-      return new Response(JSON.stringify({ error: 'Invalid token' }), {
+    let userEmail = ''
+    let jwtDebug = ''
+    try {
+      const parts = token.split('.')
+      if (parts.length !== 3) throw new Error(`JWT has ${parts.length} parts, expected 3`)
+      // Add padding so atob doesn't throw
+      const b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/')
+      const padded = b64 + '='.repeat((4 - b64.length % 4) % 4)
+      const payload = JSON.parse(atob(padded))
+      userEmail = (payload.email ?? payload.sub ?? '').toLowerCase()
+      jwtDebug = `email=${payload.email} sub=${payload.sub}`
+    } catch (e: any) {
+      return new Response(JSON.stringify({ error: `JWT decode failed: ${e.message}` }), {
+        status: 401, headers: corsHeaders,
+      })
+    }
+    if (!userEmail) {
+      return new Response(JSON.stringify({ error: `No email in token. jwt=${jwtDebug}` }), {
         status: 401, headers: corsHeaders,
       })
     }
 
     // Admin gate
-    if (user.email?.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
+    if (userEmail !== ADMIN_EMAIL.toLowerCase()) {
       return new Response(JSON.stringify({ error: 'Forbidden' }), {
         status: 403, headers: corsHeaders,
       })
     }
+
+    // DB client — uses the admin's JWT so RLS runs as the admin user.
+    // The admin_select_affiliates policy (and siblings) grant full read access.
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+    const supabase = createClient(SUPABASE_URL, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+      auth: { autoRefreshToken: false, persistSession: false },
+    })
 
     // Run all stats queries in parallel
     const [
@@ -47,15 +67,18 @@ Deno.serve(async (req) => {
       payoutsRes,
       recentConversionsRes,
     ] = await Promise.all([
-      // Subscriber tier breakdown
+      // Subscriber tier breakdown — select ALL profiles (free tier may have null subscription_tier)
       supabase.from('profiles')
-        .select('subscription_tier, subscription_source')
-        .not('subscription_tier', 'is', null),
+        .select('subscription_tier, subscription_source'),
 
-      // All affiliates with their data
-      supabase.from('affiliates')
-        .select('id, name, email, referral_code, status, tier, commission_rate, applied_at, approved_at, stripe_account_id')
-        .order('applied_at', { ascending: false }),
+      // All affiliates — raw fetch to PostgREST, bypassing supabase-js client layer
+      fetch(`${SUPABASE_URL}/rest/v1/affiliates?select=id,name,email,referral_code,status,tier,commission_rate,applied_at,approved_at,stripe_account_id&order=applied_at.desc`, {
+        headers: {
+          'apikey': SERVICE_ROLE_KEY,
+          'Authorization': `Bearer ${SERVICE_ROLE_KEY}`,
+          'Content-Type': 'application/json',
+        },
+      }).then(r => r.json()).then(data => ({ data: Array.isArray(data) ? data : [], error: Array.isArray(data) ? null : data })),
 
       // Aggregate conversion stats per affiliate
       supabase.from('affiliate_conversions')
@@ -74,7 +97,7 @@ Deno.serve(async (req) => {
 
     // Subscriber counts
     const profiles = profilesRes.data ?? []
-    const freeCount = profiles.filter(p => p.subscription_tier === 'free').length
+    const freeCount = profiles.filter(p => !p.subscription_tier || p.subscription_tier === 'free').length
     const proCount = profiles.filter(p => p.subscription_tier === 'pro').length
     const proRevenueCatCount = profiles.filter(p => p.subscription_tier === 'pro' && p.subscription_source === 'revenuecat').length
 
@@ -110,6 +133,16 @@ Deno.serve(async (req) => {
       affiliates,
       recent_conversions: recentConversionsRes.data ?? [],
       total_commissions_pending: affiliates.reduce((s, a) => s + a.pending_payout, 0),
+      // Debug: surface any query errors so the admin UI can display them
+      _debug: {
+        affiliates_error: affiliatesRes.error?.message ?? null,
+        affiliates_count: affiliatesRes.data?.length ?? -1,
+        profiles_error: profilesRes.error?.message ?? null,
+        conversions_error: conversionsRes.error?.message ?? null,
+        payouts_error: payoutsRes.error?.message ?? null,
+        recent_conv_error: recentConversionsRes.error?.message ?? null,
+        srk_len: SERVICE_ROLE_KEY.length,
+      },
     }), { status: 200, headers: corsHeaders })
 
   } catch (err: any) {

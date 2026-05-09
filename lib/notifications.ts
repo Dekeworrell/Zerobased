@@ -24,7 +24,8 @@ export async function registerForPushNotifications() {
 
   const token = (await Notifications.getExpoPushTokenAsync()).data
 
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { session } } = await supabase.auth.getSession()
+  const user = session?.user
   if (user) {
     await supabase.from('profiles').update({ push_token: token }).eq('id', user.id)
   }
@@ -112,7 +113,8 @@ export async function checkBudgetAndNotify(
 ) {
   if (!notificationsEnabled) return
 
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { session } } = await supabase.auth.getSession()
+  const user = session?.user
   if (!user) return
 
   const { data: profile } = await supabase

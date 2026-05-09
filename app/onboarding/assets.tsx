@@ -52,7 +52,7 @@ export default function AssetsScreen() {
     const existing = getOnboardingData().accounts
     const otherAccounts = existing.filter(a => !ASSET_TYPES.find(e => e.id === a.type))
     setAccounts([...otherAccounts, ...assets])
-    router.push('/onboarding/goals')
+    router.replace('/onboarding/goals')
   }
 
   return (

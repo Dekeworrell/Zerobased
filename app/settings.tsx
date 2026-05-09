@@ -1,5 +1,6 @@
 import { router } from 'expo-router'
-import { useEffect, useState } from 'react'
+import { useFocusEffect } from 'expo-router'
+import { useCallback, useEffect, useState } from 'react'
 import { ActivityIndicator, Alert, Platform, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import { Colors } from '../constants/colors'
 import { registerForPushNotifications } from '../lib/notifications'
@@ -26,19 +27,21 @@ export default function SettingsScreen() {
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteSent, setInviteSent] = useState(false)
   const [inviteCode, setInviteCode] = useState('')
-  const [joiningHousehold, setJoiningHousehold] = useState(false)
   const [pendingInvite, setPendingInvite] = useState<any>(null)
   const [pendingInviteeEmail, setPendingInviteeEmail] = useState('')
   const [householdLoading, setHouseholdLoading] = useState(false)
   const [subscriptionTier, setSubscriptionTier] = useState<'free' | 'pro'>('free')
   const [showPayCycleLock, setShowPayCycleLock] = useState(false)
 
-  useEffect(() => {
-    loadProfile()
-  }, [])
+  useFocusEffect(
+    useCallback(() => {
+      loadProfile()
+    }, [])
+  )
 
   async function loadProfile() {
-    const { data: { user } } = await supabase.auth.getUser()
+    const { data: { session } } = await supabase.auth.getSession()
+    const user = session?.user
     if (!user) { router.replace('/'); return }
 
     setEmail(user.email || '')
@@ -47,7 +50,7 @@ export default function SettingsScreen() {
     setPendingInviteeEmail('')
 
     const [{ data: profile }, rcTier] = await Promise.all([
-      supabase.from('profiles').select('*').eq('id', user.id).single(),
+      supabase.from('profiles').select('name, tracking_method, budget_cycle, notifications_enabled, notify_at_percent_1, notify_at_percent_2, paycheque_reminders, household_id, subscription_tier').eq('id', user.id).single(),
       getSubscriptionTier(),
     ])
 
@@ -58,6 +61,7 @@ export default function SettingsScreen() {
       setNotificationsEnabled(profile.notifications_enabled ?? true)
       setNotifyAt1(profile.notify_at_percent_1 ?? 80)
       setNotifyAt2(profile.notify_at_percent_2 ?? 90)
+      setPaychequeReminders(profile.paycheque_reminders ?? true)
       setHouseholdId(profile.household_id || null)
       const dbTier = (profile.subscription_tier as 'free' | 'pro') ?? 'free'
       setSubscriptionTier(dbTier === 'pro' || rcTier === 'pro' ? 'pro' : 'free')
@@ -91,8 +95,9 @@ export default function SettingsScreen() {
     setSuccess(false)
 
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Not logged in')
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user) throw new Error('Not logged in')
+      const user = session.user
 
       await supabase.from('profiles').upsert({
         id: user.id,
@@ -102,6 +107,7 @@ export default function SettingsScreen() {
         notifications_enabled: notificationsEnabled,
         notify_at_percent_1: notifyAt1,
         notify_at_percent_2: notifyAt2,
+        paycheque_reminders: paychequeReminders,
       })
       setSuccess(true)
       setTimeout(() => setSuccess(false), 2000)
@@ -152,7 +158,8 @@ export default function SettingsScreen() {
     if (!confirm) return
     setHouseholdLoading(true)
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: { session } } = await supabase.auth.getSession()
+      const user = session?.user
       if (!user) return
       await supabase.from('profiles').update({ household_id: null }).eq('id', user.id)
       invalidateUserCache()
@@ -356,7 +363,7 @@ async function sendInvite() {
             thumbColor={Colors.text}
           />
         </View>
-        {notificationsEnabled && (
+        {notificationsEnabled && subscriptionTier === 'pro' && (
           <>
             <Text style={styles.switchSubLabel}>
               Set up to 2 warning thresholds for variable expense categories (e.g. warn me at 80% and 90%)
@@ -406,6 +413,15 @@ async function sendInvite() {
               />
             </View>
           </>
+        )}
+        {notificationsEnabled && subscriptionTier !== 'pro' && (
+          <View style={styles.upgradeCard}>
+            <Text style={styles.upgradeCardTitle}>Custom notification thresholds are Pro only.</Text>
+            <Text style={styles.upgradeCardBody}>Free users get an alert when a category hits 100%. Upgrade to set custom warnings at any percentage.</Text>
+            <TouchableOpacity style={styles.upgradeButton} onPress={() => router.push('/upgrade')}>
+              <Text style={styles.upgradeButtonText}>Upgrade to Pro</Text>
+            </TouchableOpacity>
+          </View>
         )}
       </View>
 

@@ -15,8 +15,8 @@ export default function RootLayout() {
     initStore()
     registerForPushNotifications()
     // Initialize RevenueCat; link to Supabase user ID if already signed in
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      initRevenueCat(user?.id)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      initRevenueCat(session?.user?.id)
     })
   }, [])
 

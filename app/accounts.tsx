@@ -116,7 +116,8 @@ export default function AccountsScreen() {
   }
 
   async function addAccount(type: string, label: string) {
-    const { data: { user } } = await supabase.auth.getUser()
+    const { data: { session } } = await supabase.auth.getSession()
+    const user = session?.user
     if (!user) return
     const isLiability = isLiabilityAccount(type)
     const existing = getAccountItems().filter(a => isLiabilityAccount(a.type) === isLiability)

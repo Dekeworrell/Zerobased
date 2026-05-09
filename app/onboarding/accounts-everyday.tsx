@@ -54,7 +54,7 @@ export default function AccountsEverydayScreen() {
              !EVERYDAY_ACCOUNTS.find(e => e.id === baseType)
     })
     setAccounts([...accounts, ...otherAccounts])
-    router.push('/onboarding/accounts-debt')
+    router.replace('/onboarding/accounts-debt')
   }
 
   return (

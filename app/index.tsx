@@ -1,17 +1,32 @@
-import { router } from 'expo-router'
+import { router, useLocalSearchParams } from 'expo-router'
 import { useEffect } from 'react'
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { supabase } from '../lib/supabase'
 
 export default function WelcomeScreen() {
+  const { ref } = useLocalSearchParams<{ ref?: string }>()
+
   useEffect(() => {
     checkSession()
-    supabase.from('profiles').select('id').limit(1)
   }, [])
 
   async function checkSession() {
     const { data: { session } } = await supabase.auth.getSession()
-    if (session) router.replace('/dashboard')
+    if (!session) return
+
+    // Check if onboarding is complete — if not, resume from welcome
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('onboarding_complete')
+      .eq('id', session.user.id)
+      .maybeSingle()
+
+    if (profile?.onboarding_complete) {
+      router.replace('/dashboard')
+    } else {
+      // Onboarding not finished — send back to welcome so they can continue
+      router.replace('/welcome')
+    }
   }
 
   return (
@@ -44,7 +59,7 @@ export default function WelcomeScreen() {
       </View>
 
       <View style={styles.buttons}>
-        <TouchableOpacity style={styles.primaryButton} onPress={() => router.push('/signup')}>
+        <TouchableOpacity style={styles.primaryButton} onPress={() => router.push(ref ? `/signup?ref=${ref}` : '/signup')}>
           <Text style={styles.primaryButtonText}>Get Started</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.secondaryButton} onPress={() => router.push('/login')}>

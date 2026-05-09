@@ -57,7 +57,7 @@ export default function AccountsScreen() {
   function handleContinue() {
     console.log('Saving accounts:', JSON.stringify(accounts))
     saveAccountsToStore(accounts)
-    router.push('/onboarding/income')
+    router.replace('/onboarding/income')
   }
 
   return (

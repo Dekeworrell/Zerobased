@@ -162,25 +162,39 @@ export default function TransactionEditSheet({ visible, transaction, categories,
               />
 
               <Text style={styles.fieldLabel}>Date</Text>
-              <TouchableOpacity style={styles.dateButton} onPress={() => setShowDatePicker(!showDatePicker)}>
-                <Text style={styles.dateButtonText}>📅 {formatDateDisplay(date)}</Text>
-              </TouchableOpacity>
-              {showDatePicker && (
-                <View style={{ backgroundColor: '#ffffff', borderRadius: 16, borderWidth: 1, borderColor: '#e3e8e3', overflow: 'hidden', marginTop: 8 }}>
-                  <DateTimePicker
-                    value={date}
-                    mode="date"
-                    display="spinner"
-                    themeVariant="light"
-                    onChange={(event, selectedDate) => {
-                      if (selectedDate) setDate(selectedDate)
-                      if (Platform.OS === 'android') setShowDatePicker(false)
-                    }}
+              {Platform.OS === 'web' ? (
+                <View style={styles.dateButton}>
+                  <Text style={[styles.dateButtonText, { marginBottom: 4 }]}>📅</Text>
+                  <input
+                    type="date"
+                    value={formatDateForDB(date)}
+                    onChange={e => { if (e.target.value) setDate(new Date(e.target.value + 'T12:00:00')) }}
+                    style={{ border: 'none', background: 'transparent', fontSize: 15, color: '#1a1f1a', outline: 'none', cursor: 'pointer' }}
                   />
-                  <TouchableOpacity style={styles.doneBtn} onPress={() => setShowDatePicker(false)}>
-                    <Text style={styles.doneBtnText}>Done</Text>
-                  </TouchableOpacity>
                 </View>
+              ) : (
+                <>
+                  <TouchableOpacity style={styles.dateButton} onPress={() => setShowDatePicker(!showDatePicker)}>
+                    <Text style={styles.dateButtonText}>📅 {formatDateDisplay(date)}</Text>
+                  </TouchableOpacity>
+                  {showDatePicker && (
+                    <View style={{ backgroundColor: '#ffffff', borderRadius: 16, borderWidth: 1, borderColor: '#e3e8e3', overflow: 'hidden', marginTop: 8 }}>
+                      <DateTimePicker
+                        value={date}
+                        mode="date"
+                        display="spinner"
+                        themeVariant="light"
+                        onChange={(event, selectedDate) => {
+                          if (selectedDate) setDate(selectedDate)
+                          if (Platform.OS === 'android') setShowDatePicker(false)
+                        }}
+                      />
+                      <TouchableOpacity style={styles.doneBtn} onPress={() => setShowDatePicker(false)}>
+                        <Text style={styles.doneBtnText}>Done</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </>
               )}
 
               <Text style={styles.fieldLabel}>Category</Text>

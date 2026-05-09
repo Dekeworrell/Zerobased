@@ -70,7 +70,7 @@ export default function AccountsInvestmentScreen() {
              !allInvestmentAccounts.find(e => e.id === baseType)
     })
     setAccounts([...otherAccounts, ...accounts])
-    router.push('/onboarding/assets')
+    router.replace('/onboarding/assets')
   }
 
   return (

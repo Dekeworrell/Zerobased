@@ -1,6 +1,6 @@
 import { router } from 'expo-router'
 import { useState } from 'react'
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { StyleSheet, Text, TextInput, TouchableOpacity, View, ScrollView } from 'react-native'
 import CurrencyInput from '../../components/CurrencyInput'
 import KeyboardScrollView from '../../components/KeyboardScrollView'
 import { EXPENSE_CATEGORIES } from '../../constants/categories'
@@ -17,6 +17,9 @@ type LocalExpense = {
   permanent?: boolean
 }
 
+const FREE_TIER_LIMIT = 8
+const FREE_TIER_NUDGE_AT = 7
+
 export default function ExpensesScreen() {
   const [masterFrequency, setMasterFrequency] = useState<'monthly' | 'biweekly'>('monthly')
   const [expenses, setExpenses] = useState<LocalExpense[]>(() => {
@@ -29,7 +32,11 @@ export default function ExpensesScreen() {
     ]
   })
 
+  const atNudge = expenses.length === FREE_TIER_NUDGE_AT
+  const atLimit = expenses.length >= FREE_TIER_LIMIT
+
   function addExpense(category: typeof EXPENSE_CATEGORIES[0]) {
+    if (atLimit) return
     const newId = `${category.id}_${Date.now()}`
     setExpenses([...expenses, {
       id: newId,
@@ -63,7 +70,7 @@ export default function ExpensesScreen() {
 
   function handleContinue() {
     saveExpensesToStore(expenses)
-    router.push('/onboarding/assign')
+    router.replace('/onboarding/assign')
   }
 
   return (
@@ -74,9 +81,9 @@ export default function ExpensesScreen() {
       </TouchableOpacity>
       <View style={styles.progressWrap}>
         <View style={styles.progressTrack}>
-          <View style={[styles.progressFill, { width: '88%' }]} />
+          <View style={[styles.progressFill, { width: '66%' }]} />
         </View>
-        <Text style={styles.progressLabel}>Step 8 of 9</Text>
+        <Text style={styles.progressLabel}>Step 2 of 3</Text>
       </View>
       <Text style={styles.title}>What are your regular expenses?</Text>
       <Text style={styles.subtitle}>Start with your biggest bills — you can always add more later.</Text>
@@ -140,19 +147,41 @@ export default function ExpensesScreen() {
         ))}
       </View>
 
-      <Text style={styles.addLabel}>Add a category</Text>
-      <View style={styles.typeGrid}>
-        {EXPENSE_CATEGORIES.sort((a, b) => a.label.localeCompare(b.label)).map((category) => (
-          <TouchableOpacity
-            key={category.id}
-            style={styles.typeChip}
-            onPress={() => addExpense(category)}
-          >
-            <Text style={styles.typeChipIcon}>{category.icon}</Text>
-            <Text style={styles.typeChipLabel}>{category.label}</Text>
+      {atNudge && (
+        <View style={styles.nudgeBanner}>
+          <Text style={styles.nudgeText}>
+            1 category left on your free plan — upgrade for unlimited
+          </Text>
+        </View>
+      )}
+
+      {atLimit ? (
+        <View style={styles.limitCard}>
+          <Text style={styles.limitTitle}>You've reached the free plan limit.</Text>
+          <Text style={styles.limitBody}>
+            Free accounts can have up to 8 budget categories. You can add more after upgrading, or continue with these 8 and adjust later.
+          </Text>
+          <TouchableOpacity style={styles.limitUpgradeBtn} onPress={() => router.push('/upgrade')}>
+            <Text style={styles.limitUpgradeBtnText}>Upgrade to Pro — Unlimited categories</Text>
           </TouchableOpacity>
-        ))}
-      </View>
+        </View>
+      ) : (
+        <>
+          <Text style={styles.addLabel}>Add a category</Text>
+          <View style={styles.typeGrid}>
+            {EXPENSE_CATEGORIES.sort((a, b) => a.label.localeCompare(b.label)).map((category) => (
+              <TouchableOpacity
+                key={category.id}
+                style={styles.typeChip}
+                onPress={() => addExpense(category)}
+              >
+                <Text style={styles.typeChipIcon}>{category.icon}</Text>
+                <Text style={styles.typeChipLabel}>{category.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </>
+      )}
 
       <View style={{ height: 80 }} />
     </KeyboardScrollView>
@@ -352,6 +381,13 @@ backButton: {
   progressTrack: { height: 3, backgroundColor: '#e3e8e3', borderRadius: 2, overflow: 'hidden', marginBottom: 6 },
   progressFill: { height: 3, backgroundColor: '#3db870', borderRadius: 2 },
   progressLabel: { fontSize: 11, color: '#3db870', fontWeight: '600' },
+  nudgeBanner: { backgroundColor: '#fffbeb', borderWidth: 1, borderColor: '#f5d97a', borderRadius: 10, padding: 12, marginBottom: 12 },
+  nudgeText: { fontSize: 13, color: '#92400e', textAlign: 'center', fontWeight: '500' },
+  limitCard: { backgroundColor: '#fff8f8', borderWidth: 1.5, borderColor: '#f5c6c6', borderRadius: 14, padding: 18, gap: 8, marginBottom: 16 },
+  limitTitle: { fontSize: 15, fontWeight: '700', color: '#b91c1c', textAlign: 'center' },
+  limitBody: { fontSize: 13, color: '#6b7280', textAlign: 'center', lineHeight: 19 },
+  limitUpgradeBtn: { backgroundColor: '#3db870', paddingVertical: 12, borderRadius: 10, alignItems: 'center', marginTop: 4 },
+  limitUpgradeBtnText: { color: '#ffffff', fontSize: 14, fontWeight: '700' },
   floatingButton: {
     position: 'absolute',
     bottom: 0,

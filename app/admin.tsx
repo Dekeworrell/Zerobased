@@ -77,7 +77,7 @@ export default function AdminScreen() {
   useFocusEffect(useCallback(() => { loadStats() }, []))
 
   async function loadStats() {
-    setLoading(true); setError(''); setActionMessage('')
+    setLoading(true); setError(''); setActionMessage(''); setStats(null)
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.replace('/'); return }
@@ -86,9 +86,59 @@ export default function AdminScreen() {
       }
       setAuthorized(true)
       setOwnerName(user.user_metadata?.name ?? user.email?.split('@')[0] ?? 'Deke')
-      const { data, error: fnErr } = await supabase.functions.invoke('admin-get-stats')
-      if (fnErr || data?.error) throw new Error(data?.error ?? fnErr?.message)
-      setStats(data)
+
+      // Query directly — no edge function needed. Admin RLS policies allow full read.
+      const [affiliatesRes, profilesRes, conversionsRes, payoutsRes, recentConvRes] = await Promise.all([
+        supabase.from('affiliates')
+          .select('id, name, email, referral_code, status, tier, commission_rate, applied_at, approved_at, stripe_account_id')
+          .order('applied_at', { ascending: false }),
+        supabase.from('profiles')
+          .select('subscription_tier, subscription_source'),
+        supabase.from('affiliate_conversions')
+          .select('affiliate_id, commission_amount, revenue_amount, status, plan, converted_at'),
+        supabase.from('affiliate_payouts')
+          .select('affiliate_id, amount, status'),
+        supabase.from('affiliate_conversions')
+          .select('id, affiliate_id, plan, revenue_amount, commission_amount, status, converted_at')
+          .order('converted_at', { ascending: false })
+          .limit(20),
+      ])
+
+      if (affiliatesRes.error) throw new Error('affiliates: ' + affiliatesRes.error.message)
+
+      const profiles = profilesRes.data ?? []
+      const conversions = conversionsRes.data ?? []
+      const payouts = payoutsRes.data ?? []
+
+      const freeCount = profiles.filter(p => !p.subscription_tier || p.subscription_tier === 'free').length
+      const proCount = profiles.filter(p => p.subscription_tier === 'pro').length
+      const proRevenueCatCount = profiles.filter(p => p.subscription_tier === 'pro' && p.subscription_source === 'revenuecat').length
+
+      const activeMonthly = conversions.filter(c => c.plan === 'monthly' && c.status !== 'refunded').length
+      const activeAnnual = conversions.filter(c => c.plan === 'annual' && c.status !== 'refunded').length
+      const estimatedMRR = (activeMonthly * 12.99) + (activeAnnual * 89.99 / 12)
+
+      const affiliates = (affiliatesRes.data ?? []).map((aff: any) => {
+        const affConversions = conversions.filter(c => c.affiliate_id === aff.id)
+        const affPayouts = payouts.filter(p => p.affiliate_id === aff.id)
+        const totalEarned = affConversions.reduce((s: number, c: any) => s + Number(c.commission_amount), 0)
+        const totalPaid = affPayouts.filter((p: any) => p.status === 'paid').reduce((s: number, p: any) => s + Number(p.amount), 0)
+        return {
+          ...aff,
+          total_conversions: affConversions.length,
+          total_earned: Math.round(totalEarned * 100) / 100,
+          total_paid: Math.round(totalPaid * 100) / 100,
+          pending_payout: Math.round((totalEarned - totalPaid) * 100) / 100,
+        }
+      })
+
+      setStats({
+        subscribers: { free: freeCount, pro: proCount, pro_revenuecat: proRevenueCatCount, total: profiles.length },
+        mrr: Math.round(estimatedMRR * 100) / 100,
+        affiliates,
+        recent_conversions: recentConvRes.data ?? [],
+        total_commissions_pending: affiliates.reduce((s: number, a: any) => s + a.pending_payout, 0),
+      })
     } catch (err: any) { setError(err.message) }
     setLoading(false)
   }
@@ -106,7 +156,7 @@ export default function AdminScreen() {
     setActionLoading(null)
   }
 
-  const fmt = (n: number) => `$${n.toFixed(2)}`
+  const fmt = (n: any) => `$${(Number.isFinite(+n) ? +n : 0).toFixed(2)}`
   const fmtDate = (iso: string | null) => iso
     ? new Date(iso).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' })
     : '—'
@@ -172,6 +222,9 @@ export default function AdminScreen() {
         </View>
         <View style={s.headerRight}>
           <Text style={s.userChip}>{ownerName} 🔒</Text>
+          <TouchableOpacity onPress={loadStats}>
+            <Text style={s.link}>↻ Refresh</Text>
+          </TouchableOpacity>
           <TouchableOpacity onPress={() => router.replace('/settings')}>
             <Text style={s.link}>← App</Text>
           </TouchableOpacity>
@@ -204,7 +257,7 @@ export default function AdminScreen() {
             <View style={s.cardRow}>
               {[
                 { label: 'MRR', value: fmt(stats.mrr), sub: 'Estimated', color: Colors.primary },
-                { label: 'Total Users', value: stats.subscribers.total.toLocaleString(), sub: `${stats.subscribers.pro} Pro`, color: '#6c63ff' },
+                { label: 'Total Users', value: (stats.subscribers?.total ?? 0).toLocaleString(), sub: `${stats.subscribers?.pro ?? 0} Pro`, color: '#6c63ff' },
                 { label: 'Active Affiliates', value: String(approved.length), sub: `${pending.length} pending`, color: Colors.success ?? '#22c55e' },
                 { label: 'Commissions Due', value: fmt(stats.total_commissions_pending), sub: 'CAD', color: Colors.warning ?? '#f59e0b' },
               ].map(c => (
@@ -224,7 +277,7 @@ export default function AdminScreen() {
               {[
                 ['Active Affiliates', String(approved.length), Colors.text],
                 ['Pending Payouts', fmt(stats.total_commissions_pending) + ' CAD', Colors.warning ?? '#f59e0b'],
-                ['Recent Conversions', `${stats.recent_conversions.length} (last 20)`, Colors.text],
+                ['Recent Conversions', `${(stats.recent_conversions ?? []).length} (last 20)`, Colors.text],
                 approved.length > 0
                   ? ['Top Affiliate', (() => { const t = [...approved].sort((a, b) => b.total_earned - a.total_earned)[0]; return `${t.referral_code}  ${fmt(t.total_earned)}` })(), Colors.primary]
                   : null,
@@ -254,10 +307,10 @@ export default function AdminScreen() {
             {stats && (
               <View style={s.cardRow}>
                 {[
-                  { label: 'Total', value: stats.subscribers.total },
-                  { label: 'Pro', value: stats.subscribers.pro },
-                  { label: 'Free', value: stats.subscribers.free },
-                  { label: 'Via RevenueCat', value: stats.subscribers.pro_revenuecat },
+                  { label: 'Total', value: stats.subscribers?.total ?? 0 },
+                  { label: 'Pro', value: stats.subscribers?.pro ?? 0 },
+                  { label: 'Free', value: stats.subscribers?.free ?? 0 },
+                  { label: 'Via RevenueCat', value: stats.subscribers?.pro_revenuecat ?? 0 },
                 ].map(c => (
                   <View key={c.label} style={s.miniCard}>
                     <Text style={s.miniVal}>{c.value}</Text>
@@ -361,7 +414,7 @@ export default function AdminScreen() {
                             <View style={s.payRow}>
                               <TextInput
                                 style={s.payInput}
-                                placeholder={aff.pending_payout.toFixed(2)}
+                                placeholder={(+(aff.pending_payout ?? 0)).toFixed(2)}
                                 placeholderTextColor={Colors.textSecondary}
                                 value={payoutAmounts[aff.id] ?? ''}
                                 onChangeText={v => setPayoutAmounts(p => ({ ...p, [aff.id]: v }))}

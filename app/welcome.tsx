@@ -49,14 +49,14 @@ export default function WelcomeScreen() {
 
         <TouchableOpacity
           style={styles.primaryBtn}
-          onPress={() => router.replace('/onboarding/tracking-method')}
+          onPress={() => router.replace('/onboarding/income')}
         >
           <Text style={styles.primaryBtnText}>Let's set up your budget →</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.skipBtn}
-          onPress={() => router.replace('/onboarding/tracking-method')}
+          onPress={() => router.replace('/onboarding/income')}
         >
           <Text style={styles.skipText}>Skip intro</Text>
         </TouchableOpacity>

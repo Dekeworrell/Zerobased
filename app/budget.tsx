@@ -110,7 +110,8 @@ export default function BudgetScreen() {
 
   async function saveSortOrder(reorderedCats: Category[]) {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: { session } } = await supabase.auth.getSession()
+      const user = session?.user
       if (!user) return
       for (let i = 0; i < reorderedCats.length; i++) {
         if (!reorderedCats[i].isNew) {
@@ -131,8 +132,9 @@ export default function BudgetScreen() {
     setSuccess(false)
 
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Not logged in')
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user) throw new Error('Not logged in')
+      const user = session.user
 
       const newCats = categories.filter(c => c.isNew)
       const existingCats = categories.filter(c => !c.isNew)

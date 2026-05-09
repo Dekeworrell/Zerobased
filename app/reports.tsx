@@ -227,6 +227,8 @@ export default function ReportsScreen() {
   }
 
   // ── Derived data ──────────────────────────────────────────────
+  const todayMonth = new Date().toISOString().slice(0, 7)
+  const isCurrentMonth = selectedMonth === todayMonth
   const last6 = monthSummaries.slice(0, 6).reverse()
   const currentMonthData = monthSummaries.find(m => m.month === selectedMonth)
   const prevMonthData = monthSummaries[1]
@@ -278,18 +280,26 @@ export default function ReportsScreen() {
   function buildInsight(): string {
     if (!currentMonthData) return ''
     const saved = Math.round(netAmount)
+    const monthName = new Date(selectedMonth + '-01T00:00:00').toLocaleDateString('en-CA', { month: 'long' })
+
+    if (isCurrentMonth) {
+      return saved >= 0
+        ? `You've saved $${saved.toLocaleString('en-CA')} so far in ${monthName}. Keep going!`
+        : `You're currently overspent by $${Math.abs(saved).toLocaleString('en-CA')} in ${monthName}. Try reducing variable expenses.`
+    }
+
     if (prevNet !== null) {
       const diff = saved - Math.round(prevNet)
       if (saved >= 0) {
         return diff >= 0
-          ? `You saved $${saved.toLocaleString('en-CA')} this month — $${Math.abs(diff).toLocaleString('en-CA')} more than last month.`
-          : `You saved $${saved.toLocaleString('en-CA')} this month — $${Math.abs(diff).toLocaleString('en-CA')} less than last month.`
+          ? `You saved $${saved.toLocaleString('en-CA')} in ${monthName} — $${Math.abs(diff).toLocaleString('en-CA')} more than the previous month.`
+          : `You saved $${saved.toLocaleString('en-CA')} in ${monthName} — $${Math.abs(diff).toLocaleString('en-CA')} less than the previous month.`
       }
-      return `You overspent by $${Math.abs(saved).toLocaleString('en-CA')} this month. Try reducing variable expenses next month.`
+      return `You overspent by $${Math.abs(saved).toLocaleString('en-CA')} in ${monthName}. Try reducing variable expenses.`
     }
     return saved >= 0
-      ? `You saved $${saved.toLocaleString('en-CA')} this month. Keep it up!`
-      : `You overspent by $${Math.abs(saved).toLocaleString('en-CA')} this month.`
+      ? `You saved $${saved.toLocaleString('en-CA')} in ${monthName}. Great work!`
+      : `You overspent by $${Math.abs(saved).toLocaleString('en-CA')} in ${monthName}.`
   }
 
   // ── Loading ───────────────────────────────────────────────────
@@ -348,14 +358,18 @@ export default function ReportsScreen() {
         <>
           {/* Net card */}
           <View style={[styles.netCard, { borderColor: netAmount >= 0 ? '#b6dfc0' : '#f5c6c6' }]}>
-            <Text style={styles.netLabel}>Net this month</Text>
+            <Text style={styles.netLabel}>
+              {isCurrentMonth
+                ? `Net so far in ${new Date(selectedMonth + '-01T00:00:00').toLocaleDateString('en-CA', { month: 'long' })}`
+                : 'Net this month'}
+            </Text>
             <Text style={[styles.netAmount, { color: netAmount >= 0 ? '#1f7a45' : '#e05252' }]}>
               {netAmount >= 0 ? '+' : ''}${Math.abs(netAmount).toLocaleString('en-CA', { maximumFractionDigits: 0 })}
             </Text>
             <Text style={styles.netSub}>
               Income ${monthlyIncome.toLocaleString('en-CA', { maximumFractionDigits: 0 })} · Expenses ${(currentMonthData?.expenses ?? 0).toLocaleString('en-CA', { maximumFractionDigits: 0 })}
             </Text>
-            {prevNet !== null && (
+            {prevNet !== null && !isCurrentMonth && (
               <View style={[styles.netBadge, { backgroundColor: netAmount >= prevNet ? 'rgba(61,184,112,0.12)' : 'rgba(224,82,82,0.1)' }]}>
                 <Text style={[styles.netBadgeText, { color: netAmount >= prevNet ? '#1f7a45' : '#e05252' }]}>
                   {netAmount >= prevNet ? '↑' : '↓'} vs last month
@@ -385,7 +399,7 @@ export default function ReportsScreen() {
               </Text>
             </View>
             <View style={styles.metricCard}>
-              <Text style={styles.metricLabel}>Saved</Text>
+              <Text style={styles.metricLabel}>{isCurrentMonth ? 'Saved so far' : 'Saved'}</Text>
               <Text style={[styles.metricValue, { color: '#d97706' }]}>
                 ${Math.max(0, netAmount).toLocaleString('en-CA', { maximumFractionDigits: 0 })}
               </Text>
@@ -710,7 +724,9 @@ export default function ReportsScreen() {
                     onPress={() => setSelectedMonth(m.month)}
                   >
                     <View>
-                      <Text style={styles.historyMonth}>{m.label}</Text>
+                      <Text style={styles.historyMonth}>
+                        {m.label}{m.month === todayMonth ? ' · in progress' : ''}
+                      </Text>
                       <Text style={styles.historyDetail}>
                         ${(m.income > 0 ? m.income : monthlyIncome).toLocaleString('en-CA', { maximumFractionDigits: 0 })} in · ${m.expenses.toLocaleString('en-CA', { maximumFractionDigits: 0 })} out
                       </Text>

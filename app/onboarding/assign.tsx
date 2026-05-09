@@ -1,6 +1,6 @@
 import { router } from 'expo-router'
-import { useState } from 'react'
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { useEffect, useRef, useState } from 'react'
+import { Animated, ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import CurrencyInput from '../../components/CurrencyInput'
 import KeyboardScrollView from '../../components/KeyboardScrollView'
 import { EXPENSE_CATEGORIES } from '../../constants/categories'
@@ -60,6 +60,8 @@ export default function AssignScreen() {
   const [saving, setSaving] = useState(false)
   const [showAddCategory, setShowAddCategory] = useState<'fixed' | 'variable' | 'priority' | null>(null)
   const [error, setError] = useState('')
+  const [celebrated, setCelebrated] = useState(false)
+  const celebrationAnim = useRef(new Animated.Value(0)).current
 
   const totalMonthlyIncome = data.incomeSources.reduce(
     (sum, s) => sum + toMonthly(s.amount, s.frequency), 0
@@ -74,6 +76,32 @@ export default function AssignScreen() {
   const priorityExpenses = expenses.filter(e => e.category_type === 'priority')
   const fixedExpenses = expenses.filter(e => e.category_type === 'fixed')
   const variableExpenses = expenses.filter(e => e.category_type === 'variable')
+
+  // Fire celebration banner the first time remaining hits $0, auto-dismiss after 3s
+  useEffect(() => {
+    if (isZero && !celebrated) {
+      setCelebrated(true)
+      Animated.spring(celebrationAnim, {
+        toValue: 1,
+        useNativeDriver: true,
+        tension: 60,
+        friction: 8,
+      }).start()
+      // Auto-dismiss after 3 seconds
+      const timer = setTimeout(() => {
+        Animated.timing(celebrationAnim, {
+          toValue: 0,
+          duration: 400,
+          useNativeDriver: true,
+        }).start(() => setCelebrated(false))
+      }, 3000)
+      return () => clearTimeout(timer)
+    } else if (!isZero && celebrated) {
+      // They adjusted an amount back — hide the banner immediately
+      setCelebrated(false)
+      celebrationAnim.setValue(0)
+    }
+  }, [isZero])
 
   function getStatusColor() {
     if (isOver) return Colors.danger
@@ -98,8 +126,9 @@ export default function AssignScreen() {
     setError('')
 
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Not logged in')
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user) throw new Error('Not logged in')
+      const user = session.user
 
       const onboarding = getOnboardingData()
 
@@ -150,6 +179,7 @@ export default function AssignScreen() {
       }
 
       clearOnboardingData()
+      await supabase.from('profiles').update({ onboarding_complete: true }).eq('id', user.id)
       router.replace('/dashboard')
 
     } catch (err: any) {
@@ -196,8 +226,9 @@ export default function AssignScreen() {
   }
 
   return (
+    <View style={{ flex: 1 }}>
     <KeyboardScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-      <TouchableOpacity onPress={() => router.replace('/dashboard')} style={styles.backButton}>
+      <TouchableOpacity onPress={() => router.replace('/onboarding/expenses')} style={styles.backButton}>
         <Text style={styles.backText}>← Back</Text>
       </TouchableOpacity>
 
@@ -205,7 +236,7 @@ export default function AssignScreen() {
         <View style={styles.progressTrack}>
           <View style={[styles.progressFill, { width: '100%' }]} />
         </View>
-        <Text style={[styles.progressLabel, { color: '#1f7a45' }]}>Almost done!</Text>
+        <Text style={[styles.progressLabel, { color: '#1f7a45' }]}>Step 3 of 3</Text>
       </View>
       <Text style={styles.title}>Assign every dollar</Text>
       <Text style={styles.subtitle}>Every dollar needs a job — start with fixed bills, then variable spending, then invest the rest</Text>
@@ -377,6 +408,26 @@ export default function AssignScreen() {
         <Text style={{ color: Colors.textSecondary, fontSize: 14 }}>Skip for now</Text>
       </TouchableOpacity>
     </KeyboardScrollView>
+
+    {/* Celebration banner — slides up from bottom when every dollar is assigned */}
+    {celebrated && (
+      <Animated.View style={[styles.celebrationBanner, {
+        transform: [{
+          translateY: celebrationAnim.interpolate({
+            inputRange: [0, 1],
+            outputRange: [200, 0],
+          })
+        }],
+        opacity: celebrationAnim,
+      }]}>
+        <Text style={styles.celebrationEmoji}>🎉</Text>
+        <View style={styles.celebrationText}>
+          <Text style={styles.celebrationTitle}>Every dollar has a job!</Text>
+          <Text style={styles.celebrationSub}>Your budget is perfectly balanced.</Text>
+        </View>
+      </Animated.View>
+    )}
+    </View>
   )
 }
 
@@ -634,4 +685,38 @@ const styles = StyleSheet.create({
   progressTrack: { height: 3, backgroundColor: '#e3e8e3', borderRadius: 2, overflow: 'hidden', marginBottom: 6 },
   progressFill: { height: 3, backgroundColor: '#3db870', borderRadius: 2 },
   progressLabel: { fontSize: 11, color: '#3db870', fontWeight: '600' },
+  celebrationBanner: {
+    position: 'absolute',
+    bottom: 32,
+    left: 20,
+    right: 20,
+    backgroundColor: '#1a4731',
+    borderRadius: 20,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 12,
+  },
+  celebrationEmoji: {
+    fontSize: 28,
+  },
+  celebrationText: {
+    flex: 1,
+    gap: 2,
+  },
+  celebrationTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#ffffff',
+  },
+  celebrationSub: {
+    fontSize: 12,
+    color: '#86efac',
+  },
 })

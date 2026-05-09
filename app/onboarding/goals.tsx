@@ -70,7 +70,8 @@ export default function GoalsScreen() {
   async function handleContinue() {
     setSaving(true)
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: { session } } = await supabase.auth.getSession()
+      const user = session?.user
       if (user) {
         await supabase.from('profiles').upsert({
           id: user.id,
@@ -85,7 +86,7 @@ export default function GoalsScreen() {
       }
     } catch (e) {}
     setSaving(false)
-    router.push('/onboarding/income')
+    router.replace('/onboarding/income')
   }
 
   return (

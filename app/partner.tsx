@@ -47,7 +47,8 @@ export default function PartnerScreen() {
   async function loadData() {
     setLoading(true); setError('')
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: { session } } = await supabase.auth.getSession()
+      const user = session?.user
       if (!user) { router.replace('/'); return }
       setUserName(user.user_metadata?.name ?? user.email?.split('@')[0] ?? 'Partner')
 
@@ -142,6 +143,9 @@ export default function PartnerScreen() {
           </TouchableOpacity>
         </View>
         <ScrollView style={p.body} contentContainerStyle={p.bodyInner}>
+          <TouchableOpacity onPress={() => router.replace('/settings')} style={{ alignSelf: 'flex-start', marginBottom: 4 }}>
+            <Text style={p.link}>← Back to app</Text>
+          </TouchableOpacity>
           <Text style={p.pageTitle}>Become a partner</Text>
           <Text style={p.pageSub}>Share Zerobased and earn commission on every subscriber you refer.</Text>
 

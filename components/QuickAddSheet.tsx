@@ -64,8 +64,9 @@ export default function QuickAddSheet({ visible, category, accounts, categoryDef
     setError('')
 
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Not logged in')
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user) throw new Error('Not logged in')
+      const user = session.user
 
       const parsedAmount = parseFloat(amount)
       const today = new Date()

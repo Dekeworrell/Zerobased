@@ -2,7 +2,6 @@ import { router, useFocusEffect } from 'expo-router'
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import PaydayModal from '../components/PaydayModal'
-import { isLiabilityAccount } from '../constants/categories'
 import { Colors } from '../constants/colors'
 import { calculateBudgetStatus, getPayPeriodDates, toMonthly, toPeriodAmount } from '../lib/store'
 import { supabase } from '../lib/supabase'
@@ -26,6 +25,7 @@ export default function DashboardScreen() {
   const [globalDefaultAccountId, setGlobalDefaultAccountId] = useState<string | null>(null)
   const [showPaydayModal, setShowPaydayModal] = useState(false)
   const [paydayIncomeSources, setPaydayIncomeSources] = useState<any[]>([])
+  const [subscriptionTier, setSubscriptionTier] = useState<'free' | 'pro'>('free')
   const scrollRef = useRef<ScrollView>(null)
   const paydayShownRef = useRef(false)
 
@@ -53,7 +53,7 @@ export default function DashboardScreen() {
         { data: catDefaults },
         { data: members },
       ] = await Promise.all([
-        supabase.from('profiles').select('name, budget_cycle, default_account_id, last_payday_check, household_id').eq('id', userId).single(),
+        supabase.from('profiles').select('name, budget_cycle, default_account_id, last_payday_check, household_id, subscription_tier').eq('id', userId).single(),
         supabase.from('income_sources').select('id, amount, frequency, next_payday, income_type, user_id').in('user_id', userIds),
         supabase.from('budget_categories').select('id, label, icon, budgeted_amount, frequency, category_type, sort_order').in('user_id', userIds).order('sort_order', { ascending: true }),
         supabase.from('accounts').select('id, label, type, balance, user_id').in('user_id', userIds),
@@ -69,18 +69,8 @@ export default function DashboardScreen() {
         setName(profileName)
       }
 
-      // Budget cycle — prefer 'paycycle' if any household member uses it
-      let cycle = profile?.budget_cycle || 'monthly'
-      if (profile?.household_id && cycle !== 'paycycle' && members && members.length > 0) {
-        // members RPC already returns partner profiles; check if partner uses paycycle
-        const { data: partnerProfiles } = await supabase
-          .from('profiles')
-          .select('budget_cycle')
-          .eq('household_id', profile.household_id)
-          .eq('budget_cycle', 'paycycle')
-          .limit(1)
-        if (partnerProfiles && partnerProfiles.length > 0) cycle = 'paycycle'
-      }
+      // Budget cycle — use own profile setting (household members inherit via shared categories)
+      const cycle = profile?.budget_cycle || 'monthly'
       setBudgetCycle(cycle)
       if (profile?.default_account_id) setGlobalDefaultAccountId(profile.default_account_id)
 
@@ -104,6 +94,9 @@ export default function DashboardScreen() {
           setShowPaydayModal(true)
         }
       }
+
+      // Subscription tier
+      setSubscriptionTier((profile?.subscription_tier as 'free' | 'pro') ?? 'free')
 
       // Accounts
       if (accs) setAccounts(accs)
@@ -144,21 +137,19 @@ export default function DashboardScreen() {
         }
       }
 
-      // Transactions — depends on pay period so runs after
+      // Transactions — for monthly users we can use a pre-calculated date range.
+      // For paycycle users, periodStart/End are now set above so we use those.
       if (cats) {
-        let txnQuery = supabase
+        const txnStart = periodStart ?? new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+        const txnEnd = periodEnd ?? new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0)
+
+        const { data: txns } = await supabase
           .from('transactions')
           .select('category_id, amount, type, is_unexpected, date')
           .in('user_id', userIds)
           .eq('type', 'expense')
-
-        if (periodStart && periodEnd) {
-          txnQuery = txnQuery
-            .gte('date', periodStart.toISOString().split('T')[0])
-            .lte('date', periodEnd.toISOString().split('T')[0])
-        }
-
-        const { data: txns } = await txnQuery
+          .gte('date', txnStart.toISOString().split('T')[0])
+          .lte('date', txnEnd.toISOString().split('T')[0])
 
         const catsWithSpent = cats.map((cat: any) => {
           const spent = txns
@@ -202,14 +193,6 @@ export default function DashboardScreen() {
 
   const displayBudgeted = summaryView === 'monthly' ? monthlyBudgeted : paycycleBudgeted
 
-  const netWorth = useMemo(
-    () => accounts.reduce((sum, a) => {
-      const balance = parseFloat(a.balance) || 0
-      return isLiabilityAccount(a.type) ? sum - balance : sum + balance
-    }, 0),
-    [accounts]
-  )
-
   const greeting = useMemo(() => {
     const h = new Date().getHours()
     if (h < 12) return 'Good morning'
@@ -238,13 +221,23 @@ export default function DashboardScreen() {
           <Text style={styles.subGreeting}>
             {budgetCycle === 'paycycle'
               ? `Pay period: ${payPeriodLabel}`
-              : `Here's your budget this month`}
+              : `Here's your budget for ${new Date().toLocaleDateString('en-CA', { month: 'long', year: 'numeric' })}`}
           </Text>
         </View>
         <TouchableOpacity onPress={() => router.push('/settings')} style={styles.settingsBtn}>
           <Text style={styles.settingsIcon}>⚙️</Text>
         </TouchableOpacity>
       </View>
+
+      {subscriptionTier === 'pro' && accounts.length === 0 && (
+        <TouchableOpacity style={styles.setupCard} onPress={() => router.push('/onboarding/accounts')}>
+          <View style={styles.setupCardLeft}>
+            <Text style={styles.setupCardTitle}>Complete your Pro setup</Text>
+            <Text style={styles.setupCardBody}>Add your accounts, debts, assets, and goals to unlock the full picture.</Text>
+          </View>
+          <Text style={styles.setupCardArrow}>→</Text>
+        </TouchableOpacity>
+      )}
 
       <View style={styles.row}>
         <View style={styles.statCard}>
@@ -449,6 +442,21 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     fontSize: 16,
   },
+  setupCard: {
+    backgroundColor: '#edf7f1',
+    borderWidth: 1.5,
+    borderColor: '#b6dfc0',
+    borderRadius: 14,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 4,
+  },
+  setupCardLeft: { flex: 1 },
+  setupCardTitle: { fontSize: 14, fontWeight: '700', color: Colors.text, marginBottom: 3 },
+  setupCardBody: { fontSize: 12, color: Colors.textSecondary, lineHeight: 17 },
+  setupCardArrow: { fontSize: 20, color: Colors.primary, fontWeight: '600' },
   container: {
     flex: 1,
     backgroundColor: '#f2f4f2',
@@ -483,29 +491,6 @@ const styles = StyleSheet.create({
   },
   settingsIcon: {
     fontSize: 24,
-  },
-  netWorthCard: {
-    backgroundColor: Colors.primaryLight,
-    borderRadius: 20,
-    padding: 24,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: Colors.primary,
-  },
-  netWorthLabel: {
-    fontSize: 14,
-    color: Colors.primary,
-    marginBottom: 8,
-  },
-  netWorthAmount: {
-    fontSize: 40,
-    fontWeight: 'bold',
-    color: '#0A2A1A',
-    marginBottom: 8,
-  },
-  netWorthSub: {
-    fontSize: 13,
-    color: Colors.primary,
   },
   row: {
     flexDirection: 'row',

@@ -36,7 +36,8 @@ export default function BudgetAdjustScreen() {
   useEffect(() => { loadCategories() }, [])
 
   async function loadCategories() {
-    const { data: { user } } = await supabase.auth.getUser()
+    const { data: { session } } = await supabase.auth.getSession()
+    const user = session?.user
     if (!user) return
 
     const { data: cats } = await supabase
@@ -74,8 +75,9 @@ export default function BudgetAdjustScreen() {
     setSaving(true)
     setError('')
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Not logged in')
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user) throw new Error('Not logged in')
+      const user = session.user
 
       // Delete existing overrides for this period
       await supabase.from('budget_overrides')

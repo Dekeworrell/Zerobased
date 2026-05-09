@@ -21,19 +21,31 @@ Deno.serve(async (req) => {
       })
     }
 
-    const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    })
-
+    // Decode JWT to get email without a network round-trip
     const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token)
-    if (userError || !user) {
-      return new Response(JSON.stringify({ error: 'Invalid token' }), {
+    let userEmail = ''
+    try {
+      const [, b64] = token.split('.')
+      const payload = JSON.parse(atob(b64.replace(/-/g, '+').replace(/_/g, '/')))
+      userEmail = (payload.email ?? '').toLowerCase()
+    } catch {
+      return new Response(JSON.stringify({ error: 'Invalid token format' }), {
+        status: 401, headers: corsHeaders,
+      })
+    }
+    if (!userEmail) {
+      return new Response(JSON.stringify({ error: 'No email in token' }), {
         status: 401, headers: corsHeaders,
       })
     }
 
-    if (user.email?.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+    const supabase = createClient(SUPABASE_URL, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+      auth: { autoRefreshToken: false, persistSession: false },
+    })
+
+    if (userEmail !== ADMIN_EMAIL.toLowerCase()) {
       return new Response(JSON.stringify({ error: 'Forbidden' }), {
         status: 403, headers: corsHeaders,
       })

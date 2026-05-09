@@ -93,7 +93,8 @@ export default function IncomeScreen() {
   }
 
   async function loadExistingIncome() {
-    const { data: { user } } = await supabase.auth.getUser()
+    const { data: { session } } = await supabase.auth.getSession()
+    const user = session?.user
     if (!user) return
 
     // For household_join mode: just load current user's existing income (may be empty)
@@ -180,7 +181,8 @@ export default function IncomeScreen() {
     if (isEditing || isHouseholdJoin) {
       setSaving(true)
       try {
-        const { data: { user } } = await supabase.auth.getUser()
+        const { data: { session } } = await supabase.auth.getSession()
+        const user = session?.user
         if (!user) return
         await supabase.from('income_sources').delete().eq('user_id', user.id)
         router.replace('/dashboard')
@@ -188,7 +190,7 @@ export default function IncomeScreen() {
       setSaving(false)
     } else {
       setIncomeSources([])
-      router.push('/onboarding/expenses')
+      router.replace('/onboarding/expenses')
     }
   }
 
@@ -207,7 +209,8 @@ export default function IncomeScreen() {
     if (isEditing || isHouseholdJoin) {
       setSaving(true)
       try {
-        const { data: { user } } = await supabase.auth.getUser()
+        const { data: { session } } = await supabase.auth.getSession()
+        const user = session?.user
         if (!user) return
 
         // Save current user's income
@@ -227,7 +230,7 @@ export default function IncomeScreen() {
       setSaving(false)
     } else {
       setIncomeSources(sources)
-      router.push('/onboarding/expenses')
+      router.replace('/onboarding/expenses')
     }
   }
 
@@ -250,7 +253,7 @@ export default function IncomeScreen() {
           <View style={styles.progressTrack}>
             <View style={[styles.progressFill, { width: '77%' }]} />
           </View>
-          <Text style={styles.progressLabel}>Step 7 of 9</Text>
+          <Text style={styles.progressLabel}>Step 1 of 3</Text>
         </View>
       )}
       {isEditing && <Text style={styles.step}>Edit income</Text>}

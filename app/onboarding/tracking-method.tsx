@@ -16,7 +16,7 @@ export default function TrackingMethodScreen() {
 
   function handleCycleChoice(cycle: 'monthly' | 'paycycle') {
     setBudgetCycle(cycle)
-    router.push('/onboarding/accounts-everyday')
+    router.replace('/onboarding/accounts-everyday')
   }
 
   if (step === 'cycle') {
@@ -67,7 +67,7 @@ export default function TrackingMethodScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.inner}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity onPress={() => router.replace('/welcome')} style={styles.backButton}>
           <Text style={styles.backText}>← Back</Text>
         </TouchableOpacity>
         <View style={styles.progressWrap}>
