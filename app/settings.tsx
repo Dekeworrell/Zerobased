@@ -563,6 +563,18 @@ async function sendInvite() {
         }
       </TouchableOpacity>
 
+      {/* Affiliate partner portal — visible to all users */}
+      <TouchableOpacity style={styles.partnerButton} onPress={() => router.push('/partner')}>
+        <Text style={styles.partnerButtonText}>🤝  Partner / Affiliate Program</Text>
+      </TouchableOpacity>
+
+      {/* Owner-only admin dashboard */}
+      {email.toLowerCase() === 'dekeworrell@shaw.ca' && (
+        <TouchableOpacity style={styles.adminButton} onPress={() => router.push('/admin')}>
+          <Text style={styles.adminButtonText}>⚙️  Admin Dashboard</Text>
+        </TouchableOpacity>
+      )}
+
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
         <Text style={styles.logoutButtonText}>Log out</Text>
       </TouchableOpacity>
@@ -755,6 +767,32 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     color: Colors.text,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  partnerButton: {
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  partnerButtonText: {
+    color: Colors.primary,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  adminButton: {
+    borderWidth: 1,
+    borderColor: Colors.textSecondary,
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  adminButtonText: {
+    color: Colors.textSecondary,
     fontSize: 16,
     fontWeight: '600',
   },
