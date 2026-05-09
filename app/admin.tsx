@@ -128,9 +128,26 @@ export default function AdminScreen() {
     )
   }
 
-  const pending = stats?.affiliates.filter(a => a.status === 'pending') ?? []
-  const approved = stats?.affiliates.filter(a => a.status === 'approved') ?? []
-  const others = stats?.affiliates.filter(a => a.status !== 'pending' && a.status !== 'approved') ?? []
+  // stats may be null if the edge function failed — show retry screen
+  if (!stats) {
+    return (
+      <View style={s.center}>
+        <Text style={{ fontSize: 48 }}>⚠️</Text>
+        <Text style={s.h2}>Could not load data</Text>
+        <Text style={s.muted}>{error || 'Edge function unreachable. Make sure admin-get-stats is deployed.'}</Text>
+        <TouchableOpacity onPress={loadStats} style={{ marginTop: 8 }}>
+          <Text style={s.link}>↻ Retry</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => router.replace('/settings')} style={{ marginTop: 4 }}>
+          <Text style={[s.link, { color: Colors.textSecondary }]}>← Back to settings</Text>
+        </TouchableOpacity>
+      </View>
+    )
+  }
+
+  const pending = (stats.affiliates ?? []).filter((a: AffiliateRow) => a.status === 'pending')
+  const approved = (stats.affiliates ?? []).filter((a: AffiliateRow) => a.status === 'approved')
+  const others = (stats.affiliates ?? []).filter((a: AffiliateRow) => a.status !== 'pending' && a.status !== 'approved')
   const filteredAff = approved.filter(a =>
     a.name.toLowerCase().includes(affiliateSearch.toLowerCase()) ||
     a.referral_code.toLowerCase().includes(affiliateSearch.toLowerCase())
