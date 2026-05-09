@@ -162,7 +162,7 @@ export default function PartnerScreen() {
   if (!affiliate) {
     return (
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity onPress={() => router.replace('/settings')} style={styles.backButton}>
           <Text style={styles.backText}>← Back</Text>
         </TouchableOpacity>
 
@@ -259,7 +259,7 @@ export default function PartnerScreen() {
   if (affiliate.status === 'pending') {
     return (
       <View style={styles.center}>
-        <TouchableOpacity onPress={() => router.back()} style={[styles.backButton, { alignSelf: 'flex-start', marginBottom: 24 }]}>
+        <TouchableOpacity onPress={() => router.replace('/settings')} style={[styles.backButton, { alignSelf: 'flex-start', marginBottom: 24 }]}>
           <Text style={styles.backText}>← Back</Text>
         </TouchableOpacity>
         <Text style={{ fontSize: 48 }}>⏳</Text>
@@ -283,7 +283,7 @@ export default function PartnerScreen() {
         <Text style={[styles.subtitle, { textAlign: 'center', maxWidth: 300 }]}>
           Thank you for applying. Your application wasn't approved at this time. Feel free to reach out if you have questions.
         </Text>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity onPress={() => router.replace('/settings')} style={styles.backButton}>
           <Text style={styles.backText}>← Back</Text>
         </TouchableOpacity>
       </View>
@@ -296,7 +296,7 @@ export default function PartnerScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+      <TouchableOpacity onPress={() => router.replace('/settings')} style={styles.backButton}>
         <Text style={styles.backText}>← Back</Text>
       </TouchableOpacity>
 

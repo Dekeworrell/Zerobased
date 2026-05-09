@@ -128,7 +128,7 @@ export default function AdminScreen() {
         <Text style={{ fontSize: 48 }}>🔒</Text>
         <Text style={styles.title}>Admin only</Text>
         <Text style={styles.subtitle}>This page is restricted to the account owner.</Text>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity onPress={() => router.replace('/settings')} style={styles.backButton}>
           <Text style={styles.backText}>← Back</Text>
         </TouchableOpacity>
       </View>
@@ -141,7 +141,7 @@ export default function AdminScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+      <TouchableOpacity onPress={() => router.replace('/settings')} style={styles.backButton}>
         <Text style={styles.backText}>← Back</Text>
       </TouchableOpacity>
 
