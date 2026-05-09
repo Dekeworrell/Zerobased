@@ -36,6 +36,8 @@ export default function UpgradeScreen() {
 
       if (tier === 'pro') {
         await syncTierWithSupabase()
+        // Fire-and-forget: attribute conversion to affiliate who referred this user (if any)
+        supabase.functions.invoke('affiliate-track-conversion', { body: { plan: selectedPlan } }).catch(() => {})
         router.replace('/dashboard')
       }
     } catch (err: any) {

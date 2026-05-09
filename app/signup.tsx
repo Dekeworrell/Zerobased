@@ -1,4 +1,4 @@
-import { router } from 'expo-router'
+import { router, useLocalSearchParams } from 'expo-router'
 import { useState } from 'react'
 import { Image, Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import { Colors } from '../constants/colors'
@@ -6,6 +6,8 @@ import { setCountry } from '../lib/store'
 import { supabase } from '../lib/supabase'
 
 export default function SignUpScreen() {
+  // Capture ?ref=CODE from affiliate referral links (e.g. zerobased.app/signup?ref=DEKE20)
+  const { ref } = useLocalSearchParams<{ ref?: string }>()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -36,6 +38,7 @@ export default function SignUpScreen() {
           id: user.id,
           name: name.trim(),
           country,
+          ...(ref ? { referred_by: ref.toUpperCase() } : {}),
         })
       }
       setCountry(country)
@@ -46,6 +49,7 @@ export default function SignUpScreen() {
           id: data.user.id,
           name: name.trim(),
           country,
+          ...(ref ? { referred_by: ref.toUpperCase() } : {}),
         })
         setCountry(country)
       }

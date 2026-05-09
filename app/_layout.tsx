@@ -56,6 +56,8 @@ export default function RootLayout() {
       <Tabs.Screen name="settings" options={{ href: null, tabBarStyle: { display: 'none' } }} />
       <Tabs.Screen name="upgrade" options={{ href: null, tabBarStyle: { display: 'none' } }} />
       <Tabs.Screen name="connect-bank" options={{ href: null, tabBarStyle: { display: 'none' } }} />
+      <Tabs.Screen name="partner" options={{ href: null, tabBarStyle: { display: 'none' } }} />
+      <Tabs.Screen name="admin" options={{ href: null, tabBarStyle: { display: 'none' } }} />
       <Tabs.Screen
         name="budget"
         options={{
