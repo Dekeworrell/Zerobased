@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { ActivityIndicator, Alert, Platform, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import { Colors } from '../constants/colors'
 import { registerForPushNotifications } from '../lib/notifications'
+import { getSubscriptionTier } from '../lib/purchases'
 import { clearOnboardingData } from '../lib/store'
 import { supabase } from '../lib/supabase'
 
@@ -44,11 +45,10 @@ export default function SettingsScreen() {
     setInviteCode('')
     setPendingInviteeEmail('')
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single()
+    const [{ data: profile }, rcTier] = await Promise.all([
+      supabase.from('profiles').select('*').eq('id', user.id).single(),
+      getSubscriptionTier(),
+    ])
 
     if (profile) {
       setName(profile.name || '')
@@ -58,7 +58,8 @@ export default function SettingsScreen() {
       setNotifyAt1(profile.notify_at_percent_1 ?? 80)
       setNotifyAt2(profile.notify_at_percent_2 ?? 90)
       setHouseholdId(profile.household_id || null)
-      setSubscriptionTier((profile.subscription_tier as 'free' | 'pro') ?? 'free')
+      const dbTier = (profile.subscription_tier as 'free' | 'pro') ?? 'free'
+      setSubscriptionTier(dbTier === 'pro' || rcTier === 'pro' ? 'pro' : 'free')
 
       if (profile.household_id) {
         const { data: members } = await supabase.rpc('get_household_members')
@@ -527,13 +528,20 @@ async function sendInvite() {
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Subscription</Text>
-        <View style={styles.planCard}>
-          <Text style={styles.planName}>Free plan</Text>
-          <Text style={styles.planDesc}>Upgrade to Zerobased Pro for advanced features</Text>
-          <TouchableOpacity style={styles.upgradeBtn}>
-            <Text style={styles.upgradeBtnText}>Upgrade to Pro</Text>
-          </TouchableOpacity>
-        </View>
+        {subscriptionTier === 'pro' ? (
+          <View style={styles.planCard}>
+            <Text style={styles.planName}>✅ Zerobased Pro</Text>
+            <Text style={styles.planDesc}>You have access to all Pro features. Thank you for your support!</Text>
+          </View>
+        ) : (
+          <View style={styles.planCard}>
+            <Text style={styles.planName}>Free plan</Text>
+            <Text style={styles.planDesc}>Upgrade to Zerobased Pro for unlimited categories, household sharing, reports, and more.</Text>
+            <TouchableOpacity style={styles.upgradeBtn} onPress={() => router.push('/upgrade')}>
+              <Text style={styles.upgradeBtnText}>Upgrade to Pro</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}

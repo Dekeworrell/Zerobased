@@ -7,6 +7,7 @@ import CurrencyInput from '../components/CurrencyInput'
 import { ASSET_TYPE_OPTIONS, LIABILITY_ACCOUNTS as LIABILITY_TYPE_OPTIONS, getAccountIcon } from '../constants/accounts'
 import { isLiabilityAccount } from '../constants/categories'
 import { Colors } from '../constants/colors'
+import { getSubscriptionTier } from '../lib/purchases'
 import { supabase } from '../lib/supabase'
 
 type Account = {
@@ -50,12 +51,12 @@ export default function AccountsScreen() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { router.replace('/'); return }
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('subscription_tier')
-      .eq('id', user.id)
-      .single()
-    setSubscriptionTier((profile?.subscription_tier as 'free' | 'pro') ?? 'free')
+    const [{ data: profile }, rcTier] = await Promise.all([
+      supabase.from('profiles').select('subscription_tier').eq('id', user.id).single(),
+      getSubscriptionTier(),
+    ])
+    const dbTier = (profile?.subscription_tier as 'free' | 'pro') ?? 'free'
+    setSubscriptionTier(dbTier === 'pro' || rcTier === 'pro' ? 'pro' : 'free')
 
     const { data: householdIds } = await supabase.rpc('get_household_user_ids')
     const userIds: string[] = householdIds || [user.id]

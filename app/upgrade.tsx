@@ -1,7 +1,9 @@
 import { router } from 'expo-router'
 import { useState } from 'react'
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { Colors } from '../constants/colors'
+import { purchaseAnnual, purchaseMonthly, restorePurchases } from '../lib/purchases'
+import { supabase } from '../lib/supabase'
 
 const FEATURES: { label: string; free: string; pro: string }[] = [
   { label: 'Manual expense tracking',    free: '✅',      pro: '✅' },
@@ -14,8 +16,57 @@ const FEATURES: { label: string; free: string; pro: string }[] = [
   { label: 'Bank connections',           free: '🔒',      pro: '✅' },
 ]
 
+async function syncTierWithSupabase(): Promise<void> {
+  await supabase.functions.invoke('update-subscription-tier')
+}
+
 export default function UpgradeScreen() {
   const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'annual'>('annual')
+  const [purchasing, setPurchasing] = useState(false)
+  const [restoring, setRestoring] = useState(false)
+  const [purchaseError, setPurchaseError] = useState('')
+
+  async function handlePurchase() {
+    setPurchasing(true)
+    setPurchaseError('')
+    try {
+      const tier = selectedPlan === 'monthly'
+        ? await purchaseMonthly()
+        : await purchaseAnnual()
+
+      if (tier === 'pro') {
+        await syncTierWithSupabase()
+        router.replace('/dashboard')
+      }
+    } catch (err: any) {
+      // RC throws a specific error when the user cancels — don't show that as an error
+      if (err?.userCancelled) {
+        // silent cancel
+      } else {
+        setPurchaseError(err?.message ?? 'Purchase failed. Please try again.')
+      }
+    } finally {
+      setPurchasing(false)
+    }
+  }
+
+  async function handleRestore() {
+    setRestoring(true)
+    setPurchaseError('')
+    try {
+      const tier = await restorePurchases()
+      if (tier === 'pro') {
+        await syncTierWithSupabase()
+        router.replace('/dashboard')
+      } else {
+        setPurchaseError('No active subscription found.')
+      }
+    } catch (err: any) {
+      setPurchaseError(err?.message ?? 'Restore failed. Please try again.')
+    } finally {
+      setRestoring(false)
+    }
+  }
 
   return (
     <ScrollView
@@ -84,6 +135,7 @@ export default function UpgradeScreen() {
           style={[styles.planCard, selectedPlan === 'monthly' && styles.planCardSelected]}
           onPress={() => setSelectedPlan('monthly')}
           activeOpacity={0.8}
+          disabled={purchasing}
         >
           <Text style={styles.planName}>Monthly</Text>
           <Text style={styles.planPrice}>$12.99</Text>
@@ -94,6 +146,7 @@ export default function UpgradeScreen() {
           style={[styles.planCard, selectedPlan === 'annual' && styles.planCardSelected]}
           onPress={() => setSelectedPlan('annual')}
           activeOpacity={0.8}
+          disabled={purchasing}
         >
           <View style={styles.saveBadge}>
             <Text style={styles.saveBadgeText}>Save 42%</Text>
@@ -106,14 +159,33 @@ export default function UpgradeScreen() {
 
       {/* CTA */}
       <TouchableOpacity
-        style={styles.upgradeButton}
-        onPress={() => console.log('purchase pressed', selectedPlan)}
+        style={[styles.upgradeButton, purchasing && styles.upgradeButtonDisabled]}
+        onPress={handlePurchase}
         activeOpacity={0.85}
+        disabled={purchasing}
       >
-        <Text style={styles.upgradeButtonText}>Upgrade to Pro</Text>
+        {purchasing
+          ? <ActivityIndicator color={Colors.text} />
+          : <Text style={styles.upgradeButtonText}>Upgrade to Pro</Text>
+        }
       </TouchableOpacity>
 
+      {purchaseError ? (
+        <Text style={styles.errorText}>{purchaseError}</Text>
+      ) : null}
+
       <Text style={styles.legalText}>Cancel anytime. Billed through the App Store.</Text>
+
+      <TouchableOpacity
+        style={styles.restoreButton}
+        onPress={handleRestore}
+        disabled={restoring || purchasing}
+      >
+        {restoring
+          ? <ActivityIndicator size="small" color={Colors.textSecondary} />
+          : <Text style={styles.restoreText}>Restore purchases</Text>
+        }
+      </TouchableOpacity>
 
       <View style={{ height: 40 }} />
     </ScrollView>
@@ -335,7 +407,10 @@ const styles = StyleSheet.create({
     paddingVertical: 17,
     borderRadius: 14,
     alignItems: 'center',
-    marginBottom: 14,
+    marginBottom: 12,
+  },
+  upgradeButtonDisabled: {
+    opacity: 0.6,
   },
   upgradeButtonText: {
     color: Colors.text,
@@ -343,9 +418,25 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0.2,
   },
+  errorText: {
+    fontSize: 13,
+    color: Colors.danger,
+    textAlign: 'center',
+    marginBottom: 10,
+  },
   legalText: {
     fontSize: 12,
     color: Colors.textSecondary,
     textAlign: 'center',
+    marginBottom: 16,
+  },
+  restoreButton: {
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  restoreText: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    textDecorationLine: 'underline',
   },
 })

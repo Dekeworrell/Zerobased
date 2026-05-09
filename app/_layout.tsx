@@ -4,7 +4,9 @@ import { Platform, Text, View } from 'react-native'
 import 'react-native-url-polyfill/auto'
 import { Colors } from '../constants/colors'
 import { registerForPushNotifications } from '../lib/notifications'
+import { initRevenueCat } from '../lib/purchases'
 import { initStore } from '../lib/store'
+import { supabase } from '../lib/supabase'
 
 export default function RootLayout() {
   const tabBarHeight = Platform.OS === 'web' ? 54 : 68
@@ -12,6 +14,10 @@ export default function RootLayout() {
   useEffect(() => {
     initStore()
     registerForPushNotifications()
+    // Initialize RevenueCat; link to Supabase user ID if already signed in
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      initRevenueCat(user?.id)
+    })
   }, [])
 
   return (
@@ -48,6 +54,7 @@ export default function RootLayout() {
       <Tabs.Screen name="budget-adjust" options={{ href: null, tabBarStyle: { display: 'none' } }} />
       <Tabs.Screen name="welcome" options={{ href: null, tabBarStyle: { display: 'none' } }} />
       <Tabs.Screen name="settings" options={{ href: null, tabBarStyle: { display: 'none' } }} />
+      <Tabs.Screen name="upgrade" options={{ href: null, tabBarStyle: { display: 'none' } }} />
       <Tabs.Screen
         name="budget"
         options={{

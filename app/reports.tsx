@@ -11,6 +11,7 @@ import {
 } from 'react-native'
 import { BarChart, LineChart } from 'react-native-gifted-charts'
 import { Colors } from '../constants/colors'
+import { getSubscriptionTier } from '../lib/purchases'
 import { toMonthly } from '../lib/store'
 import { supabase } from '../lib/supabase'
 
@@ -109,6 +110,7 @@ export default function ReportsScreen() {
         { data: txns },
         { data: cats },
         { data: snaps },
+        rcTier,
       ] = await Promise.all([
         supabase.from('profiles').select('goals, primary_goal, subscription_tier').eq('id', user.id).single(),
         supabase.from('income_sources').select('*').in('user_id', userIds),
@@ -124,13 +126,15 @@ export default function ReportsScreen() {
           .in('user_id', userIds)
           .order('month', { ascending: true })
           .limit(12),
+        getSubscriptionTier(),
       ])
 
       // Profile
       if (profile) {
         setGoals(profile.goals || [])
         setPrimaryGoal(profile.primary_goal || '')
-        setSubscriptionTier((profile.subscription_tier as 'free' | 'pro') ?? 'free')
+        const dbTier = (profile.subscription_tier as 'free' | 'pro') ?? 'free'
+        setSubscriptionTier(dbTier === 'pro' || rcTier === 'pro' ? 'pro' : 'free')
       }
 
       // Income
