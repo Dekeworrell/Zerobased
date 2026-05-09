@@ -273,7 +273,10 @@ async function sendInvite() {
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.methodBtn, trackingMethod === 'bank' && styles.methodBtnActive]}
-            onPress={() => setTrackingMethod('bank')}
+            onPress={() => {
+              setTrackingMethod('bank')
+              router.push('/connect-bank')
+            }}
           >
             <Text style={[styles.methodBtnText, trackingMethod === 'bank' && styles.methodBtnTextActive]}>
               🏦 Bank connected
@@ -326,11 +329,11 @@ async function sendInvite() {
           </View>
         )}
         {trackingMethod === 'bank' && (
-          <View style={styles.infoBox}>
+          <TouchableOpacity style={styles.infoBox} onPress={() => router.push('/connect-bank')}>
             <Text style={styles.infoText}>
-              🔗 Bank connection via Flinks coming soon. You'll be able to automatically import transactions from your Canadian bank accounts.
+              🔗 Tap here to manage your connected bank accounts and sync transactions.
             </Text>
-          </View>
+          </TouchableOpacity>
         )}
       </View>
 
