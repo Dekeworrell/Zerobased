@@ -1,11 +1,12 @@
 import { router, useFocusEffect } from 'expo-router'
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import PaydayModal from '../components/PaydayModal'
 import { isLiabilityAccount } from '../constants/categories'
 import { Colors } from '../constants/colors'
 import { calculateBudgetStatus, getPayPeriodDates, toMonthly, toPeriodAmount } from '../lib/store'
 import { supabase } from '../lib/supabase'
+import { getCachedHouseholdIds, getCachedUserId } from '../lib/userCache'
 
 export default function DashboardScreen() {
   const [loading, setLoading] = useState(true)
@@ -38,54 +39,47 @@ export default function DashboardScreen() {
 
   async function loadDashboard() {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        router.replace('/')
-        return
-      }
+      const userId = await getCachedUserId()
+      if (!userId) { router.replace('/'); return }
 
-      const { data: householdIds } = await supabase.rpc('get_household_user_ids')
-      const userIds: string[] = householdIds || [user.id]
+      const userIds = await getCachedHouseholdIds(userId)
 
-      // Fire all independent queries in parallel
+      // Fire all independent queries in parallel — including household lookups
       const [
         { data: profile },
         { data: income },
         { data: cats },
         { data: accs },
         { data: catDefaults },
+        { data: members },
       ] = await Promise.all([
-        supabase.from('profiles').select('name, budget_cycle, default_account_id, last_payday_check, household_id').eq('id', user.id).single(),
-        supabase.from('income_sources').select('*').in('user_id', userIds),
-        supabase.from('budget_categories').select('*').in('user_id', userIds).order('sort_order', { ascending: true }),
-        supabase.from('accounts').select('*').in('user_id', userIds),
+        supabase.from('profiles').select('name, budget_cycle, default_account_id, last_payday_check, household_id').eq('id', userId).single(),
+        supabase.from('income_sources').select('id, amount, frequency, next_payday, income_type, user_id').in('user_id', userIds),
+        supabase.from('budget_categories').select('id, label, icon, budgeted_amount, frequency, category_type, sort_order').in('user_id', userIds).order('sort_order', { ascending: true }),
+        supabase.from('accounts').select('id, label, type, balance, user_id').in('user_id', userIds),
         supabase.from('category_account_defaults').select('category_id, account_id').in('user_id', userIds),
+        supabase.rpc('get_household_members'),
       ])
 
-      // Profile
+      // Profile + greeting name
       const profileName = profile?.name || 'there'
-      if (profile?.household_id) {
-        const { data: members } = await supabase.rpc('get_household_members')
-        if (members && members.length > 0) {
-          setName(`${profileName} & ${members[0].name}`)
-        } else {
-          setName(profileName)
-        }
+      if (profile?.household_id && members && members.length > 0) {
+        setName(`${profileName} & ${members[0].name}`)
       } else {
         setName(profileName)
       }
+
+      // Budget cycle — prefer 'paycycle' if any household member uses it
       let cycle = profile?.budget_cycle || 'monthly'
-      // If no income on this profile, use partner's budget cycle
-      if (profile?.household_id) {
-        const { data: householdProfiles } = await supabase
+      if (profile?.household_id && cycle !== 'paycycle' && members && members.length > 0) {
+        // members RPC already returns partner profiles; check if partner uses paycycle
+        const { data: partnerProfiles } = await supabase
           .from('profiles')
           .select('budget_cycle')
           .eq('household_id', profile.household_id)
-          .neq('budget_cycle', null)
-        if (householdProfiles && householdProfiles.length > 0) {
-          const withCycle = householdProfiles.find((p: any) => p.budget_cycle === 'paycycle')
-          if (withCycle) cycle = 'paycycle'
-        }
+          .eq('budget_cycle', 'paycycle')
+          .limit(1)
+        if (partnerProfiles && partnerProfiles.length > 0) cycle = 'paycycle'
       }
       setBudgetCycle(cycle)
       if (profile?.default_account_id) setGlobalDefaultAccountId(profile.default_account_id)
@@ -94,7 +88,7 @@ export default function DashboardScreen() {
       const now = new Date()
       const todayStr = new Date(now.getTime() - now.getTimezoneOffset() * 60 * 1000).toISOString().split('T')[0]
       const lastCheck = profile?.last_payday_check || ''
-      const myIncome = (income || []).filter((s: any) => s.user_id === user.id)
+      const myIncome = (income || []).filter((s: any) => s.user_id === userId)
       if (lastCheck !== todayStr && !showPaydayModal && !paydayShownRef.current && myIncome.length > 0) {
         const isPayday = myIncome.some((s: any) => {
           if (!s.next_payday) return false
@@ -193,27 +187,35 @@ export default function DashboardScreen() {
     setLoading(false)
   }
 
-  const { totalBudgeted: monthlyBudgeted, remaining: unassigned } = calculateBudgetStatus(monthlyIncome, categories)
+  const { totalBudgeted: monthlyBudgeted, remaining: unassigned } = useMemo(
+    () => calculateBudgetStatus(monthlyIncome, categories),
+    [monthlyIncome, categories]
+  )
 
-  const paycycleBudgeted = budgetCycle === 'paycycle' && payPeriodStart && payPeriodEnd
-    ? categories.reduce((sum, c) => {
-        return sum + toPeriodAmount(c.budgeted_amount, c.frequency, budgetCycle, payPeriodStart, payPeriodEnd)
-      }, 0)
-    : monthlyBudgeted / 2
+  const paycycleBudgeted = useMemo(() => {
+    if (budgetCycle === 'paycycle' && payPeriodStart && payPeriodEnd) {
+      return categories.reduce((sum, c) =>
+        sum + toPeriodAmount(c.budgeted_amount, c.frequency, budgetCycle, payPeriodStart, payPeriodEnd), 0)
+    }
+    return monthlyBudgeted / 2
+  }, [categories, budgetCycle, payPeriodStart, payPeriodEnd, monthlyBudgeted])
 
   const displayBudgeted = summaryView === 'monthly' ? monthlyBudgeted : paycycleBudgeted
 
-  const netWorth = accounts.reduce((sum, a) => {
-    const balance = parseFloat(a.balance) || 0
-    return isLiabilityAccount(a.type) ? sum - balance : sum + balance
-  }, 0)
+  const netWorth = useMemo(
+    () => accounts.reduce((sum, a) => {
+      const balance = parseFloat(a.balance) || 0
+      return isLiabilityAccount(a.type) ? sum - balance : sum + balance
+    }, 0),
+    [accounts]
+  )
 
-  function getHour() {
+  const greeting = useMemo(() => {
     const h = new Date().getHours()
     if (h < 12) return 'Good morning'
     if (h < 17) return 'Good afternoon'
     return 'Good evening'
-  }
+  }, [])
 
   if (loading) {
     return (
@@ -231,7 +233,7 @@ export default function DashboardScreen() {
       <View style={styles.header}>
         <View style={{ flex: 1, marginRight: 8 }}>
           <Text style={styles.greeting} adjustsFontSizeToFit numberOfLines={2}>
-            {getHour()}, {name} 👋
+            {greeting}, {name} 👋
           </Text>
           <Text style={styles.subGreeting}>
             {budgetCycle === 'paycycle'

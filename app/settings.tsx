@@ -6,6 +6,7 @@ import { registerForPushNotifications } from '../lib/notifications'
 import { getSubscriptionTier } from '../lib/purchases'
 import { clearOnboardingData } from '../lib/store'
 import { supabase } from '../lib/supabase'
+import { invalidateUserCache } from '../lib/userCache'
 
 export default function SettingsScreen() {
   const [email, setEmail] = useState('')
@@ -111,6 +112,7 @@ export default function SettingsScreen() {
   }
 
   async function handleLogout() {
+    invalidateUserCache()
     await supabase.auth.signOut()
     clearOnboardingData()
     router.replace('/')
@@ -118,15 +120,14 @@ export default function SettingsScreen() {
 
   async function acceptInvite() {
     if (!pendingInvite) return
-    console.log('Accepting invite:', JSON.stringify(pendingInvite))
     setHouseholdLoading(true)
     setError('')
     try {
       const { data, error } = await supabase.rpc('accept_household_invite', {
         invite_token: pendingInvite.token
       })
-      console.log('Accept result:', JSON.stringify(data), JSON.stringify(error))
       if (error) throw error
+      invalidateUserCache()
       setHouseholdId(data.household_id)
       setPendingInvite(null)
       setPartnerEmail('Your partner')
@@ -154,6 +155,7 @@ export default function SettingsScreen() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
       await supabase.from('profiles').update({ household_id: null }).eq('id', user.id)
+      invalidateUserCache()
       setHouseholdId(null)
       setPartnerEmail('')
     } catch (err: any) {

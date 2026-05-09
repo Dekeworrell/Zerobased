@@ -9,6 +9,7 @@ import { Colors } from '../constants/colors'
 import { getSubscriptionTier } from '../lib/purchases'
 import { calculateBudgetStatus, toMonthly } from '../lib/store'
 import { supabase } from '../lib/supabase'
+import { getCachedHouseholdIds, getCachedUserId } from '../lib/userCache'
 
 const FREE_TIER_LIMIT = 8
 const FREE_TIER_NUDGE_AT = 7
@@ -39,35 +40,27 @@ export default function BudgetScreen() {
 
   async function loadBudget() {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.replace('/'); return }
+      const userId = await getCachedUserId()
+      if (!userId) { router.replace('/'); return }
 
-      const [{ data: profile }, rcTier] = await Promise.all([
-        supabase.from('profiles').select('subscription_tier').eq('id', user.id).single(),
+      const [{ data: profile }, rcTier, userIds] = await Promise.all([
+        supabase.from('profiles').select('subscription_tier').eq('id', userId).single(),
         getSubscriptionTier(),
+        getCachedHouseholdIds(userId),
       ])
       const dbTier = (profile?.subscription_tier as 'free' | 'pro') ?? 'free'
       setSubscriptionTier(dbTier === 'pro' || rcTier === 'pro' ? 'pro' : 'free')
 
-      const { data: householdIds } = await supabase.rpc('get_household_user_ids')
-      const userIds: string[] = householdIds || [user.id]
-
-      const { data: income } = await supabase
-        .from('income_sources')
-        .select('*')
-        .in('user_id', userIds)
+      const [{ data: income }, { data: cats }] = await Promise.all([
+        supabase.from('income_sources').select('amount, frequency, user_id').in('user_id', userIds),
+        supabase.from('budget_categories').select('id, label, icon, budgeted_amount, frequency, category_type, sort_order').in('user_id', userIds).order('sort_order', { ascending: true }),
+      ])
 
       if (income) {
         const total = income.reduce((sum: number, s: any) =>
           sum + toMonthly(s.amount.toString(), s.frequency), 0)
         setMonthlyIncome(total)
       }
-
-      const { data: cats } = await supabase
-        .from('budget_categories')
-        .select('*')
-        .in('user_id', userIds)
-        .order('sort_order', { ascending: true })
 
       if (cats) {
         setCategories(cats.map((c: any, index: number) => ({

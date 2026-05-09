@@ -9,6 +9,7 @@ import { isLiabilityAccount } from '../constants/categories'
 import { Colors } from '../constants/colors'
 import { getSubscriptionTier } from '../lib/purchases'
 import { supabase } from '../lib/supabase'
+import { getCachedHouseholdIds, getCachedUserId } from '../lib/userCache'
 
 type Account = {
   id: string
@@ -48,22 +49,20 @@ export default function AccountsScreen() {
   )
 
   async function loadAccounts() {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { router.replace('/'); return }
+    const userId = await getCachedUserId()
+    if (!userId) { router.replace('/'); return }
 
-    const [{ data: profile }, rcTier] = await Promise.all([
-      supabase.from('profiles').select('subscription_tier').eq('id', user.id).single(),
+    const [{ data: profile }, rcTier, userIds] = await Promise.all([
+      supabase.from('profiles').select('subscription_tier').eq('id', userId).single(),
       getSubscriptionTier(),
+      getCachedHouseholdIds(userId),
     ])
     const dbTier = (profile?.subscription_tier as 'free' | 'pro') ?? 'free'
     setSubscriptionTier(dbTier === 'pro' || rcTier === 'pro' ? 'pro' : 'free')
 
-    const { data: householdIds } = await supabase.rpc('get_household_user_ids')
-    const userIds: string[] = householdIds || [user.id]
-
     const { data } = await supabase
       .from('accounts')
-      .select('*')
+      .select('id, label, type, balance, sort_order, user_id')
       .in('user_id', userIds)
       .order('sort_order', { ascending: true })
 

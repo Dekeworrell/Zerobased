@@ -14,6 +14,7 @@ import { Colors } from '../constants/colors'
 import { getSubscriptionTier } from '../lib/purchases'
 import { toMonthly } from '../lib/store'
 import { supabase } from '../lib/supabase'
+import { getCachedHouseholdIds, getCachedUserId } from '../lib/userCache'
 
 const SCREEN_WIDTH = Dimensions.get('window').width
 const CHART_WIDTH = SCREEN_WIDTH - 80
@@ -93,10 +94,9 @@ export default function ReportsScreen() {
   async function loadReports() {
     setLoading(true)
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.replace('/'); return }
-      const { data: householdIds } = await supabase.rpc('get_household_user_ids')
-      const userIds: string[] = householdIds || [user.id]
+      const userId = await getCachedUserId()
+      if (!userId) { router.replace('/'); return }
+      const userIds = await getCachedHouseholdIds(userId)
 
       const twelveMonthsAgo = new Date()
       twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 11)
@@ -112,15 +112,15 @@ export default function ReportsScreen() {
         { data: snaps },
         rcTier,
       ] = await Promise.all([
-        supabase.from('profiles').select('goals, primary_goal, subscription_tier').eq('id', user.id).single(),
-        supabase.from('income_sources').select('*').in('user_id', userIds),
-        supabase.from('accounts').select('*').in('user_id', userIds),
+        supabase.from('profiles').select('goals, primary_goal, subscription_tier').eq('id', userId).single(),
+        supabase.from('income_sources').select('amount, frequency, user_id').in('user_id', userIds),
+        supabase.from('accounts').select('id, label, type, balance, user_id').in('user_id', userIds),
         supabase.from('transactions')
           .select('amount, date, type, is_unexpected, category:budget_categories(label, icon)')
           .in('user_id', userIds)
           .gte('date', fromDate)
           .order('date', { ascending: false }),
-        supabase.from('budget_categories').select('*').in('user_id', userIds),
+        supabase.from('budget_categories').select('id, label, icon, budgeted_amount, frequency').in('user_id', userIds),
         supabase.from('monthly_snapshots')
           .select('month, net_worth, total_assets, total_liabilities')
           .in('user_id', userIds)
@@ -216,7 +216,7 @@ export default function ReportsScreen() {
       // Save / update this month's snapshot (fire and forget — don't await)
       const currentMonth = new Date().toISOString().slice(0, 7)
       supabase.from('monthly_snapshots').upsert(
-        { user_id: user.id, month: currentMonth, net_worth: netWorth, total_assets: totalAssets, total_liabilities: totalLiabilities },
+        { user_id: userId, month: currentMonth, net_worth: netWorth, total_assets: totalAssets, total_liabilities: totalLiabilities },
         { onConflict: 'user_id,month' }
       )
 

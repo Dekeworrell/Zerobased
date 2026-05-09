@@ -1,10 +1,11 @@
 import DateTimePicker from '@react-native-community/datetimepicker'
 import { router, useFocusEffect } from 'expo-router'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import TransactionEditSheet from '../components/TransactionEditSheet'
 import { Colors } from '../constants/colors'
 import { supabase } from '../lib/supabase'
+import { getCachedHouseholdIds, getCachedUserId } from '../lib/userCache'
 
 type Transaction = {
   id: string
@@ -24,9 +25,9 @@ type Transaction = {
 
 export default function TransactionsScreen() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
-  const [filtered, setFiltered] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [filter, setFilter] = useState<'all' | 'expense' | 'income' | 'unexpected'>('all')
   const [startDate, setStartDate] = useState<Date | null>(null)
   const [endDate, setEndDate] = useState<Date | null>(null)
@@ -35,6 +36,7 @@ export default function TransactionsScreen() {
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null)
   const [allCategories, setAllCategories] = useState<{ id: string; label: string; icon: string }[]>([])
   const scrollRef = useRef<ScrollView>(null)
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useFocusEffect(
     useCallback(() => {
@@ -43,15 +45,16 @@ export default function TransactionsScreen() {
     }, [])
   )
 
-  useEffect(() => {
-    applyFilter()
-  }, [transactions, search, filter, startDate, endDate])
+  function handleSearchChange(text: string) {
+    setSearch(text)
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current)
+    searchDebounceRef.current = setTimeout(() => setDebouncedSearch(text), 150)
+  }
 
   async function loadTransactions() {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-    const { data: householdIds } = await supabase.rpc('get_household_user_ids')
-    const userIds: string[] = householdIds || [user.id]
+    const userId = await getCachedUserId()
+    if (!userId) return
+    const userIds = await getCachedHouseholdIds(userId)
 
     const [{ data }, { data: cats }] = await Promise.all([
       supabase
@@ -83,38 +86,38 @@ export default function TransactionsScreen() {
     setLoading(false)
   }
 
-  function applyFilter() {
-    let result = [...transactions]
-
-    if (search) {
-      result = result.filter(t =>
-        t.label.toLowerCase().includes(search.toLowerCase()) ||
-        t.category?.label.toLowerCase().includes(search.toLowerCase())
-      )
-    }
-
-    if (filter === 'expense') result = result.filter(t => t.type === 'expense' && !t.is_unexpected)
-    if (filter === 'income') result = result.filter(t => t.type === 'income')
-    if (filter === 'unexpected') result = result.filter(t => t.is_unexpected)
-
-    if (startDate) {
-      result = result.filter(t => new Date(t.date + 'T00:00:00') >= startDate)
-    }
-    if (endDate) {
-      result = result.filter(t => new Date(t.date + 'T00:00:00') <= endDate)
-    }
-
-    setFiltered(result)
-  }
-
-  function groupByDate(transactions: Transaction[]) {
-    const groups: { [key: string]: Transaction[] } = {}
-    transactions.forEach(t => {
-      if (!groups[t.date]) groups[t.date] = []
-      groups[t.date].push(t)
+  // Derived state via useMemo — no re-computation on unrelated renders
+  const filtered = useMemo(() => {
+    const q = debouncedSearch.toLowerCase()
+    return transactions.filter(t => {
+      if (q && !t.label.toLowerCase().includes(q) && !t.category?.label.toLowerCase().includes(q)) return false
+      if (filter === 'expense' && (t.type !== 'expense' || t.is_unexpected)) return false
+      if (filter === 'income' && t.type !== 'income') return false
+      if (filter === 'unexpected' && !t.is_unexpected) return false
+      if (startDate && new Date(t.date + 'T00:00:00') < startDate) return false
+      if (endDate && new Date(t.date + 'T00:00:00') > endDate) return false
+      return true
     })
-    return groups
-  }
+  }, [transactions, debouncedSearch, filter, startDate, endDate])
+
+  const { totalExpenses, totalIncome, unexpectedTotal } = useMemo(() => {
+    let totalExpenses = 0, totalIncome = 0, unexpectedTotal = 0
+    for (const t of transactions) {
+      if (t.type === 'expense') totalExpenses += t.amount
+      else if (t.type === 'income') totalIncome += t.amount
+      if (t.is_unexpected) unexpectedTotal += t.amount
+    }
+    return { totalExpenses, totalIncome, unexpectedTotal }
+  }, [transactions])
+
+  const groups = useMemo(() => {
+    const g: { [key: string]: Transaction[] } = {}
+    for (const t of filtered) {
+      if (!g[t.date]) g[t.date] = []
+      g[t.date].push(t)
+    }
+    return g
+  }, [filtered])
 
   function formatDate(dateStr: string) {
     const date = new Date(dateStr + 'T00:00:00')
@@ -126,20 +129,6 @@ export default function TransactionsScreen() {
       return t.type === 'income' ? sum + t.amount : sum - t.amount
     }, 0)
   }
-
-  const totalExpenses = transactions
-    .filter(t => t.type === 'expense')
-    .reduce((sum, t) => sum + t.amount, 0)
-
-  const totalIncome = transactions
-    .filter(t => t.type === 'income')
-    .reduce((sum, t) => sum + t.amount, 0)
-
-  const unexpectedTotal = transactions
-    .filter(t => t.is_unexpected)
-    .reduce((sum, t) => sum + t.amount, 0)
-
-  const groups = groupByDate(filtered)
 
   if (loading) {
     return (
@@ -189,7 +178,7 @@ export default function TransactionsScreen() {
         placeholder="Search transactions..."
         placeholderTextColor={Colors.textSecondary}
         value={search}
-        onChangeText={setSearch}
+        onChangeText={handleSearchChange}
       />
 
       <View style={styles.dateRow}>
