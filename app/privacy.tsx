@@ -3,7 +3,7 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-nati
 import { Colors } from '../constants/colors'
 
 const LAST_UPDATED = 'May 2026'
-const CONTACT_EMAIL = 'privacy@zerobased.ca'
+const CONTACT_EMAIL = 'privacy@zerobased.ca' // TODO: update when domain is live
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -43,7 +43,7 @@ export default function PrivacyScreen() {
 
       <Section title="1. Who We Are">
         <Body>
-          Zerobased is a personal budgeting application built for Canadians and Americans. We help you track income, manage expenses, monitor debts and assets, and work toward your financial goals. Zerobased is operated by Deke Worrell ("we", "us", "our").
+          Zerobased is a personal budgeting application built for Canadians and Americans. We help you track income, manage expenses, monitor debts and assets, and work toward your financial goals. Zerobased is operated by Zerobased ("we", "us", "our"), based in Alberta, Canada.
         </Body>
       </Section>
 
@@ -146,7 +146,7 @@ export default function PrivacyScreen() {
 
       <Section title="10. Governing Law">
         <Body>
-          Zerobased is operated from Canada and this Privacy Policy is governed by the Personal Information Protection and Electronic Documents Act (PIPEDA) and applicable provincial privacy laws. Users in the United States are also protected under this policy.
+          Zerobased is operated from Alberta, Canada. This Privacy Policy is governed by Alberta's Personal Information Protection Act (PIPA) and applicable federal laws of Canada. Alberta's PIPA has been recognized as substantially similar to federal PIPEDA. Users in the United States are also protected under this policy.
         </Body>
       </Section>
 

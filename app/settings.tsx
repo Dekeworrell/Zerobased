@@ -595,6 +595,10 @@ async function sendInvite() {
         <Text style={styles.privacyButtonText}>🔒  Privacy Policy</Text>
       </TouchableOpacity>
 
+      <TouchableOpacity style={styles.privacyButton} onPress={() => router.push('/terms')}>
+        <Text style={styles.privacyButtonText}>📄  Terms of Service</Text>
+      </TouchableOpacity>
+
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
         <Text style={styles.logoutButtonText}>Log out</Text>
       </TouchableOpacity>
