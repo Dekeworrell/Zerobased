@@ -33,31 +33,33 @@ Deno.serve(async (req) => {
 
     const { name, referral_code, platform_url, audience_size } = await req.json()
 
-    if (!name?.trim() || !referral_code?.trim()) {
-      return new Response(JSON.stringify({ error: 'name and referral_code are required' }), {
+    if (!name?.trim()) {
+      return new Response(JSON.stringify({ error: 'name is required' }), {
         status: 400, headers: corsHeaders,
       })
     }
 
-    // Validate referral code format: 3-15 alphanumeric chars, uppercase
-    const code = referral_code.trim().toUpperCase().replace(/[^A-Z0-9]/g, '')
-    if (code.length < 3 || code.length > 15) {
-      return new Response(JSON.stringify({ error: 'Referral code must be 3-15 letters/numbers' }), {
-        status: 400, headers: corsHeaders,
-      })
-    }
+    // referral_code is optional — if provided, validate and check uniqueness
+    let code: string | null = null
+    if (referral_code?.trim()) {
+      code = referral_code.trim().toUpperCase().replace(/[^A-Z0-9]/g, '')
+      if (code.length < 3 || code.length > 15) {
+        return new Response(JSON.stringify({ error: 'Referral code must be 3-15 letters/numbers' }), {
+          status: 400, headers: corsHeaders,
+        })
+      }
 
-    // Check if code is already taken
-    const { data: existing } = await supabase
-      .from('affiliates')
-      .select('id')
-      .eq('referral_code', code)
-      .maybeSingle()
+      const { data: existing } = await supabase
+        .from('affiliates')
+        .select('id')
+        .eq('referral_code', code)
+        .maybeSingle()
 
-    if (existing) {
-      return new Response(JSON.stringify({ error: 'That referral code is already taken. Try another.' }), {
-        status: 409, headers: corsHeaders,
-      })
+      if (existing) {
+        return new Response(JSON.stringify({ error: 'That referral code is already taken. Try another.' }), {
+          status: 409, headers: corsHeaders,
+        })
+      }
     }
 
     // Check if this user already has an application
@@ -85,7 +87,7 @@ Deno.serve(async (req) => {
         user_id: user.id,
         name: name.trim(),
         email: user.email,
-        referral_code: code,
+        referral_code: code ?? null,
         tier,
         commission_rate,
         notes: platform_url ? `Platform: ${platform_url}. Audience: ${audience_size || 'not specified'}` : null,

@@ -82,7 +82,7 @@ export default function PartnerScreen() {
   }
 
   async function handleApply() {
-    if (!applyName.trim() || !applyCode.trim()) { setApplyError('Name and referral code are required'); return }
+    if (!applyName.trim()) { setApplyError('Your name is required'); return }
     setApplying(true); setApplyError('')
     try {
       const { data, error } = await supabase.functions.invoke('affiliate-apply', {
@@ -172,7 +172,7 @@ export default function PartnerScreen() {
             {applyError ? <Text style={p.errText}>{applyError}</Text> : null}
             {([
               { label: 'Your name', val: applyName, set: setApplyName, ph: 'Sarah Johnson', caps: 'words' },
-              { label: 'Your referral code', val: applyCode, set: (v: string) => setApplyCode(v.toUpperCase().replace(/[^A-Z0-9]/g, '')), ph: 'SARAH20', caps: 'characters', hint: '3–15 letters/numbers. Your followers use this to get a discount.' },
+              { label: 'Your referral code (optional)', val: applyCode, set: (v: string) => setApplyCode(v.toUpperCase().replace(/[^A-Z0-9]/g, '')), ph: 'e.g. SARAH20', caps: 'characters', hint: 'Leave blank and we\'ll create one for you. Letters/numbers only, 3–15 chars.' },
               { label: 'TikTok / Instagram / YouTube (optional)', val: applyPlatform, set: setApplyPlatform, ph: '@yourhandle or URL', caps: 'none' },
               { label: 'Approximate audience size (optional)', val: applyAudience, set: setApplyAudience, ph: 'e.g. 25000', caps: 'none' },
             ] as any[]).map((f: any) => (
@@ -201,7 +201,7 @@ export default function PartnerScreen() {
         <Text style={{ fontSize: 48 }}>⏳</Text>
         <Text style={p.pageTitle}>Application submitted!</Text>
         <Text style={[p.pageSub, { textAlign: 'center', maxWidth: 320 }]}>
-          We'll review and get back to you within 2–3 business days.{'\n'}Code: {affiliate.referral_code}
+          We'll review and get back to you within 2–3 business days.{affiliate.referral_code ? `\nRequested code: ${affiliate.referral_code}` : ''}
         </Text>
         <TouchableOpacity onPress={() => router.replace('/settings')}>
           <Text style={p.link}>← Back to app</Text>
