@@ -81,9 +81,9 @@ export default function AccountsInvestmentScreen() {
 
       <View style={styles.progressWrap}>
         <View style={styles.progressTrack}>
-          <View style={[styles.progressFill, { width: '44%' }]} />
+          <View style={[styles.progressFill, { width: '60%' }]} />
         </View>
-        <Text style={styles.progressLabel}>Step 4 of 9</Text>
+        <Text style={styles.progressLabel}>Pro Setup · Step 3 of 5</Text>
       </View>
       <Text style={styles.title}>Are you investing for your future?</Text>
       <Text style={styles.subtitle}>

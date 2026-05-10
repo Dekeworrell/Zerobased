@@ -63,11 +63,11 @@ export default function AssetsScreen() {
 
       <View style={styles.progressWrap}>
         <View style={styles.progressTrack}>
-          <View style={[styles.progressFill, { width: '55%' }]} />
+          <View style={[styles.progressFill, { width: '80%' }]} />
         </View>
-        <Text style={styles.progressLabel}>Step 5 of 9</Text>
+        <Text style={styles.progressLabel}>Pro Setup · Step 4 of 5</Text>
       </View>
-      <Text style={styles.title}>What do you own of value?</Text>
+      <Text style={styles.title}>What are your assets worth?</Text>
       <Text style={styles.subtitle}>
         Your home, vehicles, and other major assets count toward your net worth. Rough estimates work great!
       </Text>

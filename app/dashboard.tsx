@@ -230,7 +230,7 @@ export default function DashboardScreen() {
       </View>
 
       {subscriptionTier === 'pro' && accounts.length === 0 && (
-        <TouchableOpacity style={styles.setupCard} onPress={() => router.push('/onboarding/accounts')}>
+        <TouchableOpacity style={styles.setupCard} onPress={() => router.push('/onboarding/accounts-everyday')}>
           <View style={styles.setupCardLeft}>
             <Text style={styles.setupCardTitle}>Complete your Pro setup</Text>
             <Text style={styles.setupCardBody}>Add your accounts, debts, assets, and goals to unlock the full picture.</Text>

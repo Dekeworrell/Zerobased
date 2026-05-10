@@ -55,21 +55,20 @@ export default function AccountsScreen() {
   }
 
   function handleContinue() {
-    console.log('Saving accounts:', JSON.stringify(accounts))
     saveAccountsToStore(accounts)
-    router.replace('/onboarding/income')
+    router.replace('/onboarding/goals')
   }
 
   return (
     <KeyboardScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-      <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+      <TouchableOpacity onPress={() => router.replace('/dashboard')} style={styles.backButton}>
         <Text style={styles.backText}>← Back</Text>
       </TouchableOpacity>
       <View style={styles.progressWrap}>
         <View style={styles.progressTrack}>
-          <View style={[styles.progressFill, { width: '22%' }]} />
+          <View style={[styles.progressFill, { width: '50%' }]} />
         </View>
-        <Text style={styles.progressLabel}>Step 2 of 9</Text>
+        <Text style={styles.progressLabel}>Pro Setup · Step 1 of 2</Text>
       </View>
       <Text style={styles.title}>Your accounts</Text>
       <Text style={styles.subtitle}>Add your accounts and current balances</Text>

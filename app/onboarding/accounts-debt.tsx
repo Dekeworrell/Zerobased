@@ -62,9 +62,9 @@ export default function AccountsDebtScreen() {
 
       <View style={styles.progressWrap}>
         <View style={styles.progressTrack}>
-          <View style={[styles.progressFill, { width: '33%' }]} />
+          <View style={[styles.progressFill, { width: '40%' }]} />
         </View>
-        <Text style={styles.progressLabel}>Step 3 of 9</Text>
+        <Text style={styles.progressLabel}>Pro Setup · Step 2 of 5</Text>
       </View>
       <Text style={styles.title}>What do you currently owe?</Text>
       <Text style={styles.subtitle}>

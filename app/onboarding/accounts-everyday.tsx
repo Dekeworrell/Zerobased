@@ -65,9 +65,9 @@ export default function AccountsEverydayScreen() {
 
       <View style={styles.progressWrap}>
         <View style={styles.progressTrack}>
-          <View style={[styles.progressFill, { width: '22%' }]} />
+          <View style={[styles.progressFill, { width: '20%' }]} />
         </View>
-        <Text style={styles.progressLabel}>Step 2 of 9</Text>
+        <Text style={styles.progressLabel}>Pro Setup · Step 1 of 5</Text>
       </View>
       <Text style={styles.title}>Where does your money live?</Text>
       <Text style={styles.subtitle}>

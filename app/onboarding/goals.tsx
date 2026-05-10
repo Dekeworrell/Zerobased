@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import KeyboardScrollView from '../../components/KeyboardScrollView'
 import { Colors } from '../../constants/colors'
+import { getOnboardingData } from '../../lib/store'
 import { supabase } from '../../lib/supabase'
 
 const GOALS = [
@@ -73,6 +74,7 @@ export default function GoalsScreen() {
       const { data: { session } } = await supabase.auth.getSession()
       const user = session?.user
       if (user) {
+        // Save goals
         await supabase.from('profiles').upsert({
           id: user.id,
           goals: selectedGoals,
@@ -83,23 +85,35 @@ export default function GoalsScreen() {
           has_high_interest_debt: highInterestDebt,
           debt_types: debtTypes,
         })
+
+        // Save accounts from local store (set in accounts.tsx)
+        const { accounts } = getOnboardingData()
+        if (accounts && accounts.length > 0) {
+          const rows = accounts.map((a: any) => ({
+            user_id: user.id,
+            label: a.label,
+            type: a.type,
+            balance: parseFloat(a.balance) || 0,
+          }))
+          await supabase.from('accounts').insert(rows)
+        }
       }
     } catch (e) {}
     setSaving(false)
-    router.replace('/onboarding/income')
+    router.replace('/dashboard')
   }
 
   return (
     <KeyboardScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-      <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+      <TouchableOpacity onPress={() => router.replace('/onboarding/accounts')} style={styles.backButton}>
         <Text style={styles.backText}>← Back</Text>
       </TouchableOpacity>
 
       <View style={styles.progressWrap}>
         <View style={styles.progressTrack}>
-          <View style={[styles.progressFill, { width: '66%' }]} />
+          <View style={[styles.progressFill, { width: '100%' }]} />
         </View>
-        <Text style={styles.progressLabel}>Step 6 of 9</Text>
+        <Text style={styles.progressLabel}>Pro Setup · Step 5 of 5</Text>
       </View>
       <Text style={styles.title}>What are you working toward?</Text>
       <Text style={styles.subtitle}>
