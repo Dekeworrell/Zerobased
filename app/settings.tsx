@@ -591,6 +591,10 @@ async function sendInvite() {
         </TouchableOpacity>
       )}
 
+      <TouchableOpacity style={styles.privacyButton} onPress={() => router.push('/privacy')}>
+        <Text style={styles.privacyButtonText}>🔒  Privacy Policy</Text>
+      </TouchableOpacity>
+
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
         <Text style={styles.logoutButtonText}>Log out</Text>
       </TouchableOpacity>
@@ -811,6 +815,19 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     fontSize: 16,
     fontWeight: '600',
+  },
+  privacyButton: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  privacyButtonText: {
+    color: Colors.textSecondary,
+    fontSize: 16,
+    fontWeight: '500',
   },
   logoutButton: {
     borderWidth: 1,
