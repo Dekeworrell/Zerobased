@@ -61,12 +61,41 @@ Deno.serve(async (req) => {
 
     // ── approve ──────────────────────────────────────────────────────────────
     if (action === 'approve') {
+      // Fetch current affiliate to check if they already have a code
+      const { data: existing } = await supabase
+        .from('affiliates')
+        .select('name, referral_code')
+        .eq('id', affiliate_id)
+        .single()
+
       const updates: any = {
         status: 'approved',
         approved_at: new Date().toISOString(),
       }
       if (payload.commission_rate) updates.commission_rate = payload.commission_rate
       if (payload.tier) updates.tier = payload.tier
+
+      // Auto-generate a referral code if they don't have one yet
+      if (!existing?.referral_code) {
+        const firstName = (existing?.name ?? 'USER').split(' ')[0]
+        const base = firstName.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 10)
+
+        // Find a unique code — try base, then base2, base3, etc.
+        let candidate = base
+        let suffix = 2
+        while (true) {
+          const { data: clash } = await supabase
+            .from('affiliates')
+            .select('id')
+            .eq('referral_code', candidate)
+            .maybeSingle()
+          if (!clash) break
+          candidate = base.slice(0, 8) + suffix
+          suffix++
+          if (suffix > 99) { candidate = base + Date.now().toString().slice(-4); break }
+        }
+        updates.referral_code = candidate
+      }
 
       const { data, error } = await supabase
         .from('affiliates')
