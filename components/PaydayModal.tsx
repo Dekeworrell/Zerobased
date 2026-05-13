@@ -30,10 +30,19 @@ type Props = {
   accounts: Account[]
   defaultAccountId: string | null
   userName?: string
+  paydayDate: string
+  isReminder?: boolean
   onComplete: () => void
+  onSkip: () => void
 }
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window')
+
+function formatPaydayDate(dateStr: string) {
+  if (!dateStr) return ''
+  const [year, month, day] = dateStr.split('-').map(Number)
+  return new Date(year, month - 1, day).toLocaleDateString('en-CA', { month: 'long', day: 'numeric' })
+}
 
 // Coin particle config — 8 coins at varied positions and delays
 const COIN_CONFIGS = [
@@ -47,7 +56,7 @@ const COIN_CONFIGS = [
   { x: 0.55, delay: 200, rise: 210, drift: -25 },
 ]
 
-export default function PaydayModal({ visible, incomeSources, accounts, defaultAccountId, userName, onComplete }: Props) {
+export default function PaydayModal({ visible, incomeSources, accounts, defaultAccountId, userName, paydayDate, isReminder, onComplete, onSkip }: Props) {
   const variableSources = incomeSources.filter(s => s.income_type === 'variable')
   const fixedSources = incomeSources.filter(s => s.income_type === 'fixed')
 
@@ -105,9 +114,6 @@ export default function PaydayModal({ visible, incomeSources, accounts, defaultA
     })
   }, [visible])
 
-  const today = new Date()
-  const dateStr = new Date(today.getTime() - today.getTimezoneOffset() * 60 * 1000).toISOString().split('T')[0]
-
   async function handleConfirm() {
     if (accounts.length > 0 && !selectedAccountId) {
       setError('Please select an account to deposit your pay into.')
@@ -132,7 +138,7 @@ export default function PaydayModal({ visible, incomeSources, accounts, defaultA
       for (const source of fixedSources) {
         await supabase.from('transactions').insert({
           user_id: user.id, label: source.label, amount: source.amount,
-          date: dateStr, type: 'income', is_unexpected: false, category_id: null,
+          date: paydayDate, type: 'income', is_unexpected: false, category_id: null,
         })
         totalActual += source.amount
         balanceDelta += source.amount
@@ -143,7 +149,7 @@ export default function PaydayModal({ visible, incomeSources, accounts, defaultA
         if (actualAmount > 0) {
           await supabase.from('transactions').insert({
             user_id: user.id, label: source.label, amount: actualAmount,
-            date: dateStr, type: 'income', is_unexpected: false, category_id: null,
+            date: paydayDate, type: 'income', is_unexpected: false, category_id: null,
           })
           totalActual += actualAmount
           balanceDelta += actualAmount
@@ -163,7 +169,7 @@ export default function PaydayModal({ visible, incomeSources, accounts, defaultA
         await supabase.from('profiles').update({ default_account_id: selectedAccountId }).eq('id', user.id)
       }
 
-      await supabase.from('profiles').update({ last_payday_check: dateStr }).eq('id', user.id)
+      await supabase.from('profiles').update({ last_payday_check: paydayDate }).eq('id', user.id)
 
       for (const source of incomeSources) {
         if (!source.next_payday) continue
@@ -209,7 +215,7 @@ export default function PaydayModal({ visible, incomeSources, accounts, defaultA
                 onComplete()
                 setTimeout(() => router.push({
                   pathname: '/budget-adjust',
-                  params: { actualPay: confirmedActual.toString(), expectedPay: confirmedBudgeted.toString(), periodStart: dateStr, periodEnd: dateStr },
+                  params: { actualPay: confirmedActual.toString(), expectedPay: confirmedBudgeted.toString(), periodStart: paydayDate, periodEnd: paydayDate },
                 }), 300)
               }}
             >
@@ -240,7 +246,7 @@ export default function PaydayModal({ visible, incomeSources, accounts, defaultA
                 onComplete()
                 setTimeout(() => router.push({
                   pathname: '/budget-adjust',
-                  params: { actualPay: confirmedActual.toString(), expectedPay: confirmedBudgeted.toString(), periodStart: dateStr, periodEnd: dateStr },
+                  params: { actualPay: confirmedActual.toString(), expectedPay: confirmedBudgeted.toString(), periodStart: paydayDate, periodEnd: paydayDate },
                 }), 300)
               }}
             >
@@ -283,7 +289,7 @@ export default function PaydayModal({ visible, incomeSources, accounts, defaultA
         {/* Card raised above the dimmed dashboard */}
         <View style={styles.modal}>
           {/* Dismiss button */}
-          <TouchableOpacity style={styles.dismissBtn} onPress={onComplete} hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}>
+          <TouchableOpacity style={styles.dismissBtn} onPress={onSkip} hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}>
             <Text style={styles.dismissText}>✕</Text>
           </TouchableOpacity>
 
@@ -296,8 +302,16 @@ export default function PaydayModal({ visible, incomeSources, accounts, defaultA
             <Animated.Text style={[styles.emoji, { transform: [{ scale: emojiScale }] }]}>
               🪙
             </Animated.Text>
-            <Text style={styles.title}>{userName ? `It's ${userName}'s Payday!` : "It's Payday!"}</Text>
-            <Text style={styles.subtitle}>Log your paycheque to keep your budget up to date.</Text>
+            <Text style={styles.title}>
+              {isReminder
+                ? `${userName ? `${userName}, you` : 'You'} haven't logged your paycheque yet`
+                : (userName ? `It's ${userName}'s Payday!` : "It's Payday!")}
+            </Text>
+            <Text style={styles.subtitle}>
+              {isReminder
+                ? `Your paycheque from ${formatPaydayDate(paydayDate)} hasn't been entered. It will be backdated automatically.`
+                : 'Log your paycheque to keep your budget up to date.'}
+            </Text>
 
             {fixedSources.length > 0 && (
               <View style={styles.fixedList}>
@@ -373,8 +387,8 @@ export default function PaydayModal({ visible, incomeSources, accounts, defaultA
               }
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.secondaryBtn} onPress={onComplete}>
-              <Text style={styles.secondaryBtnText}>Skip for now</Text>
+            <TouchableOpacity style={styles.secondaryBtn} onPress={onSkip}>
+              <Text style={styles.secondaryBtnText}>{isReminder ? 'Remind me later' : 'Skip for now'}</Text>
             </TouchableOpacity>
           </ScrollView>
         </View>

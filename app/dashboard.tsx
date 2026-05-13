@@ -26,6 +26,8 @@ export default function DashboardScreen() {
   const [showPaydayModal, setShowPaydayModal] = useState(false)
   const [paydayIncomeSources, setPaydayIncomeSources] = useState<any[]>([])
   const [paydayUserName, setPaydayUserName] = useState('')
+  const [paydayActualDate, setPaydayActualDate] = useState('')
+  const [isPaydayReminder, setIsPaydayReminder] = useState(false)
   const [subscriptionTier, setSubscriptionTier] = useState<'free' | 'pro'>('free')
   const scrollRef = useRef<ScrollView>(null)
   const paydayShownRef = useRef(false)
@@ -81,20 +83,33 @@ export default function DashboardScreen() {
       const lastCheck = profile?.last_payday_check || ''
       const myIncome = (income || []).filter((s: any) => s.user_id === userId)
       const tier = (profile?.subscription_tier as string) ?? 'free'
-      if (tier === 'pro' && lastCheck !== todayStr && !showPaydayModal && !paydayShownRef.current && myIncome.length > 0) {
-        const isPayday = myIncome.some((s: any) => {
-          if (!s.next_payday) return false
-          const paydays = s.next_payday.split('|')
-          return paydays.some((d: string) => d === todayStr)
-        })
-        if (isPayday) {
-          setPaydayIncomeSources(myIncome.map((s: any) => ({
-            ...s,
-            income_type: s.income_type || 'fixed',
-          })))
+
+      if (tier === 'pro' && !showPaydayModal && !paydayShownRef.current && myIncome.length > 0) {
+        const isPendingSkip = lastCheck.startsWith('SKIP:')
+        const pendingDate = isPendingSkip ? lastCheck.replace('SKIP:', '') : null
+
+        if (isPendingSkip && pendingDate) {
+          // User skipped a previous payday — show reminder with the original payday date
+          setPaydayIncomeSources(myIncome.map((s: any) => ({ ...s, income_type: s.income_type || 'fixed' })))
           setPaydayUserName(profileName)
+          setPaydayActualDate(pendingDate)
+          setIsPaydayReminder(true)
           paydayShownRef.current = true
           setShowPaydayModal(true)
+        } else if (lastCheck !== todayStr) {
+          // Normal payday check — is today a scheduled payday?
+          const isPayday = myIncome.some((s: any) => {
+            if (!s.next_payday) return false
+            return s.next_payday.split('|').some((d: string) => d === todayStr)
+          })
+          if (isPayday) {
+            setPaydayIncomeSources(myIncome.map((s: any) => ({ ...s, income_type: s.income_type || 'fixed' })))
+            setPaydayUserName(profileName)
+            setPaydayActualDate(todayStr)
+            setIsPaydayReminder(false)
+            paydayShownRef.current = true
+            setShowPaydayModal(true)
+          }
         }
       }
 
@@ -427,7 +442,20 @@ export default function DashboardScreen() {
         accounts={accounts}
         defaultAccountId={globalDefaultAccountId}
         userName={paydayUserName}
+        paydayDate={paydayActualDate}
+        isReminder={isPaydayReminder}
         onComplete={() => { setShowPaydayModal(false); loadDashboard() }}
+        onSkip={async () => {
+          // Mark as skipped with the actual payday date so we can remind next open
+          const { data: { session } } = await supabase.auth.getSession()
+          const user = session?.user
+          if (user) {
+            await supabase.from('profiles')
+              .update({ last_payday_check: `SKIP:${paydayActualDate}` })
+              .eq('id', user.id)
+          }
+          setShowPaydayModal(false)
+        }}
       />
     )}
     </>
