@@ -379,15 +379,16 @@ export default function IncomeScreen() {
                     min={new Date().toISOString().split('T')[0]}
                     onChange={(e) => updateSource(index, 'second_payday', e.target.value)}
                     style={{
-                      backgroundColor: '#1c1c1e',
-                      border: '1px solid #3a3a3c',
+                      backgroundColor: Colors.card,
+                      border: `2px solid ${source.second_payday ? Colors.primary : Colors.border}`,
                       borderRadius: 12,
                       padding: '14px 16px',
                       fontSize: 16,
-                      color: '#ffffff',
+                      color: Colors.text,
                       width: '100%',
                       boxSizing: 'border-box' as any,
                       marginBottom: 8,
+                      cursor: 'pointer',
                     }}
                   />
                 ) : (
