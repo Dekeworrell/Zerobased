@@ -56,7 +56,7 @@ export default function DashboardScreen() {
         { data: catDefaults },
         { data: members },
       ] = await Promise.all([
-        supabase.from('profiles').select('name, budget_cycle, default_account_id, last_payday_check, household_id, subscription_tier').eq('id', userId).single(),
+        supabase.from('profiles').select('name, budget_cycle, default_account_id, last_payday_check, household_id, subscription_tier, paycheque_reminders').eq('id', userId).single(),
         supabase.from('income_sources').select('id, label, amount, frequency, next_payday, income_type, user_id').in('user_id', userIds),
         supabase.from('budget_categories').select('id, label, icon, budgeted_amount, frequency, category_type, sort_order').in('user_id', userIds).order('sort_order', { ascending: true }),
         supabase.from('accounts').select('id, label, type, balance, user_id').in('user_id', userIds),
@@ -83,8 +83,9 @@ export default function DashboardScreen() {
       const lastCheck = profile?.last_payday_check || ''
       const myIncome = (income || []).filter((s: any) => s.user_id === userId)
       const tier = (profile?.subscription_tier as string) ?? 'free'
+      const remindersOn = profile?.paycheque_reminders ?? true
 
-      if (tier === 'pro' && !showPaydayModal && !paydayShownRef.current && myIncome.length > 0) {
+      if (tier === 'pro' && remindersOn && !showPaydayModal && !paydayShownRef.current && myIncome.length > 0) {
         const isPendingSkip = lastCheck.startsWith('SKIP:')
         const pendingDate = isPendingSkip ? lastCheck.replace('SKIP:', '') : null
 
