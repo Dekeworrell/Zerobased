@@ -1,6 +1,9 @@
 import { router } from 'expo-router'
 import { useEffect, useRef, useState } from 'react'
-import { ActivityIndicator, Animated, Dimensions, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import {
+  ActivityIndicator, Animated, Dimensions, Modal, ScrollView,
+  StyleSheet, Text, TouchableOpacity, View,
+} from 'react-native'
 import { Colors } from '../constants/colors'
 import { toMonthly } from '../lib/store'
 import { supabase } from '../lib/supabase'
@@ -29,9 +32,19 @@ type Props = {
   onComplete: () => void
 }
 
-const PARTICLES = ['💸', '✨', '🎉', '💵']
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window')
-const PARTICLE_X = [0.22, 0.38, 0.55, 0.72].map(p => SCREEN_W * p)
+
+// Coin particle config — 8 coins at varied positions and delays
+const COIN_CONFIGS = [
+  { x: 0.15, delay: 0,   rise: 160, drift: 20 },
+  { x: 0.30, delay: 80,  rise: 200, drift: -15 },
+  { x: 0.45, delay: 30,  rise: 180, drift: 10 },
+  { x: 0.60, delay: 120, rise: 220, drift: -20 },
+  { x: 0.72, delay: 50,  rise: 190, drift: 25 },
+  { x: 0.85, delay: 100, rise: 170, drift: -10 },
+  { x: 0.22, delay: 160, rise: 140, drift: 30 },
+  { x: 0.55, delay: 200, rise: 210, drift: -25 },
+]
 
 export default function PaydayModal({ visible, incomeSources, accounts, defaultAccountId, onComplete }: Props) {
   const variableSources = incomeSources.filter(s => s.income_type === 'variable')
@@ -49,8 +62,13 @@ export default function PaydayModal({ visible, incomeSources, accounts, defaultA
   const [makeDefault, setMakeDefault] = useState(false)
 
   const emojiScale = useRef(new Animated.Value(0.1)).current
-  const particleAnims = useRef(
-    PARTICLES.map(() => ({ y: new Animated.Value(0), opacity: new Animated.Value(0) }))
+  const coinAnims = useRef(
+    COIN_CONFIGS.map(() => ({
+      y: new Animated.Value(0),
+      x: new Animated.Value(0),
+      opacity: new Animated.Value(0),
+      scale: new Animated.Value(0.6),
+    }))
   ).current
 
   useEffect(() => {
@@ -61,19 +79,27 @@ export default function PaydayModal({ visible, incomeSources, accounts, defaultA
     setSelectedAccountId(defaultAccountId)
     setMakeDefault(false)
 
+    // Pop the main coin icon in
     emojiScale.setValue(0.1)
-    Animated.spring(emojiScale, { toValue: 1, friction: 4, tension: 50, useNativeDriver: true }).start()
+    Animated.spring(emojiScale, { toValue: 1, friction: 4, tension: 60, useNativeDriver: true }).start()
 
-    particleAnims.forEach((anim, i) => {
+    // Fire coins upward from the bottom of the overlay
+    coinAnims.forEach((anim, i) => {
+      const cfg = COIN_CONFIGS[i]
       anim.y.setValue(0)
+      anim.x.setValue(0)
       anim.opacity.setValue(0)
+      anim.scale.setValue(0.6)
+
       Animated.sequence([
-        Animated.delay(i * 100),
+        Animated.delay(cfg.delay),
         Animated.parallel([
-          Animated.timing(anim.opacity, { toValue: 1, duration: 150, useNativeDriver: true }),
-          Animated.timing(anim.y, { toValue: -(100 + i * 25), duration: 1100, useNativeDriver: true }),
+          Animated.timing(anim.opacity, { toValue: 1, duration: 120, useNativeDriver: true }),
+          Animated.spring(anim.scale, { toValue: 1, friction: 5, tension: 80, useNativeDriver: true }),
+          Animated.timing(anim.y, { toValue: -cfg.rise, duration: 900, useNativeDriver: true }),
+          Animated.timing(anim.x, { toValue: cfg.drift, duration: 900, useNativeDriver: true }),
         ]),
-        Animated.timing(anim.opacity, { toValue: 0, duration: 350, useNativeDriver: true }),
+        Animated.timing(anim.opacity, { toValue: 0, duration: 300, useNativeDriver: true }),
       ]).start()
     })
   }, [visible])
@@ -82,7 +108,7 @@ export default function PaydayModal({ visible, incomeSources, accounts, defaultA
   const dateStr = new Date(today.getTime() - today.getTimezoneOffset() * 60 * 1000).toISOString().split('T')[0]
 
   async function handleConfirm() {
-    if (!selectedAccountId) {
+    if (accounts.length > 0 && !selectedAccountId) {
       setError('Please select an account to deposit your pay into.')
       return
     }
@@ -123,7 +149,7 @@ export default function PaydayModal({ visible, incomeSources, accounts, defaultA
         }
       }
 
-      if (balanceDelta > 0) {
+      if (balanceDelta > 0 && selectedAccountId) {
         const { data: acc } = await supabase.from('accounts').select('balance').eq('id', selectedAccountId).single()
         if (acc) {
           await supabase.from('accounts')
@@ -132,7 +158,7 @@ export default function PaydayModal({ visible, incomeSources, accounts, defaultA
         }
       }
 
-      if (makeDefault) {
+      if (makeDefault && selectedAccountId) {
         await supabase.from('profiles').update({ default_account_id: selectedAccountId }).eq('id', user.id)
       }
 
@@ -174,7 +200,7 @@ export default function PaydayModal({ visible, incomeSources, accounts, defaultA
             <Text style={styles.emoji}>📉</Text>
             <Text style={styles.title}>You're ${shortfallAmount.toLocaleString('en-CA', { maximumFractionDigits: 0 })} short this cycle</Text>
             <Text style={styles.body}>
-              Your take-home was less than expected. We recommend reviewing your budget to find savings — or carry the shortfall and we'll track it in your reports.
+              Your take-home was less than expected. Review your budget to find savings — or carry the shortfall and we'll track it in your reports.
             </Text>
             <TouchableOpacity
               style={styles.primaryBtn}
@@ -205,7 +231,7 @@ export default function PaydayModal({ visible, incomeSources, accounts, defaultA
             <Text style={styles.emoji}>🎉</Text>
             <Text style={styles.title}>Extra ${extraAmount.toLocaleString('en-CA', { maximumFractionDigits: 0 })} this cycle!</Text>
             <Text style={styles.body}>
-              Nice! You earned more than expected. Consider paying down high-interest debt first, then put the rest toward your goals.
+              Nice! You earned more than budgeted. Many financial experts suggest tackling high-interest debt first, then directing the rest toward your goals.
             </Text>
             <TouchableOpacity
               style={styles.primaryBtn}
@@ -231,99 +257,125 @@ export default function PaydayModal({ visible, incomeSources, accounts, defaultA
   const selectedAccount = accounts.find(a => a.id === selectedAccountId)
 
   return (
-    <Modal visible={visible} transparent animationType="slide">
+    <Modal visible={visible} transparent animationType="fade">
       <View style={styles.overlay}>
-        {/* Celebratory particles floating up behind the modal */}
-        {particleAnims.map((anim, i) => (
+
+        {/* Coin particles bursting upward */}
+        {coinAnims.map((anim, i) => (
           <Animated.Text
             key={i}
-            style={[styles.particle, {
-              left: PARTICLE_X[i],
-              top: SCREEN_H * 0.38,
+            style={[styles.coin, {
+              left: SCREEN_W * COIN_CONFIGS[i].x,
+              bottom: SCREEN_H * 0.28,
               opacity: anim.opacity,
-              transform: [{ translateY: anim.y }],
+              transform: [
+                { translateY: anim.y },
+                { translateX: anim.x },
+                { scale: anim.scale },
+              ],
             }]}
           >
-            {PARTICLES[i]}
+            🪙
           </Animated.Text>
         ))}
 
+        {/* Card raised above the dimmed dashboard */}
         <View style={styles.modal}>
-          <Animated.Text style={[styles.emoji, { transform: [{ scale: emojiScale }] }]}>
-            💰
-          </Animated.Text>
-          <Text style={styles.title}>It's Payday! 🎉</Text>
-          <Text style={styles.subtitle}>How much did you get paid?</Text>
-
-          {fixedSources.length > 0 && (
-            <View style={styles.fixedList}>
-              {fixedSources.map(source => (
-                <View key={source.id} style={styles.fixedRow}>
-                  <View style={styles.fixedRowLeft}>
-                    <Text style={styles.fixedLabel}>{source.label}</Text>
-                    <Text style={styles.fixedAmount}>
-                      ${source.amount.toLocaleString('en-CA', { maximumFractionDigits: 2 })}
-                    </Text>
-                  </View>
-                  <View style={styles.autoTag}>
-                    <Text style={styles.autoTagText}>Auto-logged ✓</Text>
-                  </View>
-                </View>
-              ))}
-            </View>
-          )}
-
-          {variableSources.map(source => (
-            <View key={source.id} style={{ marginBottom: 12 }}>
-              <Text style={styles.fieldLabel}>{source.label} — actual amount</Text>
-              <CurrencyInput
-                style={styles.input}
-                placeholder={`Expected $${source.amount.toLocaleString('en-CA', { maximumFractionDigits: 2 })}`}
-                value={variableAmounts[source.id] || ''}
-                onChangeText={(val) => setVariableAmounts(prev => ({ ...prev, [source.id]: val }))}
-              />
-            </View>
-          ))}
-
-          <Text style={styles.fieldLabel}>Deposit to account</Text>
-          <View style={styles.accountList}>
-            {accounts.map(acc => (
-              <TouchableOpacity
-                key={acc.id}
-                style={[styles.accountRow, selectedAccountId === acc.id && styles.accountRowActive]}
-                onPress={() => setSelectedAccountId(acc.id)}
-              >
-                <Text style={[styles.accountRowText, selectedAccountId === acc.id && styles.accountRowTextActive]}>
-                  🏦 {acc.label}
-                </Text>
-                {selectedAccountId === acc.id && <Text style={styles.accountRowCheck}>✓</Text>}
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {selectedAccountId && selectedAccountId !== defaultAccountId && (
-            <TouchableOpacity style={styles.defaultToggle} onPress={() => setMakeDefault(!makeDefault)}>
-              <View style={[styles.checkbox, makeDefault && styles.checkboxActive]}>
-                {makeDefault && <Text style={styles.checkboxCheck}>✓</Text>}
-              </View>
-              <Text style={styles.defaultToggleText}>
-                Set {selectedAccount?.label} as my default account
-              </Text>
-            </TouchableOpacity>
-          )}
-
-          {error ? <Text style={styles.error}>{error}</Text> : null}
-
-          <TouchableOpacity
-            style={[styles.primaryBtn, saving && styles.disabled]}
-            onPress={handleConfirm}
-            disabled={saving}
-          >
-            {saving
-              ? <ActivityIndicator color={Colors.text} />
-              : <Text style={styles.primaryBtnText}>Confirm & Log Paycheque</Text>
-            }
+          {/* Dismiss button */}
+          <TouchableOpacity style={styles.dismissBtn} onPress={onComplete} hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}>
+            <Text style={styles.dismissText}>✕</Text>
           </TouchableOpacity>
+
+          {/* Scrollable content so long account lists don't overflow */}
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+          >
+            <Animated.Text style={[styles.emoji, { transform: [{ scale: emojiScale }] }]}>
+              🪙
+            </Animated.Text>
+            <Text style={styles.title}>It's Payday!</Text>
+            <Text style={styles.subtitle}>Log your paycheque to keep your budget up to date.</Text>
+
+            {fixedSources.length > 0 && (
+              <View style={styles.fixedList}>
+                {fixedSources.map(source => (
+                  <View key={source.id} style={styles.fixedRow}>
+                    <View style={styles.fixedRowLeft}>
+                      <Text style={styles.fixedLabel}>{source.label}</Text>
+                      <Text style={styles.fixedAmount}>
+                        ${source.amount.toLocaleString('en-CA', { maximumFractionDigits: 2 })}
+                      </Text>
+                    </View>
+                    <View style={styles.autoTag}>
+                      <Text style={styles.autoTagText}>Auto-logged ✓</Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {variableSources.map(source => (
+              <View key={source.id} style={{ marginBottom: 4 }}>
+                <Text style={styles.fieldLabel}>{source.label} — actual amount</Text>
+                <CurrencyInput
+                  style={styles.input}
+                  placeholder={`Expected $${source.amount.toLocaleString('en-CA', { maximumFractionDigits: 2 })}`}
+                  value={variableAmounts[source.id] || ''}
+                  onChangeText={(val) => setVariableAmounts(prev => ({ ...prev, [source.id]: val }))}
+                />
+              </View>
+            ))}
+
+            {accounts.length > 0 && (
+              <>
+                <Text style={styles.fieldLabel}>Deposit to account</Text>
+                <View style={styles.accountList}>
+                  {accounts.map(acc => (
+                    <TouchableOpacity
+                      key={acc.id}
+                      style={[styles.accountRow, selectedAccountId === acc.id && styles.accountRowActive]}
+                      onPress={() => setSelectedAccountId(acc.id)}
+                    >
+                      <Text style={[styles.accountRowText, selectedAccountId === acc.id && styles.accountRowTextActive]}>
+                        🏦 {acc.label}
+                      </Text>
+                      {selectedAccountId === acc.id && <Text style={styles.accountRowCheck}>✓</Text>}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                {selectedAccountId && selectedAccountId !== defaultAccountId && (
+                  <TouchableOpacity style={styles.defaultToggle} onPress={() => setMakeDefault(!makeDefault)}>
+                    <View style={[styles.checkbox, makeDefault && styles.checkboxActive]}>
+                      {makeDefault && <Text style={styles.checkboxCheck}>✓</Text>}
+                    </View>
+                    <Text style={styles.defaultToggleText}>
+                      Set {selectedAccount?.label} as my default account
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </>
+            )}
+
+            {error ? <Text style={styles.error}>{error}</Text> : null}
+
+            <TouchableOpacity
+              style={[styles.primaryBtn, saving && styles.disabled]}
+              onPress={handleConfirm}
+              disabled={saving}
+            >
+              {saving
+                ? <ActivityIndicator color={Colors.text} />
+                : <Text style={styles.primaryBtnText}>Confirm & Log Paycheque</Text>
+              }
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.secondaryBtn} onPress={onComplete}>
+              <Text style={styles.secondaryBtnText}>Skip for now</Text>
+            </TouchableOpacity>
+          </ScrollView>
         </View>
       </View>
     </Modal>
@@ -333,45 +385,75 @@ export default function PaydayModal({ visible, incomeSources, accounts, defaultA
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.6)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
+    padding: 20,
   },
   modal: {
     backgroundColor: Colors.background,
-    borderRadius: 24,
-    padding: 28,
+    borderRadius: 28,
     width: '100%',
     maxWidth: 480,
+    maxHeight: SCREEN_H * 0.82,
+    // Elevation gives the "raised card" feel
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.35,
+    shadowRadius: 24,
+    elevation: 20,
+  },
+  dismissBtn: {
+    position: 'absolute',
+    top: 16,
+    right: 18,
+    zIndex: 10,
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f0f0f0',
+    borderRadius: 16,
+  },
+  dismissText: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    fontWeight: '700',
+  },
+  scrollContent: {
+    padding: 28,
     gap: 12,
+    paddingTop: 24,
+  },
+  coin: {
+    position: 'absolute',
+    fontSize: 28,
+    zIndex: 5,
   },
   emoji: {
-    fontSize: 48,
+    fontSize: 52,
     textAlign: 'center',
+    marginBottom: 4,
   },
   title: {
-    fontSize: 22,
-    fontWeight: 'bold',
+    fontSize: 24,
+    fontWeight: '800',
     color: Colors.text,
     textAlign: 'center',
+    letterSpacing: -0.3,
   },
   subtitle: {
-    fontSize: 15,
+    fontSize: 14,
     color: Colors.textSecondary,
     textAlign: 'center',
+    lineHeight: 20,
     marginTop: -4,
   },
   body: {
-    fontSize: 15,
+    fontSize: 14,
     color: Colors.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
-  },
-  particle: {
-    position: 'absolute',
-    fontSize: 26,
-    zIndex: 10,
   },
   fixedList: { gap: 8 },
   fixedRow: {
@@ -386,7 +468,7 @@ const styles = StyleSheet.create({
   },
   fixedRowLeft: { gap: 2 },
   fixedLabel: { fontSize: 14, color: Colors.text, fontWeight: '500' },
-  fixedAmount: { fontSize: 18, fontWeight: 'bold', color: Colors.text },
+  fixedAmount: { fontSize: 18, fontWeight: '800', color: Colors.text },
   autoTag: {
     backgroundColor: Colors.primary,
     borderRadius: 20,
@@ -394,7 +476,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   autoTagText: { fontSize: 11, color: Colors.text, fontWeight: '600' },
-  fieldLabel: { fontSize: 13, color: Colors.textSecondary, marginBottom: 4 },
+  fieldLabel: { fontSize: 13, color: Colors.textSecondary, fontWeight: '500' },
   input: {
     backgroundColor: '#f2f4f2',
     borderWidth: 1,
@@ -403,18 +485,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '700',
     textAlign: 'center',
     color: Colors.text,
   },
-  accountList: { gap: 8 },
+  accountList: { gap: 6 },
   accountRow: {
     backgroundColor: '#f2f4f2',
     borderWidth: 1,
     borderColor: '#e3e8e3',
-    borderRadius: 12,
+    borderRadius: 10,
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: 11,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -423,14 +505,14 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary + '22',
     borderColor: Colors.primary,
   },
-  accountRowText: { fontSize: 15, color: Colors.text },
+  accountRowText: { fontSize: 14, color: Colors.text },
   accountRowTextActive: { fontWeight: '600', color: Colors.text },
   accountRowCheck: { fontSize: 14, color: Colors.primary, fontWeight: '700' },
   defaultToggle: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    paddingVertical: 4,
+    paddingVertical: 2,
   },
   checkbox: {
     width: 20,
@@ -447,7 +529,7 @@ const styles = StyleSheet.create({
   },
   checkboxCheck: { fontSize: 12, color: Colors.text, fontWeight: '700' },
   defaultToggleText: { fontSize: 13, color: Colors.textSecondary, flex: 1 },
-  error: { color: Colors.danger, fontSize: 14, textAlign: 'center' },
+  error: { color: Colors.danger, fontSize: 13, textAlign: 'center' },
   primaryBtn: {
     backgroundColor: Colors.primary,
     paddingVertical: 16,
@@ -456,7 +538,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   disabled: { opacity: 0.4 },
-  primaryBtnText: { color: Colors.text, fontSize: 16, fontWeight: '600' },
-  secondaryBtn: { paddingVertical: 12, alignItems: 'center' },
-  secondaryBtnText: { color: Colors.textSecondary, fontSize: 15 },
+  primaryBtnText: { color: Colors.text, fontSize: 16, fontWeight: '700' },
+  secondaryBtn: { paddingVertical: 10, alignItems: 'center' },
+  secondaryBtnText: { color: Colors.textSecondary, fontSize: 14 },
 })

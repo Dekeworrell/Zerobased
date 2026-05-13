@@ -79,7 +79,8 @@ export default function DashboardScreen() {
       const todayStr = new Date(now.getTime() - now.getTimezoneOffset() * 60 * 1000).toISOString().split('T')[0]
       const lastCheck = profile?.last_payday_check || ''
       const myIncome = (income || []).filter((s: any) => s.user_id === userId)
-      if (lastCheck !== todayStr && !showPaydayModal && !paydayShownRef.current && myIncome.length > 0) {
+      const tier = (profile?.subscription_tier as string) ?? 'free'
+      if (tier === 'pro' && lastCheck !== todayStr && !showPaydayModal && !paydayShownRef.current && myIncome.length > 0) {
         const isPayday = myIncome.some((s: any) => {
           if (!s.next_payday) return false
           const paydays = s.next_payday.split('|')
