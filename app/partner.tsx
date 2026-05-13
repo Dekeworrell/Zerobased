@@ -86,9 +86,19 @@ export default function PartnerScreen() {
     setApplying(true); setApplyError('')
     try {
       const { data, error } = await supabase.functions.invoke('affiliate-apply', {
-        body: { name: applyName.trim(), referral_code: applyCode.trim(), platform_url: applyPlatform.trim() || null, audience_size: applyAudience.trim() || null },
+        body: {
+          name: applyName.trim(),
+          referral_code: applyCode.trim() || null,
+          platform_url: applyPlatform.trim() || null,
+          audience_size: applyAudience.trim() || null,
+        },
       })
-      if (error || data?.error) throw new Error(data?.error ?? error?.message)
+      if (error) {
+        // supabase-js wraps non-2xx edge function responses; try to get the real message
+        const body = await (error as any).context?.json?.().catch(() => null)
+        throw new Error(body?.error ?? error.message)
+      }
+      if (data?.error) throw new Error(data.error)
       await loadData()
     } catch (err: any) { setApplyError(err.message) }
     setApplying(false)
