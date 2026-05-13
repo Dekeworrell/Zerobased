@@ -29,6 +29,7 @@ type Props = {
   incomeSources: IncomeSource[]
   accounts: Account[]
   defaultAccountId: string | null
+  userName?: string
   onComplete: () => void
 }
 
@@ -46,7 +47,7 @@ const COIN_CONFIGS = [
   { x: 0.55, delay: 200, rise: 210, drift: -25 },
 ]
 
-export default function PaydayModal({ visible, incomeSources, accounts, defaultAccountId, onComplete }: Props) {
+export default function PaydayModal({ visible, incomeSources, accounts, defaultAccountId, userName, onComplete }: Props) {
   const variableSources = incomeSources.filter(s => s.income_type === 'variable')
   const fixedSources = incomeSources.filter(s => s.income_type === 'fixed')
 
@@ -295,7 +296,7 @@ export default function PaydayModal({ visible, incomeSources, accounts, defaultA
             <Animated.Text style={[styles.emoji, { transform: [{ scale: emojiScale }] }]}>
               🪙
             </Animated.Text>
-            <Text style={styles.title}>It's Payday!</Text>
+            <Text style={styles.title}>{userName ? `It's ${userName}'s Payday!` : "It's Payday!"}</Text>
             <Text style={styles.subtitle}>Log your paycheque to keep your budget up to date.</Text>
 
             {fixedSources.length > 0 && (

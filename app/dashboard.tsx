@@ -25,6 +25,7 @@ export default function DashboardScreen() {
   const [globalDefaultAccountId, setGlobalDefaultAccountId] = useState<string | null>(null)
   const [showPaydayModal, setShowPaydayModal] = useState(false)
   const [paydayIncomeSources, setPaydayIncomeSources] = useState<any[]>([])
+  const [paydayUserName, setPaydayUserName] = useState('')
   const [subscriptionTier, setSubscriptionTier] = useState<'free' | 'pro'>('free')
   const scrollRef = useRef<ScrollView>(null)
   const paydayShownRef = useRef(false)
@@ -54,7 +55,7 @@ export default function DashboardScreen() {
         { data: members },
       ] = await Promise.all([
         supabase.from('profiles').select('name, budget_cycle, default_account_id, last_payday_check, household_id, subscription_tier').eq('id', userId).single(),
-        supabase.from('income_sources').select('id, amount, frequency, next_payday, income_type, user_id').in('user_id', userIds),
+        supabase.from('income_sources').select('id, label, amount, frequency, next_payday, income_type, user_id').in('user_id', userIds),
         supabase.from('budget_categories').select('id, label, icon, budgeted_amount, frequency, category_type, sort_order').in('user_id', userIds).order('sort_order', { ascending: true }),
         supabase.from('accounts').select('id, label, type, balance, user_id').in('user_id', userIds),
         supabase.from('category_account_defaults').select('category_id, account_id').in('user_id', userIds),
@@ -91,6 +92,7 @@ export default function DashboardScreen() {
             ...s,
             income_type: s.income_type || 'fixed',
           })))
+          setPaydayUserName(profileName)
           paydayShownRef.current = true
           setShowPaydayModal(true)
         }
@@ -424,6 +426,7 @@ export default function DashboardScreen() {
         incomeSources={paydayIncomeSources}
         accounts={accounts}
         defaultAccountId={globalDefaultAccountId}
+        userName={paydayUserName}
         onComplete={() => { setShowPaydayModal(false); loadDashboard() }}
       />
     )}
