@@ -8,7 +8,7 @@ if (Platform.OS !== 'web') {
   RC = require('react-native-purchases').default
 }
 
-const RC_API_KEY = 'test_VkqGspZmJJaDUhWFRmiLGoauOyE'
+const RC_API_KEY = 'appl_ZjIQHUWSoAvCiHIfVeeYnzwmTLz'
 
 export function initRevenueCat(userId?: string): void {
   if (!RC) return
