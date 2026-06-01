@@ -20,6 +20,7 @@ export default function DashboardScreen() {
   const [payPeriodLabel, setPayPeriodLabel] = useState('this month')
   const [payPeriodStart, setPayPeriodStart] = useState<Date | null>(null)
   const [payPeriodEnd, setPayPeriodEnd] = useState<Date | null>(null)
+  const [summaryView, setSummaryView] = useState<'cycle' | 'monthly'>('cycle')
   const [categoryDefaults, setCategoryDefaults] = useState<{ [categoryId: string]: string }>({})
   const [globalDefaultAccountId, setGlobalDefaultAccountId] = useState<string | null>(null)
   const [showPaydayModal, setShowPaydayModal] = useState(false)
@@ -209,7 +210,7 @@ export default function DashboardScreen() {
     return monthlyBudgeted / 2
   }, [categories, budgetCycle, payPeriodStart, payPeriodEnd, monthlyBudgeted])
 
-  const displayBudgeted = monthlyBudgeted
+  const displayBudgeted = summaryView === 'monthly' ? monthlyBudgeted : paycycleBudgeted
 
   const greeting = useMemo(() => {
     const h = new Date().getHours()
@@ -314,6 +315,17 @@ export default function DashboardScreen() {
                 </Text>
               </View>
               <View style={styles.budgetSummaryRight}>
+                <TouchableOpacity
+                  onPress={(e) => {
+                    e.stopPropagation()
+                    setSummaryView(v => v === 'cycle' ? 'monthly' : 'cycle')
+                  }}
+                  style={styles.togglePill}
+                >
+                  <Text style={styles.togglePillText}>
+                    {summaryView === 'cycle' ? '📅 Pay period' : '🗓 Monthly'}
+                  </Text>
+                </TouchableOpacity>
                 <Text style={styles.budgetSummaryChevron}>
                   {categoriesExpanded ? '▲' : '▼'}
                 </Text>
@@ -324,7 +336,7 @@ export default function DashboardScreen() {
                 ${(displayBudgeted - totalSpent).toLocaleString('en-CA', { maximumFractionDigits: 0 })} remaining
               </Text>
               <Text style={[styles.budgetSummaryAmount, { fontSize: 13, color: Colors.textSecondary, fontWeight: '400' }]}>
-                {' '}of ${displayBudgeted.toLocaleString('en-CA', { maximumFractionDigits: 0 })}/mo
+                {' '}of ${displayBudgeted.toLocaleString('en-CA', { maximumFractionDigits: 0 })}{summaryView === 'monthly' ? '/mo' : '/period'}
               </Text>
             </View>
             <View style={styles.progressBar}>
@@ -350,8 +362,8 @@ export default function DashboardScreen() {
                 const periodAmount = budgetCycle === 'paycycle' && payPeriodStart && payPeriodEnd
                   ? toPeriodAmount(cat.budgeted_amount, cat.frequency, budgetCycle, payPeriodStart, payPeriodEnd)
                   : monthlyAmount / 2
-                const displayAmount = monthlyAmount
-                const displayLabel = '/mo'
+                const displayAmount = summaryView === 'monthly' ? monthlyAmount : periodAmount
+                const displayLabel = summaryView === 'monthly' ? '/mo' : '/period'
                 return (
                   <TouchableOpacity key={cat.id} style={styles.categoryCard}
                     onPress={() => router.push({ pathname: '/add-transaction', params: { categoryId: cat.id, categoryLabel: cat.label, categoryIcon: cat.icon } })}>
