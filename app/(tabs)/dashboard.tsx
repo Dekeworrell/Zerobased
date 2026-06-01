@@ -1,11 +1,11 @@
-import { router, useFocusEffect } from 'expo-router'
+﻿import { router, useFocusEffect } from 'expo-router'
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import PaydayModal from '../components/PaydayModal'
-import { Colors } from '../constants/colors'
-import { calculateBudgetStatus, getPayPeriodDates, toMonthly, toPeriodAmount } from '../lib/store'
-import { supabase } from '../lib/supabase'
-import { getCachedHouseholdIds, getCachedUserId } from '../lib/userCache'
+import PaydayModal from '../../components/PaydayModal'
+import { Colors } from '../../constants/colors'
+import { calculateBudgetStatus, getPayPeriodDates, toMonthly, toPeriodAmount } from '../../lib/store'
+import { supabase } from '../../lib/supabase'
+import { getCachedHouseholdIds, getCachedUserId } from '../../lib/userCache'
 
 export default function DashboardScreen() {
   const [loading, setLoading] = useState(true)
@@ -47,7 +47,7 @@ export default function DashboardScreen() {
 
       const userIds = await getCachedHouseholdIds(userId)
 
-      // Fire all independent queries in parallel — including household lookups
+      // Fire all independent queries in parallel â€” including household lookups
       const [
         { data: profile },
         { data: income },
@@ -72,12 +72,12 @@ export default function DashboardScreen() {
         setName(profileName)
       }
 
-      // Budget cycle — use own profile setting (household members inherit via shared categories)
+      // Budget cycle â€” use own profile setting (household members inherit via shared categories)
       const cycle = profile?.budget_cycle || 'monthly'
       setBudgetCycle(cycle)
       if (profile?.default_account_id) setGlobalDefaultAccountId(profile.default_account_id)
 
-      // Payday check — only fires for the current user's own income sources
+      // Payday check â€” only fires for the current user's own income sources
       const now = new Date()
       const todayStr = new Date(now.getTime() - now.getTimezoneOffset() * 60 * 1000).toISOString().split('T')[0]
       const lastCheck = profile?.last_payday_check || ''
@@ -90,7 +90,7 @@ export default function DashboardScreen() {
         const pendingDate = isPendingSkip ? lastCheck.replace('SKIP:', '') : null
 
         if (isPendingSkip && pendingDate) {
-          // User skipped a previous payday — show reminder with the original payday date
+          // User skipped a previous payday â€” show reminder with the original payday date
           setPaydayIncomeSources(myIncome.map((s: any) => ({ ...s, income_type: s.income_type || 'fixed' })))
           setPaydayUserName(profileName)
           setPaydayActualDate(pendingDate)
@@ -98,7 +98,7 @@ export default function DashboardScreen() {
           paydayShownRef.current = true
           setShowPaydayModal(true)
         } else if (lastCheck !== todayStr) {
-          // Normal payday check — is today a scheduled payday?
+          // Normal payday check â€” is today a scheduled payday?
           const isPayday = myIncome.some((s: any) => {
             if (!s.next_payday) return false
             return s.next_payday.split('|').some((d: string) => d === todayStr)
@@ -146,7 +146,7 @@ export default function DashboardScreen() {
             setPayPeriodEnd(end)
             const startStr = start.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })
             const endStr = end.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })
-            setPayPeriodLabel(`${startStr} – ${endStr}`)
+            setPayPeriodLabel(`${startStr} â€“ ${endStr}`)
           }
         } else {
           const now = new Date()
@@ -156,7 +156,7 @@ export default function DashboardScreen() {
         }
       }
 
-      // Transactions — for monthly users we can use a pre-calculated date range.
+      // Transactions â€” for monthly users we can use a pre-calculated date range.
       // For paycycle users, periodStart/End are now set above so we use those.
       if (cats) {
         const txnStart = periodStart ?? new Date(new Date().getFullYear(), new Date().getMonth(), 1)
@@ -235,7 +235,7 @@ export default function DashboardScreen() {
       <View style={styles.header}>
         <View style={{ flex: 1, marginRight: 8 }}>
           <Text style={styles.greeting} adjustsFontSizeToFit numberOfLines={2}>
-            {greeting}, {name} 👋
+            {greeting}, {name} ðŸ‘‹
           </Text>
           <Text style={styles.subGreeting}>
             {budgetCycle === 'paycycle'
@@ -244,7 +244,7 @@ export default function DashboardScreen() {
           </Text>
         </View>
         <TouchableOpacity onPress={() => router.push('/settings')} style={styles.settingsBtn}>
-          <Text style={styles.settingsIcon}>⚙️</Text>
+          <Text style={styles.settingsIcon}>âš™ï¸</Text>
         </TouchableOpacity>
       </View>
 
@@ -254,7 +254,7 @@ export default function DashboardScreen() {
             <Text style={styles.setupCardTitle}>Complete your Pro setup</Text>
             <Text style={styles.setupCardBody}>Add your accounts, debts, assets, and goals to unlock the full picture.</Text>
           </View>
-          <Text style={styles.setupCardArrow}>→</Text>
+          <Text style={styles.setupCardArrow}>â†’</Text>
         </TouchableOpacity>
       )}
 
@@ -323,11 +323,11 @@ export default function DashboardScreen() {
                   style={styles.togglePill}
                 >
                   <Text style={styles.togglePillText}>
-                    {summaryView === 'cycle' ? '📅 Pay period' : '🗓 Monthly'}
+                    {summaryView === 'cycle' ? 'ðŸ“… Pay period' : 'ðŸ—“ Monthly'}
                   </Text>
                 </TouchableOpacity>
                 <Text style={styles.budgetSummaryChevron}>
-                  {categoriesExpanded ? '▲' : '▼'}
+                  {categoriesExpanded ? 'â–²' : 'â–¼'}
                 </Text>
               </View>
             </View>
@@ -347,7 +347,7 @@ export default function DashboardScreen() {
             </View>
             <View style={styles.budgetSummaryFooter}>
               <Text style={styles.budgetSummarySubtext}>
-                ${totalSpent.toLocaleString('en-CA', { maximumFractionDigits: 0 })} spent · ${(displayBudgeted - totalSpent).toLocaleString('en-CA', { maximumFractionDigits: 0 })} remaining
+                ${totalSpent.toLocaleString('en-CA', { maximumFractionDigits: 0 })} spent Â· ${(displayBudgeted - totalSpent).toLocaleString('en-CA', { maximumFractionDigits: 0 })} remaining
               </Text>
               <Text style={styles.budgetSummarySubtext}>
                 {displayBudgeted > 0 ? ((totalSpent / displayBudgeted) * 100).toFixed(0) : 0}%
@@ -405,7 +405,7 @@ export default function DashboardScreen() {
           style={styles.emptyCard}
           onPress={() => router.push('/onboarding/tracking-method')}
         >
-          <Text style={styles.emptyIcon}>📋</Text>
+          <Text style={styles.emptyIcon}>ðŸ“‹</Text>
           <Text style={styles.emptyTitle}>No budget set up yet</Text>
           <Text style={styles.emptySubtitle}>Tap to complete your budget setup</Text>
         </TouchableOpacity>
@@ -415,21 +415,21 @@ export default function DashboardScreen() {
         <Text style={styles.sectionTitle}>Quick Actions</Text>
         <View style={styles.actionRow}>
           <TouchableOpacity style={styles.actionBtn} onPress={() => router.push('/add-transaction')}>
-            <Text style={styles.actionIcon}>➕</Text>
+            <Text style={styles.actionIcon}>âž•</Text>
             <Text style={styles.actionLabel}>Add Transaction</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.actionBtn} onPress={() => router.push('/transactions')}>
-            <Text style={styles.actionIcon}>📋</Text>
+            <Text style={styles.actionIcon}>ðŸ“‹</Text>
             <Text style={styles.actionLabel}>Transactions</Text>
           </TouchableOpacity>
         </View>
         <View style={styles.actionRow}>
           <TouchableOpacity style={styles.actionBtn} onPress={() => router.push('/accounts')}>
-            <Text style={styles.actionIcon}>🏦</Text>
+            <Text style={styles.actionIcon}>ðŸ¦</Text>
             <Text style={styles.actionLabel}>Accounts</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.actionBtn} onPress={() => router.push('/reports')}>
-            <Text style={styles.actionIcon}>📊</Text>
+            <Text style={styles.actionIcon}>ðŸ“Š</Text>
             <Text style={styles.actionLabel}>Reports</Text>
           </TouchableOpacity>
         </View>

@@ -1,4 +1,4 @@
-import { router, useFocusEffect } from 'expo-router'
+﻿import { router, useFocusEffect } from 'expo-router'
 import { useCallback, useState } from 'react'
 import {
   ActivityIndicator,
@@ -10,11 +10,11 @@ import {
   View,
 } from 'react-native'
 import { BarChart, LineChart } from 'react-native-gifted-charts'
-import { Colors } from '../constants/colors'
-import { getSubscriptionTier } from '../lib/purchases'
-import { toMonthly } from '../lib/store'
-import { supabase } from '../lib/supabase'
-import { getCachedHouseholdIds, getCachedUserId } from '../lib/userCache'
+import { Colors } from '../../constants/colors'
+import { getSubscriptionTier } from '../../lib/purchases'
+import { toMonthly } from '../../lib/store'
+import { supabase } from '../../lib/supabase'
+import { getCachedHouseholdIds, getCachedUserId } from '../../lib/userCache'
 
 const SCREEN_WIDTH = Dimensions.get('window').width
 const CHART_WIDTH = SCREEN_WIDTH - 80
@@ -31,13 +31,13 @@ function isLiability(type: string) {
 }
 
 const GOAL_ICONS: { [key: string]: string } = {
-  'buy a home': '🏠', 'home': '🏠', 'house': '🏠',
-  'pay off debt': '💳', 'debt': '💳',
-  'student loan': '🎓', 'emergency fund': '🆘', 'emergency': '🆘',
-  'retirement': '📈', 'invest': '📈',
-  'travel': '✈️', 'vacation': '✈️',
-  'education': '🎓', 'car': '🚗', 'vehicle': '🚗',
-  'wedding': '💍', 'baby': '👶', 'children': '👶',
+  'buy a home': 'ðŸ ', 'home': 'ðŸ ', 'house': 'ðŸ ',
+  'pay off debt': 'ðŸ’³', 'debt': 'ðŸ’³',
+  'student loan': 'ðŸŽ“', 'emergency fund': 'ðŸ†˜', 'emergency': 'ðŸ†˜',
+  'retirement': 'ðŸ“ˆ', 'invest': 'ðŸ“ˆ',
+  'travel': 'âœˆï¸', 'vacation': 'âœˆï¸',
+  'education': 'ðŸŽ“', 'car': 'ðŸš—', 'vehicle': 'ðŸš—',
+  'wedding': 'ðŸ’', 'baby': 'ðŸ‘¶', 'children': 'ðŸ‘¶',
 }
 
 function getGoalIcon(goal: string): string {
@@ -45,7 +45,7 @@ function getGoalIcon(goal: string): string {
   for (const key of Object.keys(GOAL_ICONS)) {
     if (lower.includes(key)) return GOAL_ICONS[key]
   }
-  return '🎯'
+  return 'ðŸŽ¯'
 }
 
 type MonthSummary = {
@@ -145,7 +145,7 @@ export default function ReportsScreen() {
         setMonthlyIncome(totalMonthlyIncome)
       }
 
-      // Accounts — net worth
+      // Accounts â€” net worth
       let netWorth = 0
       let totalAssets = 0
       let totalLiabilities = 0
@@ -163,7 +163,7 @@ export default function ReportsScreen() {
       // Snapshots
       if (snaps) setSnapshots(snaps)
 
-      // Transactions — build month summaries
+      // Transactions â€” build month summaries
       if (txns) {
         const monthMap: { [key: string]: MonthSummary } = {}
         txns.forEach((t: any) => {
@@ -192,7 +192,7 @@ export default function ReportsScreen() {
         setMonthSummaries(sorted)
         if (sorted.length > 0) setSelectedMonth(sorted[0].month)
 
-        // Category breakdown — cats already loaded, no extra query needed
+        // Category breakdown â€” cats already loaded, no extra query needed
         if (cats && sorted.length > 0) {
           const currentMonthStr = sorted[0].month
           const currentTxns = txns.filter((t: any) =>
@@ -213,7 +213,7 @@ export default function ReportsScreen() {
         }
       }
 
-      // Save / update this month's snapshot (fire and forget — don't await)
+      // Save / update this month's snapshot (fire and forget â€” don't await)
       const currentMonth = new Date().toISOString().slice(0, 7)
       supabase.from('monthly_snapshots').upsert(
         { user_id: userId, month: currentMonth, net_worth: netWorth, total_assets: totalAssets, total_liabilities: totalLiabilities },
@@ -226,7 +226,7 @@ export default function ReportsScreen() {
     setLoading(false)
   }
 
-  // ── Derived data ──────────────────────────────────────────────
+  // â”€â”€ Derived data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const todayMonth = new Date().toISOString().slice(0, 7)
   const isCurrentMonth = selectedMonth === todayMonth
   const last6 = monthSummaries.slice(0, 6).reverse()
@@ -292,8 +292,8 @@ export default function ReportsScreen() {
       const diff = saved - Math.round(prevNet)
       if (saved >= 0) {
         return diff >= 0
-          ? `You saved $${saved.toLocaleString('en-CA')} in ${monthName} — $${Math.abs(diff).toLocaleString('en-CA')} more than the previous month.`
-          : `You saved $${saved.toLocaleString('en-CA')} in ${monthName} — $${Math.abs(diff).toLocaleString('en-CA')} less than the previous month.`
+          ? `You saved $${saved.toLocaleString('en-CA')} in ${monthName} â€” $${Math.abs(diff).toLocaleString('en-CA')} more than the previous month.`
+          : `You saved $${saved.toLocaleString('en-CA')} in ${monthName} â€” $${Math.abs(diff).toLocaleString('en-CA')} less than the previous month.`
       }
       return `You overspent by $${Math.abs(saved).toLocaleString('en-CA')} in ${monthName}. Try reducing variable expenses.`
     }
@@ -302,7 +302,7 @@ export default function ReportsScreen() {
       : `You overspent by $${Math.abs(saved).toLocaleString('en-CA')} in ${monthName}.`
   }
 
-  // ── Loading ───────────────────────────────────────────────────
+  // â”€â”€ Loading â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -326,7 +326,7 @@ export default function ReportsScreen() {
     )
   }
 
-  // ── Render ────────────────────────────────────────────────────
+  // â”€â”€ Render â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <Text style={styles.title}>Reports</Text>
@@ -350,7 +350,7 @@ export default function ReportsScreen() {
 
       {monthSummaries.length === 0 ? (
         <View style={styles.emptyCard}>
-          <Text style={styles.emptyIcon}>📊</Text>
+          <Text style={styles.emptyIcon}>ðŸ“Š</Text>
           <Text style={styles.emptyTitle}>No data yet</Text>
           <Text style={styles.emptySubtitle}>Add transactions to see your reports</Text>
         </View>
@@ -367,12 +367,12 @@ export default function ReportsScreen() {
               {netAmount >= 0 ? '+' : ''}${Math.abs(netAmount).toLocaleString('en-CA', { maximumFractionDigits: 0 })}
             </Text>
             <Text style={styles.netSub}>
-              Income ${monthlyIncome.toLocaleString('en-CA', { maximumFractionDigits: 0 })} · Expenses ${(currentMonthData?.expenses ?? 0).toLocaleString('en-CA', { maximumFractionDigits: 0 })}
+              Income ${monthlyIncome.toLocaleString('en-CA', { maximumFractionDigits: 0 })} Â· Expenses ${(currentMonthData?.expenses ?? 0).toLocaleString('en-CA', { maximumFractionDigits: 0 })}
             </Text>
             {prevNet !== null && !isCurrentMonth && (
               <View style={[styles.netBadge, { backgroundColor: netAmount >= prevNet ? 'rgba(61,184,112,0.12)' : 'rgba(224,82,82,0.1)' }]}>
                 <Text style={[styles.netBadgeText, { color: netAmount >= prevNet ? '#1f7a45' : '#e05252' }]}>
-                  {netAmount >= prevNet ? '↑' : '↓'} vs last month
+                  {netAmount >= prevNet ? 'â†‘' : 'â†“'} vs last month
                 </Text>
               </View>
             )}
@@ -697,7 +697,7 @@ export default function ReportsScreen() {
                           {isPrimary ? 'Your main financial goal' : 'Working toward this'}
                         </Text>
                       </View>
-                      <Text style={[styles.goalArrow, { color: isPrimary ? '#3db870' : '#c0c8c0' }]}>›</Text>
+                      <Text style={[styles.goalArrow, { color: isPrimary ? '#3db870' : '#c0c8c0' }]}>â€º</Text>
                     </View>
                   )
                 })}
@@ -707,7 +707,7 @@ export default function ReportsScreen() {
 
           {/* Insight */}
           <View style={styles.insightCard}>
-            <Text style={styles.insightIcon}>✦</Text>
+            <Text style={styles.insightIcon}>âœ¦</Text>
             <Text style={styles.insightText}>{buildInsight()}</Text>
           </View>
 
@@ -725,10 +725,10 @@ export default function ReportsScreen() {
                   >
                     <View>
                       <Text style={styles.historyMonth}>
-                        {m.label}{m.month === todayMonth ? ' · in progress' : ''}
+                        {m.label}{m.month === todayMonth ? ' Â· in progress' : ''}
                       </Text>
                       <Text style={styles.historyDetail}>
-                        ${(m.income > 0 ? m.income : monthlyIncome).toLocaleString('en-CA', { maximumFractionDigits: 0 })} in · ${m.expenses.toLocaleString('en-CA', { maximumFractionDigits: 0 })} out
+                        ${(m.income > 0 ? m.income : monthlyIncome).toLocaleString('en-CA', { maximumFractionDigits: 0 })} in Â· ${m.expenses.toLocaleString('en-CA', { maximumFractionDigits: 0 })} out
                       </Text>
                     </View>
                     <Text style={[styles.historyNet, { color: mNet >= 0 ? '#1f7a45' : '#e05252' }]}>

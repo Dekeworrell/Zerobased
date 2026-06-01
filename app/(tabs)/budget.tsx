@@ -1,15 +1,15 @@
-import { router } from 'expo-router'
+﻿import { router } from 'expo-router'
 import { useEffect, useState } from 'react'
 import { ActivityIndicator, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist'
 import { GestureHandlerRootView, Pressable as GHPressable } from 'react-native-gesture-handler'
-import CurrencyInput from '../components/CurrencyInput'
-import { EXPENSE_CATEGORIES } from '../constants/categories'
-import { Colors } from '../constants/colors'
-import { getSubscriptionTier } from '../lib/purchases'
-import { calculateBudgetStatus, toMonthly } from '../lib/store'
-import { supabase } from '../lib/supabase'
-import { getCachedHouseholdIds, getCachedUserId } from '../lib/userCache'
+import CurrencyInput from '../../components/CurrencyInput'
+import { EXPENSE_CATEGORIES } from '../../constants/categories'
+import { Colors } from '../../constants/colors'
+import { getSubscriptionTier } from '../../lib/purchases'
+import { calculateBudgetStatus, toMonthly } from '../../lib/store'
+import { supabase } from '../../lib/supabase'
+import { getCachedHouseholdIds, getCachedUserId } from '../../lib/userCache'
 
 const FREE_TIER_LIMIT = 8
 const FREE_TIER_NUDGE_AT = 7
@@ -207,10 +207,10 @@ export default function BudgetScreen() {
                   drag()
                 }}
                 style={{ cursor: 'grab', touchAction: 'none', userSelect: 'none', fontSize: 18, color: Colors.textSecondary, padding: 4 } as any}
-              >☰</span>
+              >â˜°</span>
             ) : (
               <GHPressable onLongPress={drag} delayLongPress={200}>
-                <Text style={styles.dragHandle}>☰</Text>
+                <Text style={styles.dragHandle}>â˜°</Text>
               </GHPressable>
             )}
             <Text style={styles.categoryIcon}>{cat.icon}</Text>
@@ -221,7 +221,7 @@ export default function BudgetScreen() {
               placeholderTextColor={Colors.textSecondary}
             />
             <TouchableOpacity onPress={() => removeCategory(cat.id)}>
-              <Text style={styles.removeBtn}>✕</Text>
+              <Text style={styles.removeBtn}>âœ•</Text>
             </TouchableOpacity>
           </View>
           <View style={styles.categoryBottomRow}>
@@ -271,7 +271,7 @@ export default function BudgetScreen() {
         <Text style={[styles.statusAmount, {
           color: remaining < 0 ? Colors.danger : Math.abs(remaining) < 0.5 ? Colors.success : Colors.info
         }]}>
-          {Math.abs(remaining) < 0.5 ? '🎉 $0' : '$' + Math.abs(remaining).toLocaleString('en-CA', { maximumFractionDigits: 0 })}
+          {Math.abs(remaining) < 0.5 ? 'ðŸŽ‰ $0' : '$' + Math.abs(remaining).toLocaleString('en-CA', { maximumFractionDigits: 0 })}
         </Text>
         <Text style={[styles.statusBiweekly, {
           color: remaining < 0 ? Colors.danger : Math.abs(remaining) < 0.5 ? Colors.success : Colors.info
@@ -279,10 +279,10 @@ export default function BudgetScreen() {
           {Math.abs(remaining) < 0.5 ? 'Every dollar assigned!' : (remaining < 0 ? 'Over budget by $' : 'Unassigned $') + Math.abs(remaining / 2).toLocaleString('en-CA', { maximumFractionDigits: 0 }) + ' per paycheque'}
         </Text>
         <Text style={styles.statusIncome}>
-          Monthly income: ${monthlyIncome.toLocaleString('en-CA', { maximumFractionDigits: 0 })} · Per paycheque: ${(monthlyIncome / 2).toLocaleString('en-CA', { maximumFractionDigits: 0 })}
+          Monthly income: ${monthlyIncome.toLocaleString('en-CA', { maximumFractionDigits: 0 })} Â· Per paycheque: ${(monthlyIncome / 2).toLocaleString('en-CA', { maximumFractionDigits: 0 })}
         </Text>
       </View>
-      <Text style={styles.dragHint}>Hold ☰ to drag and reorder</Text>
+      <Text style={styles.dragHint}>Hold â˜° to drag and reorder</Text>
     </View>
   )
 
@@ -294,7 +294,7 @@ export default function BudgetScreen() {
       {atNudge && (
         <View style={styles.nudgeBanner}>
           <Text style={styles.nudgeText}>
-            1 category left on your Free plan — Zerobased Pro has unlimited
+            1 category left on your Free plan â€” Zerobased Pro has unlimited
           </Text>
         </View>
       )}
@@ -329,7 +329,7 @@ export default function BudgetScreen() {
         </>
       )}
       {error ? <Text style={styles.error}>{error}</Text> : null}
-      {success ? <Text style={styles.successText}>✅ Budget saved!</Text> : null}
+      {success ? <Text style={styles.successText}>âœ… Budget saved!</Text> : null}
       <View style={{ height: 80 }} />
     </View>
   )

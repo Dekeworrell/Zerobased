@@ -1,15 +1,15 @@
-import { router, useFocusEffect } from 'expo-router'
+﻿import { router, useFocusEffect } from 'expo-router'
 import { useCallback, useState } from 'react'
 import { ActivityIndicator, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist'
 import { GestureHandlerRootView, Pressable as GHPressable } from 'react-native-gesture-handler'
-import CurrencyInput from '../components/CurrencyInput'
-import { ASSET_TYPE_OPTIONS, LIABILITY_ACCOUNTS as LIABILITY_TYPE_OPTIONS, getAccountIcon } from '../constants/accounts'
-import { isLiabilityAccount } from '../constants/categories'
-import { Colors } from '../constants/colors'
-import { getSubscriptionTier } from '../lib/purchases'
-import { supabase } from '../lib/supabase'
-import { getCachedHouseholdIds, getCachedUserId } from '../lib/userCache'
+import CurrencyInput from '../../components/CurrencyInput'
+import { ASSET_TYPE_OPTIONS, LIABILITY_ACCOUNTS as LIABILITY_TYPE_OPTIONS, getAccountIcon } from '../../constants/accounts'
+import { isLiabilityAccount } from '../../constants/categories'
+import { Colors } from '../../constants/colors'
+import { getSubscriptionTier } from '../../lib/purchases'
+import { supabase } from '../../lib/supabase'
+import { getCachedHouseholdIds, getCachedUserId } from '../../lib/userCache'
 
 type Account = {
   id: string
@@ -158,10 +158,10 @@ export default function AccountsScreen() {
                   drag()
                 }}
                 style={{ cursor: 'grab', touchAction: 'none', userSelect: 'none', fontSize: 18, color: Colors.textSecondary, padding: 4 } as any}
-              >☰</span>
+              >â˜°</span>
             ) : (
               <GHPressable onLongPress={drag} delayLongPress={150} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                <Text style={styles.dragHandle}>☰</Text>
+                <Text style={styles.dragHandle}>â˜°</Text>
               </GHPressable>
             )}
             <Text style={styles.accountIcon}>{getAccountIcon(account.type)}</Text>
@@ -188,7 +188,7 @@ export default function AccountsScreen() {
               placeholder="$0"
             />
             <TouchableOpacity onPress={() => deleteAccount(account.id)}>
-              <Text style={styles.deleteBtn}>✕</Text>
+              <Text style={styles.deleteBtn}>âœ•</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -221,7 +221,7 @@ export default function AccountsScreen() {
   const headerComponent = (
     <View style={styles.headerContent}>
       <Text style={styles.title}>Accounts</Text>
-      <Text style={styles.dragHint}>Hold ☰ to drag and reorder</Text>
+      <Text style={styles.dragHint}>Hold â˜° to drag and reorder</Text>
     </View>
   )
 
@@ -231,7 +231,7 @@ export default function AccountsScreen() {
         style={styles.addSmallBtn}
         onPress={() => setShowAddType(showAddType === 'asset' ? null : 'asset')}
       >
-        <Text style={styles.addSmallBtnText}>{showAddType === 'asset' ? '− Hide' : '+ Add asset'}</Text>
+        <Text style={styles.addSmallBtnText}>{showAddType === 'asset' ? 'âˆ’ Hide' : '+ Add asset'}</Text>
       </TouchableOpacity>
       {showAddType === 'asset' && (
         <View style={styles.typeGrid}>
@@ -247,7 +247,7 @@ export default function AccountsScreen() {
         style={styles.addSmallBtn}
         onPress={() => setShowAddType(showAddType === 'liability' ? null : 'liability')}
       >
-        <Text style={styles.addSmallBtnText}>{showAddType === 'liability' ? '− Hide' : '+ Add liability'}</Text>
+        <Text style={styles.addSmallBtnText}>{showAddType === 'liability' ? 'âˆ’ Hide' : '+ Add liability'}</Text>
       </TouchableOpacity>
       {showAddType === 'liability' && (
         <View style={styles.typeGrid}>
@@ -260,7 +260,7 @@ export default function AccountsScreen() {
         </View>
       )}
       {error ? <Text style={styles.error}>{error}</Text> : null}
-      {success ? <Text style={styles.successText}>✅ Balances saved!</Text> : null}
+      {success ? <Text style={styles.successText}>âœ… Balances saved!</Text> : null}
       <View style={{ height: 100 }} />
     </View>
   )
@@ -376,3 +376,4 @@ const styles = StyleSheet.create({
   upgradeButton: { backgroundColor: Colors.primary, paddingVertical: 12, paddingHorizontal: 24, borderRadius: 10, marginTop: 8 },
   upgradeButtonText: { color: Colors.text, fontSize: 15, fontWeight: '600' },
 })
+

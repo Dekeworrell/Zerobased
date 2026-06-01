@@ -9,7 +9,10 @@
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
       "PowerShell(New-Item *)",
-      "mcp__supabase__deploy_edge_function"
+      "mcp__supabase__deploy_edge_function",
+      "Bash(git push *)",
+      "mcp__supabase__list_projects",
+      "Bash(npx supabase *)"
     ]
   }
 }

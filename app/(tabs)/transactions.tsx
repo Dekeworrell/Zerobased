@@ -1,11 +1,11 @@
-import DateTimePicker from '@react-native-community/datetimepicker'
+﻿import DateTimePicker from '@react-native-community/datetimepicker'
 import { router, useFocusEffect } from 'expo-router'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
-import TransactionEditSheet from '../components/TransactionEditSheet'
-import { Colors } from '../constants/colors'
-import { supabase } from '../lib/supabase'
-import { getCachedHouseholdIds, getCachedUserId } from '../lib/userCache'
+import TransactionEditSheet from '../../components/TransactionEditSheet'
+import { Colors } from '../../constants/colors'
+import { supabase } from '../../lib/supabase'
+import { getCachedHouseholdIds, getCachedUserId } from '../../lib/userCache'
 
 type Transaction = {
   id: string
@@ -86,7 +86,7 @@ export default function TransactionsScreen() {
     setLoading(false)
   }
 
-  // Derived state via useMemo — no re-computation on unrelated renders
+  // Derived state via useMemo â€” no re-computation on unrelated renders
   const filtered = useMemo(() => {
     const q = debouncedSearch.toLowerCase()
     return transactions.filter(t => {
@@ -187,16 +187,16 @@ export default function TransactionsScreen() {
           onPress={() => setShowStartPicker(!showStartPicker)}
         >
           <Text style={styles.dateBtnText}>
-            {startDate ? startDate.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' }) : '📅 From'}
+            {startDate ? startDate.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' }) : 'ðŸ“… From'}
           </Text>
         </TouchableOpacity>
-        <Text style={styles.dateSeparator}>→</Text>
+        <Text style={styles.dateSeparator}>â†’</Text>
         <TouchableOpacity
           style={styles.dateBtn}
           onPress={() => setShowEndPicker(!showEndPicker)}
         >
           <Text style={styles.dateBtnText}>
-            {endDate ? endDate.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' }) : '📅 To'}
+            {endDate ? endDate.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' }) : 'ðŸ“… To'}
           </Text>
         </TouchableOpacity>
         {(startDate || endDate) && (
@@ -204,7 +204,7 @@ export default function TransactionsScreen() {
             style={styles.dateClearBtn}
             onPress={() => { setStartDate(null); setEndDate(null) }}
           >
-            <Text style={styles.dateClearBtnText}>✕ Clear</Text>
+            <Text style={styles.dateClearBtnText}>âœ• Clear</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -303,7 +303,7 @@ export default function TransactionsScreen() {
 
       {Object.keys(groups).length === 0 && (
         <View style={styles.emptyCard}>
-          <Text style={styles.emptyIcon}>📋</Text>
+          <Text style={styles.emptyIcon}>ðŸ“‹</Text>
           <Text style={styles.emptyTitle}>No transactions yet</Text>
           <Text style={styles.emptySubtitle}>Tap + Add to log your first transaction</Text>
         </View>
@@ -327,7 +327,7 @@ export default function TransactionsScreen() {
               <TouchableOpacity key={transaction.id} style={styles.transactionRow} onPress={() => setSelectedTransaction(transaction)}>
                 <View style={styles.transactionIcon}>
                   <Text style={styles.transactionIconText}>
-                    {transaction.type === 'transfer' ? '⇄' : transaction.is_unexpected ? '⚠️' : transaction.category?.icon || '💳'}
+                    {transaction.type === 'transfer' ? 'â‡„' : transaction.is_unexpected ? 'âš ï¸' : transaction.category?.icon || 'ðŸ’³'}
                   </Text>
                 </View>
                 <View style={styles.transactionInfo}>
