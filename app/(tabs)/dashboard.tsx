@@ -6,6 +6,7 @@ import { Colors } from '../../constants/colors'
 import { calculateBudgetStatus, getPayPeriodDates, toMonthly, toPeriodAmount } from '../../lib/store'
 import { supabase } from '../../lib/supabase'
 import { getCachedHouseholdIds, getCachedUserId } from '../../lib/userCache'
+import { getSubscriptionTier } from '../../lib/purchases'
 
 export default function DashboardScreen() {
   const [loading, setLoading] = useState(true)
@@ -55,6 +56,7 @@ export default function DashboardScreen() {
         { data: accs },
         { data: catDefaults },
         { data: members },
+        rcTier,
       ] = await Promise.all([
         supabase.from('profiles').select('name, budget_cycle, default_account_id, last_payday_check, household_id, subscription_tier, paycheque_reminders').eq('id', userId).single(),
         supabase.from('income_sources').select('id, label, amount, frequency, next_payday, income_type, user_id').in('user_id', userIds),
@@ -62,6 +64,7 @@ export default function DashboardScreen() {
         supabase.from('accounts').select('id, label, type, balance, user_id').in('user_id', userIds),
         supabase.from('category_account_defaults').select('category_id, account_id').in('user_id', userIds),
         supabase.rpc('get_household_members'),
+        getSubscriptionTier(),
       ])
 
       // Profile + greeting name
@@ -82,7 +85,9 @@ export default function DashboardScreen() {
       const todayStr = new Date(now.getTime() - now.getTimezoneOffset() * 60 * 1000).toISOString().split('T')[0]
       const lastCheck = profile?.last_payday_check || ''
       const myIncome = (income || []).filter((s: any) => s.user_id === userId)
-      const tier = (profile?.subscription_tier as string) ?? 'free'
+      // Combine DB tier and RevenueCat tier — Pro if either says Pro
+      const dbTier = (profile?.subscription_tier as string) ?? 'free'
+      const tier = dbTier === 'pro' || rcTier === 'pro' ? 'pro' : 'free'
       const remindersOn = profile?.paycheque_reminders ?? true
 
       if (tier === 'pro' && remindersOn && !showPaydayModal && !paydayShownRef.current && myIncome.length > 0) {
@@ -98,24 +103,35 @@ export default function DashboardScreen() {
           paydayShownRef.current = true
           setShowPaydayModal(true)
         } else if (lastCheck !== todayStr) {
-          // Normal payday check — is today a scheduled payday?
-          const isPayday = myIncome.some((s: any) => {
-            if (!s.next_payday) return false
-            return s.next_payday.split('|').some((d: string) => d === todayStr)
-          })
-          if (isPayday) {
+          // Check today AND any missed paydays in the past (up to 7 days back)
+          let triggeredDate: string | null = null
+          for (const s of myIncome) {
+            if (!s.next_payday) continue
+            const payDates = s.next_payday.split('|')
+            for (const d of payDates) {
+              if (d === todayStr) { triggeredDate = todayStr; break }
+              // Missed payday: date is in the past and hasn't been logged
+              const diff = (new Date(todayStr).getTime() - new Date(d).getTime()) / 86400000
+              if (diff > 0 && diff <= 7 && lastCheck !== d && !lastCheck.startsWith('SKIP:')) {
+                triggeredDate = d
+                break
+              }
+            }
+            if (triggeredDate) break
+          }
+          if (triggeredDate) {
             setPaydayIncomeSources(myIncome.map((s: any) => ({ ...s, income_type: s.income_type || 'fixed' })))
             setPaydayUserName(profileName)
-            setPaydayActualDate(todayStr)
-            setIsPaydayReminder(false)
+            setPaydayActualDate(triggeredDate)
+            setIsPaydayReminder(triggeredDate !== todayStr)
             paydayShownRef.current = true
             setShowPaydayModal(true)
           }
         }
       }
 
-      // Subscription tier
-      setSubscriptionTier((profile?.subscription_tier as 'free' | 'pro') ?? 'free')
+      // Subscription tier — use combined result
+      setSubscriptionTier(tier === 'pro' ? 'pro' : 'free')
 
       // Accounts
       if (accs) setAccounts(accs)
