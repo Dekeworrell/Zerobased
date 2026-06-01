@@ -887,6 +887,7 @@ export default function AddTransactionScreen() {
           visible={!!editingTransaction}
           transaction={editingTransaction}
           categories={categories}
+          accounts={accounts}
           onClose={() => setEditingTransaction(null)}
           onSaved={() => {
             setEditingTransaction(null)

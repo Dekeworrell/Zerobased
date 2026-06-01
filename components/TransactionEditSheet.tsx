@@ -19,23 +19,27 @@ type Transaction = {
 }
 
 type Category = { id: string; label: string; icon: string }
+type Account = { id: string; label: string; type: string }
 
 type Props = {
   visible: boolean
   transaction: Transaction | null
   categories: Category[]
+  accounts: Account[]
   onClose: () => void
   onSaved: () => void
   onDeleted: () => void
 }
 
-export default function TransactionEditSheet({ visible, transaction, categories, onClose, onSaved, onDeleted }: Props) {
+export default function TransactionEditSheet({ visible, transaction, categories, accounts, onClose, onSaved, onDeleted }: Props) {
   const [amount, setAmount] = useState('')
   const [label, setLabel] = useState('')
   const [date, setDate] = useState(new Date())
   const [showDatePicker, setShowDatePicker] = useState(false)
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null)
+  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null)
   const [showCategoryPicker, setShowCategoryPicker] = useState(false)
+  const [showAccountPicker, setShowAccountPicker] = useState(false)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState('')
@@ -46,7 +50,9 @@ export default function TransactionEditSheet({ visible, transaction, categories,
       setLabel(transaction.label)
       setDate(new Date(transaction.date.split('T')[0] + 'T12:00:00'))
       setSelectedCategoryId(transaction.category_id)
+      setSelectedAccountId(transaction.account_id)
       setShowCategoryPicker(false)
+      setShowAccountPicker(false)
       setShowDatePicker(false)
       setError('')
     }
@@ -71,29 +77,43 @@ export default function TransactionEditSheet({ visible, transaction, categories,
     try {
       const newAmount = parseFloat(amount)
       const oldAmount = transaction!.amount
+      const oldAccountId = transaction!.account_id
+      const newAccountId = selectedAccountId
+      const accountChanged = oldAccountId !== newAccountId
+      const amountChanged = newAmount !== oldAmount
 
       await supabase.from('transactions').update({
         label: label || transaction!.label,
         amount: newAmount,
         date: formatDateForDB(date),
         category_id: selectedCategoryId,
+        account_id: newAccountId,
       }).eq('id', transaction!.id)
 
-      if (transaction!.account_id && newAmount !== oldAmount) {
-        const { data: acc } = await supabase
-          .from('accounts').select('balance, type').eq('id', transaction!.account_id).single()
-        if (acc) {
-          const current = parseFloat(acc.balance) || 0
-          const oldDelta = transaction!.type === 'income'
-            ? balanceChangeOnIncome(acc.type, oldAmount)
-            : balanceChangeOnExpense(acc.type, oldAmount)
-          const newDelta = transaction!.type === 'income'
-            ? balanceChangeOnIncome(acc.type, newAmount)
-            : balanceChangeOnExpense(acc.type, newAmount)
-          const newBalance = current - oldDelta + newDelta
-          await supabase.from('accounts').update({ balance: newBalance }).eq('id', transaction!.account_id)
+      // Update account balances if account or amount changed
+      if (accountChanged || amountChanged) {
+        // Reverse the old delta on the old account
+        if (oldAccountId) {
+          const { data: oldAcc } = await supabase.from('accounts').select('balance, type').eq('id', oldAccountId).single()
+          if (oldAcc) {
+            const oldDelta = transaction!.type === 'income'
+              ? balanceChangeOnIncome(oldAcc.type, oldAmount)
+              : balanceChangeOnExpense(oldAcc.type, oldAmount)
+            await supabase.from('accounts').update({ balance: (parseFloat(oldAcc.balance) || 0) - oldDelta }).eq('id', oldAccountId)
+          }
+        }
+        // Apply the new delta on the new account
+        if (newAccountId) {
+          const { data: newAcc } = await supabase.from('accounts').select('balance, type').eq('id', newAccountId).single()
+          if (newAcc) {
+            const newDelta = transaction!.type === 'income'
+              ? balanceChangeOnIncome(newAcc.type, newAmount)
+              : balanceChangeOnExpense(newAcc.type, newAmount)
+            await supabase.from('accounts').update({ balance: (parseFloat(newAcc.balance) || 0) + newDelta }).eq('id', newAccountId)
+          }
         }
       }
+
       onSaved()
     } catch (err: any) {
       setError(err.message)
@@ -218,6 +238,35 @@ export default function TransactionEditSheet({ visible, transaction, categories,
                     </TouchableOpacity>
                   ))}
                 </View>
+              )}
+
+              {accounts.length > 0 && (
+                <>
+                  <Text style={styles.fieldLabel}>Account</Text>
+                  <TouchableOpacity style={styles.categoryButton} onPress={() => setShowAccountPicker(!showAccountPicker)}>
+                    <Text style={styles.categoryButtonText}>
+                      {selectedAccountId
+                        ? `🏦 ${accounts.find(a => a.id === selectedAccountId)?.label ?? 'Unknown'}`
+                        : '— No account —'}
+                    </Text>
+                    <Text style={styles.chevron}>{showAccountPicker ? '▲' : '▼'}</Text>
+                  </TouchableOpacity>
+                  {showAccountPicker && (
+                    <View style={styles.categoryList}>
+                      {accounts.map(acc => (
+                        <TouchableOpacity
+                          key={acc.id}
+                          style={[styles.categoryRow, selectedAccountId === acc.id && styles.categoryRowActive]}
+                          onPress={() => { setSelectedAccountId(acc.id); setShowAccountPicker(false) }}
+                        >
+                          <Text style={styles.categoryRowIcon}>🏦</Text>
+                          <Text style={[styles.categoryRowText, selectedAccountId === acc.id && styles.categoryRowTextActive]}>{acc.label}</Text>
+                          {selectedAccountId === acc.id && <Text style={styles.checkmark}>✓</Text>}
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+                </>
               )}
 
               {error ? <Text style={styles.error}>{error}</Text> : null}

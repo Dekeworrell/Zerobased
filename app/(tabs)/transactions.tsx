@@ -35,6 +35,7 @@ export default function TransactionsScreen() {
   const [showEndPicker, setShowEndPicker] = useState(false)
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null)
   const [allCategories, setAllCategories] = useState<{ id: string; label: string; icon: string }[]>([])
+  const [allAccounts, setAllAccounts] = useState<{ id: string; label: string; type: string }[]>([])
   const scrollRef = useRef<ScrollView>(null)
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -56,7 +57,7 @@ export default function TransactionsScreen() {
     if (!userId) return
     const userIds = await getCachedHouseholdIds(userId)
 
-    const [{ data }, { data: cats }] = await Promise.all([
+    const [{ data }, { data: cats }, { data: accs }] = await Promise.all([
       supabase
         .from('transactions')
         .select(`
@@ -73,7 +74,9 @@ export default function TransactionsScreen() {
         .order('date', { ascending: false })
         .limit(500),
       supabase.from('budget_categories').select('id, label, icon').in('user_id', userIds),
+      supabase.from('accounts').select('id, label, type').in('user_id', userIds),
     ])
+    if (accs) setAllAccounts(accs)
 
     if (data) {
       const txnsWithCategories = (data as any[]).map(t => ({
@@ -358,6 +361,7 @@ export default function TransactionsScreen() {
         visible={!!selectedTransaction}
         transaction={selectedTransaction}
         categories={allCategories}
+        accounts={allAccounts}
         onClose={() => setSelectedTransaction(null)}
         onSaved={() => { setSelectedTransaction(null); loadTransactions() }}
         onDeleted={() => { setSelectedTransaction(null); loadTransactions() }}
