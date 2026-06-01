@@ -243,9 +243,16 @@ export default function DashboardScreen() {
               : `Here's your budget for ${new Date().toLocaleDateString('en-CA', { month: 'long', year: 'numeric' })}`}
           </Text>
         </View>
-        <TouchableOpacity onPress={() => router.push('/settings')} style={styles.settingsBtn}>
-          <Text style={styles.settingsIcon}>⚙️</Text>
-        </TouchableOpacity>
+        <View style={styles.headerRight}>
+          {subscriptionTier !== 'pro' && (
+            <TouchableOpacity style={styles.proPill} onPress={() => router.push('/upgrade')}>
+              <Text style={styles.proPillText}>⭐ Pro</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity onPress={() => router.push('/settings')} style={styles.settingsBtn}>
+            <Text style={styles.settingsIcon}>⚙️</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {subscriptionTier === 'pro' && accounts.length === 0 && (
@@ -523,6 +530,23 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.textSecondary,
     marginTop: 4,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  proPill: {
+    backgroundColor: Colors.primary,
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+  },
+  proPillText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#ffffff',
+    letterSpacing: 0.3,
   },
   settingsBtn: {
     padding: 8,
