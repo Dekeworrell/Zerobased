@@ -92,38 +92,37 @@ export default function DashboardScreen() {
 
       if (tier === 'pro' && remindersOn && !showPaydayModal && !paydayShownRef.current && myIncome.length > 0) {
         const isPendingSkip = lastCheck.startsWith('SKIP:')
-        const pendingDate = isPendingSkip ? lastCheck.replace('SKIP:', '') : null
+        const skippedDate = isPendingSkip ? lastCheck.replace('SKIP:', '') : null
 
-        if (isPendingSkip && pendingDate) {
-          // User skipped a previous payday — show reminder with the original payday date
+        if (isPendingSkip && skippedDate) {
+          // User previously skipped — remind them with the original payday date
           setPaydayIncomeSources(myIncome.map((s: any) => ({ ...s, income_type: s.income_type || 'fixed' })))
           setPaydayUserName(profileName)
-          setPaydayActualDate(pendingDate)
+          setPaydayActualDate(skippedDate)
           setIsPaydayReminder(true)
           paydayShownRef.current = true
           setShowPaydayModal(true)
-        } else if (lastCheck !== todayStr) {
-          // Check today AND any missed paydays in the past (up to 7 days back)
+        } else {
+          // Find the most recent payday that is today or in the past and not yet logged
           let triggeredDate: string | null = null
           for (const s of myIncome) {
             if (!s.next_payday) continue
-            const payDates = s.next_payday.split('|')
-            for (const d of payDates) {
-              if (d === todayStr) { triggeredDate = todayStr; break }
-              // Missed payday: date is in the past and hasn't been logged
-              const diff = (new Date(todayStr).getTime() - new Date(d).getTime()) / 86400000
-              if (diff > 0 && diff <= 7 && lastCheck !== d && !lastCheck.startsWith('SKIP:')) {
-                triggeredDate = d
+            // next_payday may be pipe-separated for semi-monthly
+            const dates = s.next_payday.split('|').filter((d: string) => d <= todayStr)
+            if (dates.length > 0) {
+              // Take the most recent one (closest to today)
+              const mostRecent = dates.sort().pop()
+              if (mostRecent && mostRecent !== lastCheck) {
+                triggeredDate = mostRecent
                 break
               }
             }
-            if (triggeredDate) break
           }
           if (triggeredDate) {
             setPaydayIncomeSources(myIncome.map((s: any) => ({ ...s, income_type: s.income_type || 'fixed' })))
             setPaydayUserName(profileName)
             setPaydayActualDate(triggeredDate)
-            setIsPaydayReminder(triggeredDate !== todayStr)
+            setIsPaydayReminder(triggeredDate < todayStr)
             paydayShownRef.current = true
             setShowPaydayModal(true)
           }
