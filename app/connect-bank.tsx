@@ -124,7 +124,8 @@ export default function ConnectBankScreen() {
         'plaid-create-link-token'
       )
       if (linkError || !linkData?.link_token) {
-        throw new Error(linkError?.message ?? 'Could not start bank connection')
+        const detail = linkData?.error ?? linkError?.message ?? 'Could not start bank connection'
+        throw new Error(detail)
       }
 
       // 2. Open Plaid Link hosted flow in the browser
