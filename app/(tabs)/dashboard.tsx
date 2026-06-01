@@ -20,7 +20,7 @@ export default function DashboardScreen() {
   const [payPeriodLabel, setPayPeriodLabel] = useState('this month')
   const [payPeriodStart, setPayPeriodStart] = useState<Date | null>(null)
   const [payPeriodEnd, setPayPeriodEnd] = useState<Date | null>(null)
-  const [summaryView, setSummaryView] = useState<'cycle' | 'monthly'>('cycle')
+  const [summaryView, setSummaryView] = useState<'cycle' | 'monthly'>('monthly')
   const [categoryDefaults, setCategoryDefaults] = useState<{ [categoryId: string]: string }>({})
   const [globalDefaultAccountId, setGlobalDefaultAccountId] = useState<string | null>(null)
   const [showPaydayModal, setShowPaydayModal] = useState(false)
@@ -318,12 +318,18 @@ export default function DashboardScreen() {
                 <TouchableOpacity
                   onPress={(e) => {
                     e.stopPropagation()
-                    setSummaryView(v => v === 'cycle' ? 'monthly' : 'cycle')
+                    if (subscriptionTier !== 'pro') {
+                      router.push('/upgrade')
+                    } else {
+                      setSummaryView(v => v === 'cycle' ? 'monthly' : 'cycle')
+                    }
                   }}
                   style={styles.togglePill}
                 >
                   <Text style={styles.togglePillText}>
-                    {summaryView === 'cycle' ? '📅 Pay period' : '🗓 Monthly'}
+                    {subscriptionTier !== 'pro'
+                      ? '📅 Pay period 🔒'
+                      : summaryView === 'cycle' ? '📅 Pay period' : '🗓 Monthly'}
                   </Text>
                 </TouchableOpacity>
                 <Text style={styles.budgetSummaryChevron}>
