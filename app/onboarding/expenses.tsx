@@ -1,6 +1,6 @@
 import { router } from 'expo-router'
 import { useState } from 'react'
-import { StyleSheet, Text, TextInput, TouchableOpacity, View, ScrollView } from 'react-native'
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import CurrencyInput from '../../components/CurrencyInput'
 import KeyboardScrollView from '../../components/KeyboardScrollView'
 import { EXPENSE_CATEGORIES } from '../../constants/categories'
@@ -17,8 +17,8 @@ type LocalExpense = {
   permanent?: boolean
 }
 
-const FREE_TIER_LIMIT = 8
-const FREE_TIER_NUDGE_AT = 7
+const FREE_TIER_LIMIT = 4
+const FREE_TIER_NUDGE_AT = 3
 
 export default function ExpensesScreen() {
   const [masterFrequency, setMasterFrequency] = useState<'monthly' | 'biweekly'>('monthly')

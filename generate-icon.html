@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Zerobased Icon Generator</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #0a0a0a;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      gap: 32px;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      padding: 40px;
+    }
+    h2 { color: #eee; font-size: 18px; font-weight: 500; letter-spacing: 0.5px; }
+    .previews {
+      display: flex;
+      align-items: flex-end;
+      gap: 28px;
+    }
+    .preview-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+    .preview-wrap span { color: #555; font-size: 12px; }
+    #icon    { border-radius: 54px;  box-shadow: 0 28px 90px rgba(40,198,100,0.35); }
+    #prev60  { border-radius: 13px;  box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+    #prev120 { border-radius: 26px;  box-shadow: 0 8px 30px rgba(0,0,0,0.5); }
+    .btns { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+    button {
+      background: #28c664;
+      color: #052010;
+      border: none;
+      padding: 14px 36px;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: 0.2px;
+    }
+    button:hover { background: #22a855; }
+    .note { color: #444; font-size: 13px; text-align: center; line-height: 1.6; }
+  </style>
+</head>
+<body>
+  <h2>Zerobased — Icon Preview</h2>
+
+  <div class="previews">
+    <div class="preview-wrap">
+      <canvas id="prev60"  width="60"   height="60"  style="width:60px;height:60px"></canvas>
+      <span>60px</span>
+    </div>
+    <div class="preview-wrap">
+      <canvas id="prev120" width="120"  height="120" style="width:120px;height:120px"></canvas>
+      <span>120px</span>
+    </div>
+    <div class="preview-wrap">
+      <canvas id="icon"    width="1024" height="1024" style="width:300px;height:300px"></canvas>
+      <span>1024px (master)</span>
+    </div>
+  </div>
+
+  <div class="btns">
+    <button onclick="download('zerobased-icon-1024.png', 1024)">⬇ Download 1024×1024 PNG</button>
+  </div>
+  <p class="note">Use the 1024px file for App Store Connect &amp; Plaid upload.</p>
+
+  <script>
+  // ─── Draw the icon onto any canvas ────────────────────────────────────────
+  function drawIcon(canvas) {
+    const ctx = canvas.getContext('2d')
+    const W = canvas.width, H = canvas.height
+    const S = W / 1024  // scale factor
+
+    ctx.clearRect(0, 0, W, H)
+
+    // ── Rounded rect clip ──────────────────────────────────────────────────
+    const r = 230 * S
+    ctx.beginPath()
+    ctx.moveTo(r, 0)
+    ctx.arcTo(W, 0, W, H, r)
+    ctx.arcTo(W, H, 0, H, r)
+    ctx.arcTo(0, H, 0, 0, r)
+    ctx.arcTo(0, 0, W, 0, r)
+    ctx.closePath()
+    ctx.save()
+    ctx.clip()
+
+    // ── Background: deep emerald gradient ─────────────────────────────────
+    const bg = ctx.createLinearGradient(0, 0, W, H)
+    bg.addColorStop(0,    '#1c7a44')   // deep forest green
+    bg.addColorStop(0.45, '#1fa853')   // mid emerald
+    bg.addColorStop(1,    '#17923f')   // rich dark
+    ctx.fillStyle = bg
+    ctx.fillRect(0, 0, W, H)
+
+    // Radial top-left highlight (simulated light source)
+    const light = ctx.createRadialGradient(W*0.32, H*0.28, 0, W*0.32, H*0.28, W*0.78)
+    light.addColorStop(0, 'rgba(255,255,255,0.13)')
+    light.addColorStop(1, 'rgba(0,0,0,0.22)')
+    ctx.fillStyle = light
+    ctx.fillRect(0, 0, W, H)
+
+    // ── Symbol coordinates ─────────────────────────────────────────────────
+    const L  = 210 * S   // left edge of Z bars
+    const R  = 814 * S   // right edge of Z bars
+    const T  = 224 * S   // top bar Y
+    const B  = 800 * S   // bottom bar Y
+    const CX = 512 * S   // center X (dollar bar)
+    const EXT = 96 * S   // how far the $ bar extends past Z bars
+
+    const Z_W  = 106 * S   // Z stroke width (bold)
+    const D_W  = 66  * S   // Dollar bar stroke width (thinner for layering hierarchy)
+
+    // ── Glow pass — draw behind everything ───────────────────────────────
+    ctx.save()
+    ctx.shadowColor = 'rgba(160, 255, 200, 0.5)'
+    ctx.shadowBlur  = 38 * S
+    ctx.globalAlpha = 1
+
+    // Z — top bar
+    stroke(ctx, L, T, R, T, Z_W, 'rgba(255,255,255,0.95)')
+    // Z — diagonal
+    stroke(ctx, R, T, L, B, Z_W, 'rgba(255,255,255,0.95)')
+    // Z — bottom bar
+    stroke(ctx, L, B, R, B, Z_W, 'rgba(255,255,255,0.95)')
+
+    ctx.restore()
+
+    // ── Z (solid, no shadow) ──────────────────────────────────────────────
+    ctx.save()
+    ctx.shadowColor = 'rgba(0, 40, 10, 0.4)'
+    ctx.shadowBlur  = 18 * S
+    ctx.shadowOffsetY = 6 * S
+
+    stroke(ctx, L, T, R, T, Z_W, '#ffffff')
+    stroke(ctx, R, T, L, B, Z_W, '#ffffff')
+    stroke(ctx, L, B, R, B, Z_W, '#ffffff')
+
+    ctx.restore()
+
+
+    ctx.restore() // end clip
+  }
+
+  function stroke(ctx, x1, y1, x2, y2, width, color) {
+    ctx.beginPath()
+    ctx.moveTo(x1, y1)
+    ctx.lineTo(x2, y2)
+    ctx.strokeStyle = color
+    ctx.lineWidth   = width
+    ctx.lineCap     = 'round'
+    ctx.lineJoin    = 'round'
+    ctx.stroke()
+  }
+
+  // ── Render all sizes ──────────────────────────────────────────────────────
+  ;['icon', 'prev120', 'prev60'].forEach(id => {
+    drawIcon(document.getElementById(id))
+  })
+
+  // ── Download ──────────────────────────────────────────────────────────────
+  function download(filename, size) {
+    const c = document.createElement('canvas')
+    c.width = c.height = size
+    drawIcon(c)
+    const a = document.createElement('a')
+    a.download = filename
+    a.href = c.toDataURL('image/png')
+    a.click()
+  }
+  </script>
+</body>
+</html>
