@@ -3,10 +3,10 @@ import { useCallback, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import PaydayModal from '../../components/PaydayModal'
 import { Colors } from '../../constants/colors'
+import { getSubscriptionTier } from '../../lib/purchases'
 import { calculateBudgetStatus, getPayPeriodDates, toMonthly, toPeriodAmount } from '../../lib/store'
 import { supabase } from '../../lib/supabase'
 import { getCachedHouseholdIds, getCachedUserId } from '../../lib/userCache'
-import { getSubscriptionTier } from '../../lib/purchases'
 
 export default function DashboardScreen() {
   const [loading, setLoading] = useState(true)
@@ -119,12 +119,38 @@ export default function DashboardScreen() {
             }
           }
           if (triggeredDate) {
-            setPaydayIncomeSources(myIncome.map((s: any) => ({ ...s, income_type: s.income_type || 'fixed' })))
-            setPaydayUserName(profileName)
-            setPaydayActualDate(triggeredDate)
-            setIsPaydayReminder(triggeredDate < todayStr)
-            paydayShownRef.current = true
-            setShowPaydayModal(true)
+            // Check if triggered date is more than 2 pay periods old
+            const triggeredSource = myIncome.find((s: any) => s.next_payday)
+            const freq = triggeredSource?.frequency || 'biweekly'
+            const periodDays = freq === 'weekly' ? 7 : freq === 'semimonthly' ? 15 : freq === 'monthly' ? 30 : 14
+            const cutoff = new Date()
+            cutoff.setDate(cutoff.getDate() - (2 * periodDays))
+            const cutoffStr = cutoff.toISOString().split('T')[0]
+
+            if (triggeredDate < cutoffStr) {
+              // Too old — silently advance next_payday and skip the modal
+              for (const s of myIncome) {
+                if (!s.next_payday) continue
+                const advanced = new Date(triggeredDate + 'T12:00:00')
+                while (advanced.toISOString().split('T')[0] <= todayStr) {
+                  advanced.setDate(advanced.getDate() + periodDays)
+                }
+                await supabase.from('income_sources')
+                  .update({ next_payday: advanced.toISOString().split('T')[0] })
+                  .eq('id', s.id)
+              }
+              await supabase.from('profiles')
+                .update({ last_payday_check: todayStr })
+                .eq('id', userId)
+            } else {
+              // Within 2 pay periods — show the modal normally
+              setPaydayIncomeSources(myIncome.map((s: any) => ({ ...s, income_type: s.income_type || 'fixed' })))
+              setPaydayUserName(profileName)
+              setPaydayActualDate(triggeredDate)
+              setIsPaydayReminder(triggeredDate < todayStr)
+              paydayShownRef.current = true
+              setShowPaydayModal(true)
+            }
           }
         }
       }

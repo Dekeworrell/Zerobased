@@ -70,6 +70,7 @@ export default function PaydayModal({ visible, incomeSources, accounts, defaultA
   const [confirmedBudgeted, setConfirmedBudgeted] = useState(0)
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(defaultAccountId)
   const [makeDefault, setMakeDefault] = useState(false)
+  const [showAllAccounts, setShowAllAccounts] = useState(!defaultAccountId)
 
   const emojiScale = useRef(new Animated.Value(0.1)).current
   const coinAnims = useRef(
@@ -88,6 +89,7 @@ export default function PaydayModal({ visible, incomeSources, accounts, defaultA
     setError('')
     setSelectedAccountId(defaultAccountId)
     setMakeDefault(false)
+    setShowAllAccounts(!defaultAccountId)
 
     // Pop the main coin icon in
     emojiScale.setValue(0.1)
@@ -282,7 +284,7 @@ export default function PaydayModal({ visible, incomeSources, accounts, defaultA
               ],
             }]}
           >
-            🪙
+            {i % 2 === 0 ? '💰' : '💵'}
           </Animated.Text>
         ))}
 
@@ -300,7 +302,7 @@ export default function PaydayModal({ visible, incomeSources, accounts, defaultA
             keyboardShouldPersistTaps="handled"
           >
             <Animated.Text style={[styles.emoji, { transform: [{ scale: emojiScale }] }]}>
-              🪙
+              💰
             </Animated.Text>
             <Text style={styles.title}>
               {isReminder
@@ -347,7 +349,7 @@ export default function PaydayModal({ visible, incomeSources, accounts, defaultA
               <>
                 <Text style={styles.fieldLabel}>Deposit to account</Text>
                 <View style={styles.accountList}>
-                  {accounts.map(acc => (
+                  {(showAllAccounts ? accounts : accounts.filter(a => a.id === defaultAccountId)).map(acc => (
                     <TouchableOpacity
                       key={acc.id}
                       style={[styles.accountRow, selectedAccountId === acc.id && styles.accountRowActive]}
@@ -360,6 +362,12 @@ export default function PaydayModal({ visible, incomeSources, accounts, defaultA
                     </TouchableOpacity>
                   ))}
                 </View>
+
+                {!showAllAccounts && (
+                  <TouchableOpacity onPress={() => setShowAllAccounts(true)}>
+                    <Text style={styles.moreAccountsLink}>More accounts</Text>
+                  </TouchableOpacity>
+                )}
 
                 {selectedAccountId && selectedAccountId !== defaultAccountId && (
                   <TouchableOpacity style={styles.defaultToggle} onPress={() => setMakeDefault(!makeDefault)}>
@@ -544,6 +552,7 @@ const styles = StyleSheet.create({
   },
   checkboxCheck: { fontSize: 12, color: Colors.text, fontWeight: '700' },
   defaultToggleText: { fontSize: 13, color: Colors.textSecondary, flex: 1 },
+  moreAccountsLink: { fontSize: 13, color: Colors.primary, fontWeight: '500', textAlign: 'center', paddingVertical: 4 },
   error: { color: Colors.danger, fontSize: 13, textAlign: 'center' },
   primaryBtn: {
     backgroundColor: Colors.primary,
