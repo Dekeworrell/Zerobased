@@ -8,7 +8,7 @@ import { Colors } from '../constants/colors'
 import { supabase } from '../lib/supabase'
 
 const OWNER_EMAIL = 'Dekeworrell@shaw.ca'
-type AdminTab = 'overview' | 'subscribers' | 'affiliates' | 'campaigns' | 'settings'
+type AdminTab = 'overview' | 'subscribers' | 'affiliates' | 'campaigns' | 'feedback' | 'settings'
 
 type AffiliateRow = {
   id: string; name: string; email: string; referral_code: string
@@ -73,6 +73,8 @@ export default function AdminScreen() {
   const [commLaunch, setCommLaunch] = useState('40')
   const [minPayout, setMinPayout] = useState('50.00')
   const [announcement, setAnnouncement] = useState('')
+  const [feedback, setFeedback] = useState<any[]>([])
+  const [feedbackFilter, setFeedbackFilter] = useState<'all' | 'bug' | 'suggestion'>('all')
 
   useFocusEffect(useCallback(() => { loadStats() }, []))
 
@@ -103,6 +105,13 @@ export default function AdminScreen() {
           .order('converted_at', { ascending: false })
           .limit(20),
       ])
+
+      const { data: feedbackData } = await supabase
+        .from('feedback')
+        .select('id, type, message, app_version, status, created_at, user_id')
+        .order('created_at', { ascending: false })
+        .limit(100)
+      setFeedback(feedbackData ?? [])
 
       if (affiliatesRes.error) throw new Error('affiliates: ' + affiliatesRes.error.message)
 
@@ -203,11 +212,13 @@ export default function AdminScreen() {
     a.referral_code.toLowerCase().includes(affiliateSearch.toLowerCase())
   ).sort((a, b) => b.total_earned - a.total_earned)
 
+  const newFeedbackCount = feedback.filter(f => f.status === 'new').length
   const TABS: { key: AdminTab; label: string }[] = [
     { key: 'overview', label: 'Overview' },
     { key: 'subscribers', label: 'Subscribers' },
     { key: 'affiliates', label: 'Affiliates' },
     { key: 'campaigns', label: 'Campaigns' },
+    { key: 'feedback', label: 'Feedback' },
     { key: 'settings', label: 'Settings' },
   ]
 
@@ -238,6 +249,9 @@ export default function AdminScreen() {
             <Text style={[s.tabText, activeTab === t.key && s.tabTextActive]}>{t.label}</Text>
             {t.key === 'affiliates' && pending.length > 0 && (
               <View style={s.tabBadge}><Text style={s.tabBadgeText}>{pending.length}</Text></View>
+            )}
+            {t.key === 'feedback' && newFeedbackCount > 0 && (
+              <View style={s.tabBadge}><Text style={s.tabBadgeText}>{newFeedbackCount}</Text></View>
             )}
           </TouchableOpacity>
         ))}
@@ -500,6 +514,74 @@ export default function AdminScreen() {
               <TouchableOpacity style={[s.primaryBtn, { alignSelf: 'flex-end', marginTop: 8 }]}>
                 <Text style={s.primaryBtnText}>Create Campaign</Text>
               </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* ── FEEDBACK ── */}
+        {activeTab === 'feedback' && (
+          <View style={s.section}>
+            <View style={s.pageHeader}>
+              <Text style={s.pageTitle}>Feedback & Bug Reports</Text>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                {(['all', 'bug', 'suggestion'] as const).map(f => (
+                  <TouchableOpacity
+                    key={f}
+                    style={[s.btnOutline, feedbackFilter === f && { backgroundColor: Colors.primary, borderColor: Colors.primary }]}
+                    onPress={() => setFeedbackFilter(f)}
+                  >
+                    <Text style={[s.btnTextDark, feedbackFilter === f && { color: '#fff' }]}>
+                      {f === 'all' ? 'All' : f === 'bug' ? '🐛 Bugs' : '💡 Ideas'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={s.cardRow}>
+              {[
+                { label: 'Total', value: feedback.length },
+                { label: 'Bugs', value: feedback.filter(f => f.type === 'bug').length },
+                { label: 'Suggestions', value: feedback.filter(f => f.type === 'suggestion').length },
+                { label: 'New', value: newFeedbackCount },
+              ].map(c => (
+                <View key={c.label} style={s.miniCard}>
+                  <Text style={s.miniVal}>{c.value}</Text>
+                  <Text style={s.miniLabel}>{c.label}</Text>
+                </View>
+              ))}
+            </View>
+
+            <View style={s.tableCard}>
+              {feedback
+                .filter(f => feedbackFilter === 'all' || f.type === feedbackFilter)
+                .length === 0 ? (
+                <View style={s.emptyBox}>
+                  <Text style={s.emptyTitle}>No feedback yet</Text>
+                </View>
+              ) : (
+                feedback
+                  .filter(f => feedbackFilter === 'all' || f.type === feedbackFilter)
+                  .map((f, i) => (
+                    <View key={f.id} style={[s.tableRow, { flexDirection: 'column', alignItems: 'flex-start', gap: 6 }]}>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%' }}>
+                        <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+                          <Text style={{ fontSize: 13, fontWeight: '700', color: f.type === 'bug' ? Colors.danger : Colors.primary }}>
+                            {f.type === 'bug' ? '🐛 Bug' : '💡 Idea'}
+                          </Text>
+                          {f.status === 'new' && (
+                            <View style={[s.tabBadge, { backgroundColor: Colors.primary }]}>
+                              <Text style={s.tabBadgeText}>New</Text>
+                            </View>
+                          )}
+                          {f.app_version && <Text style={s.cellSub}>v{f.app_version}</Text>}
+                        </View>
+                        <Text style={s.cellSub}>{fmtDate(f.created_at)}</Text>
+                      </View>
+                      <Text style={{ fontSize: 14, color: Colors.text, lineHeight: 20 }}>{f.message}</Text>
+                    </View>
+                  ))
+              )}
             </View>
           </View>
         )}

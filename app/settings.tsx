@@ -1,6 +1,5 @@
-import { router } from 'expo-router'
-import { useFocusEffect } from 'expo-router'
-import { useCallback, useEffect, useState } from 'react'
+import { router, useFocusEffect } from 'expo-router'
+import { useCallback, useState } from 'react'
 import { ActivityIndicator, Alert, Platform, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import { Colors } from '../constants/colors'
 import { registerForPushNotifications } from '../lib/notifications'
@@ -591,6 +590,10 @@ async function sendInvite() {
         </TouchableOpacity>
       )}
 
+      <TouchableOpacity style={styles.feedbackButton} onPress={() => router.push('/feedback')}>
+        <Text style={styles.feedbackButtonText}>💬  Report a Bug / Give Feedback</Text>
+      </TouchableOpacity>
+
       <TouchableOpacity style={styles.privacyButton} onPress={() => router.push('/privacy')}>
         <Text style={styles.privacyButtonText}>🔒  Privacy Policy</Text>
       </TouchableOpacity>
@@ -1007,6 +1010,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.textSecondary,
     textAlign: 'center',
+  },
+  feedbackButton: {
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  feedbackButtonText: {
+    color: Colors.primary,
+    fontSize: 16,
+    fontWeight: '500',
   },
   upgradeButton: {
     backgroundColor: Colors.primary,
