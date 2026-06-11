@@ -236,7 +236,7 @@ export default function PaydayModal({ visible, incomeSources, accounts, defaultA
     return (
       <Modal visible={visible} transparent animationType="fade">
         <View style={styles.overlay}>
-          <View style={styles.modal}>
+          <View style={[styles.modal, { padding: 28 }]}>
             <Text style={styles.emoji}>🎉</Text>
             <Text style={styles.title}>Extra ${extraAmount.toLocaleString('en-CA', { maximumFractionDigits: 0 })} this cycle!</Text>
             <Text style={styles.body}>

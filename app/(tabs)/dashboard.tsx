@@ -144,7 +144,13 @@ export default function DashboardScreen() {
                 .eq('id', userId)
             } else {
               // Within 2 pay periods — show the modal normally
-              setPaydayIncomeSources(myIncome.map((s: any) => ({ ...s, income_type: s.income_type || 'fixed' })))
+              setPaydayIncomeSources(myIncome
+                .filter((s: any) => {
+                  if (!s.next_payday) return false
+                  const dates = s.next_payday.split('|')
+                  return dates.some((d: string) => d <= todayStr)
+                })
+                .map((s: any) => ({ ...s, income_type: s.income_type || 'fixed' })))
               setPaydayUserName(profileName)
               setPaydayActualDate(triggeredDate)
               setIsPaydayReminder(triggeredDate < todayStr)
