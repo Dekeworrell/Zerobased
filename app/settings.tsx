@@ -578,17 +578,7 @@ async function sendInvite() {
         }
       </TouchableOpacity>
 
-      {/* Affiliate partner portal — visible to all users */}
-      <TouchableOpacity style={styles.partnerButton} onPress={() => router.push('/partner')}>
-        <Text style={styles.partnerButtonText}>🤝  Partner / Affiliate Program</Text>
-      </TouchableOpacity>
-
-      {/* Owner-only admin dashboard */}
-      {email.toLowerCase() === 'dekeworrell@shaw.ca' && (
-        <TouchableOpacity style={styles.adminButton} onPress={() => router.push('/admin')}>
-          <Text style={styles.adminButtonText}>⚙️  Admin Dashboard</Text>
-        </TouchableOpacity>
-      )}
+      {/* Admin and affiliate portal moved to zerobased.ca */}
 
       <TouchableOpacity style={styles.feedbackButton} onPress={() => router.push('/feedback')}>
         <Text style={styles.feedbackButtonText}>💬  Report a Bug / Give Feedback</Text>

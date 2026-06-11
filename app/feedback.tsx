@@ -2,8 +2,8 @@ import Constants from 'expo-constants'
 import { router } from 'expo-router'
 import { useState } from 'react'
 import {
-    ActivityIndicator, ScrollView, StyleSheet,
-    Text, TextInput, TouchableOpacity, View
+  ActivityIndicator, ScrollView, StyleSheet,
+  Text, TextInput, TouchableOpacity, View
 } from 'react-native'
 import { Colors } from '../constants/colors'
 import { supabase } from '../lib/supabase'
@@ -29,6 +29,7 @@ export default function FeedbackScreen() {
         type,
         message: message.trim(),
         app_version: Constants.expoConfig?.version || '1.0.0',
+        contact_email: user?.email,
       })
       if (err) throw err
       setDone(true)

@@ -9,7 +9,7 @@ const FEATURES: { label: string; free: string; pro: string }[] = [
   { label: 'Manual expense tracking',    free: '✅',      pro: '✅' },
   { label: 'Over-budget alerts',          free: '✅',      pro: '✅' },
   { label: 'Custom notification thresholds', free: '🔒',  pro: '✅' },
-  { label: 'Budget categories',          free: 'Up to 8', pro: 'Unlimited' },
+  { label: 'Budget categories',          free: 'Up to 4', pro: 'Unlimited' },
   { label: 'Pay cycle budgeting',        free: '🔒',      pro: '✅' },
   { label: 'Household sharing',          free: '🔒',      pro: '✅' },
   { label: 'Accounts, debts & net worth',free: '🔒',      pro: '✅' },
