@@ -26,9 +26,6 @@ export default function ExpensesScreen() {
     const saved = getOnboardingData().expenses
     return saved.length > 0 ? saved as LocalExpense[] : [
       { id: 'mortgage', label: 'Mortgage/Rent', icon: '🏠', amount: '', frequency: 'monthly', category_type: 'fixed' },
-      { id: 'utilities', label: 'Utilities', icon: '💡', amount: '', frequency: 'monthly', category_type: 'fixed' },
-      { id: 'groceries', label: 'Groceries', icon: '🛒', amount: '', frequency: 'monthly', category_type: 'variable' },
-      { id: 'internet', label: 'Internet', icon: '📶', amount: '', frequency: 'monthly', category_type: 'fixed' },
     ]
   })
 
@@ -76,7 +73,7 @@ export default function ExpensesScreen() {
   return (
     <>
       <KeyboardScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-      <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+      <TouchableOpacity onPress={() => router.replace('/onboarding/income')} style={styles.backButton}>
         <Text style={styles.backText}>← Back</Text>
       </TouchableOpacity>
       <View style={styles.progressWrap}>

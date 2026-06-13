@@ -11,8 +11,8 @@ import { calculateBudgetStatus, toMonthly } from '../../lib/store'
 import { supabase } from '../../lib/supabase'
 import { getCachedHouseholdIds, getCachedUserId } from '../../lib/userCache'
 
-const FREE_TIER_LIMIT = 8
-const FREE_TIER_NUDGE_AT = 7
+const FREE_TIER_LIMIT = 4
+const FREE_TIER_NUDGE_AT = 3
 
 type Category = {
   id: string
@@ -80,6 +80,10 @@ export default function BudgetScreen() {
   }
 
   function addCategory(cat: typeof EXPENSE_CATEGORIES[0]) {
+    if (subscriptionTier === 'free' && categories.length >= FREE_TIER_LIMIT) {
+      router.push('/upgrade')
+      return
+    }
     setCategories([...categories, {
       id: `${cat.id}_${Date.now()}`,
       label: cat.label,

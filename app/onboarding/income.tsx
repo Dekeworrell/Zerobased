@@ -29,7 +29,7 @@ type IncomeSource = {
   amount: string
   frequency: string
   type: string
-  income_type: 'fixed' | 'variable'
+  income_type: 'variable' | 'variable'
   next_payday: string
   second_payday: string
 }
@@ -51,7 +51,7 @@ export default function IncomeScreen() {
   const [showSecondPaydayPicker, setShowSecondPaydayPicker] = useState<number | null>(null)
   const [paydayError, setPaydayError] = useState('')
   const [sources, setSources] = useState<IncomeSource[]>([
-    { label: 'Primary income', amount: '', frequency: 'biweekly', type: 'employment', income_type: 'fixed', next_payday: '', second_payday: '' }
+    { label: 'Primary income', amount: '', frequency: 'biweekly', type: 'employment', income_type: 'variable', next_payday: '', second_payday: '' }
   ])
 
   useEffect(() => {
@@ -101,7 +101,7 @@ export default function IncomeScreen() {
     if (isHouseholdJoin) {
       const { data } = await supabase.from('income_sources').select('*').eq('user_id', user.id)
       if (data && data.length > 0) setSources(data.map(parseSourceRow))
-      else setSources([{ label: 'My income', amount: '', frequency: 'biweekly', type: 'employment', income_type: 'fixed', next_payday: '', second_payday: '' }])
+      else setSources([{ label: 'My income', amount: '', frequency: 'biweekly', type: 'employment', income_type: 'variable', next_payday: '', second_payday: '' }])
       setLoading(false)
       return
     }
@@ -118,14 +118,14 @@ export default function IncomeScreen() {
 
     setSources(myRows.length > 0
       ? myRows.map(parseSourceRow)
-      : [{ label: 'My income', amount: '', frequency: 'biweekly', type: 'employment', income_type: 'fixed', next_payday: '', second_payday: '' }]
+      : [{ label: 'My income', amount: '', frequency: 'biweekly', type: 'employment', income_type: 'variable', next_payday: '', second_payday: '' }]
     )
 
     if (partnerIds.length > 0) {
       setPartnerId(partnerIds[0])
       setPartnerSources(partnerRows.length > 0
         ? partnerRows.map(parseSourceRow)
-        : [{ label: "Partner's income", amount: '', frequency: 'biweekly', type: 'employment', income_type: 'fixed', next_payday: '', second_payday: '' }]
+        : [{ label: "Partner's income", amount: '', frequency: 'biweekly', type: 'employment', income_type: 'variable', next_payday: '', second_payday: '' }]
       )
       // Use the household RPC (profiles RLS only allows reading own row)
       const { data: members } = await supabase.rpc('get_household_members')
@@ -142,7 +142,7 @@ export default function IncomeScreen() {
   }
 
   function addSource() {
-    setSources([...sources, { label: 'Additional income', amount: '', frequency: 'monthly', type: 'other', income_type: 'fixed', next_payday: '', second_payday: '' }])
+    setSources([...sources, { label: 'Additional income', amount: '', frequency: 'monthly', type: 'other', income_type: 'variable', next_payday: '', second_payday: '' }])
   }
 
   function removeSource(index: number) {
@@ -156,7 +156,7 @@ export default function IncomeScreen() {
   }
 
   function addPartnerSource() {
-    setPartnerSources([...partnerSources, { label: 'Additional income', amount: '', frequency: 'monthly', type: 'other', income_type: 'fixed', next_payday: '', second_payday: '' }])
+    setPartnerSources([...partnerSources, { label: 'Additional income', amount: '', frequency: 'monthly', type: 'other', income_type: 'variable', next_payday: '', second_payday: '' }])
   }
 
   function removePartnerSource(index: number) {
@@ -447,19 +447,19 @@ export default function IncomeScreen() {
             <Text style={styles.fieldLabel}>Pay amount</Text>
             <View style={styles.chipRow}>
               <TouchableOpacity
-                style={[styles.chip, source.income_type === 'fixed' && styles.chipActive]}
-                onPress={() => updateSource(index, 'income_type', 'fixed')}
-              >
-                <Text style={[styles.chipText, source.income_type === 'fixed' && styles.chipTextActive]}>
-                  📅 Fixed income
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
                 style={[styles.chip, source.income_type === 'variable' && styles.chipActive]}
                 onPress={() => updateSource(index, 'income_type', 'variable')}
               >
                 <Text style={[styles.chipText, source.income_type === 'variable' && styles.chipTextActive]}>
                   📊 Variable income
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.chip, source.income_type === 'fixed' && styles.chipActive]}
+                onPress={() => updateSource(index, 'income_type', 'fixed')}
+              >
+                <Text style={[styles.chipText, source.income_type === 'fixed' && styles.chipTextActive]}>
+                  📅 Fixed income
                 </Text>
               </TouchableOpacity>
             </View>
@@ -589,16 +589,16 @@ export default function IncomeScreen() {
                 <Text style={styles.fieldLabel}>Pay amount</Text>
                 <View style={styles.chipRow}>
                   <TouchableOpacity
-                    style={[styles.chip, source.income_type === 'fixed' && styles.chipActive]}
-                    onPress={() => updatePartnerSource(index, 'income_type', 'fixed')}
-                  >
-                    <Text style={[styles.chipText, source.income_type === 'fixed' && styles.chipTextActive]}>📅 Fixed</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
                     style={[styles.chip, source.income_type === 'variable' && styles.chipActive]}
                     onPress={() => updatePartnerSource(index, 'income_type', 'variable')}
                   >
                     <Text style={[styles.chipText, source.income_type === 'variable' && styles.chipTextActive]}>📊 Variable</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.chip, source.income_type === 'fixed' && styles.chipActive]}
+                    onPress={() => updatePartnerSource(index, 'income_type', 'fixed')}
+                  >
+                    <Text style={[styles.chipText, source.income_type === 'fixed' && styles.chipTextActive]}>📅 Fixed</Text>
                   </TouchableOpacity>
                 </View>
               </View>

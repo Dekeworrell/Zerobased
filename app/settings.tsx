@@ -434,7 +434,7 @@ async function sendInvite() {
           <Text style={styles.linkRowText}>Manage accounts</Text>
           <Text style={styles.linkRowChevron}>›</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.linkRow} onPress={() => router.push('/onboarding/tracking-method')}>
+        <TouchableOpacity style={styles.linkRow} onPress={() => router.replace('/onboarding/income')}>
           <Text style={styles.linkRowText}>Redo budget setup</Text>
           <Text style={styles.linkRowChevron}>›</Text>
         </TouchableOpacity>
