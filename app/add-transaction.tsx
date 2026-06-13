@@ -8,6 +8,7 @@ import TransactionEditSheet from '../components/TransactionEditSheet'
 import { balanceChangeOnExpense, balanceChangeOnIncome, balanceChangeOnTransferFrom, balanceChangeOnTransferTo, isAssetAccount, isInvestmentAccount, isPayFromLiability, isPrimaryPayable } from '../constants/categories'
 import { Colors } from '../constants/colors'
 import { checkBudgetAndNotify, schedulePaydayReminder } from '../lib/notifications'
+import { getSubscriptionTier } from '../lib/purchases'
 import { getPayPeriodDates, toMonthly, toPeriodAmount } from '../lib/store'
 import { supabase } from '../lib/supabase'
 
@@ -22,6 +23,7 @@ type HistoryTransaction = {
 export default function AddTransactionScreen() {
   const { categoryId, categoryLabel, categoryIcon } = useLocalSearchParams<{ categoryId?: string, categoryLabel?: string, categoryIcon?: string }>()
 
+  const [tier, setTier] = useState<'free' | 'pro'>('free')
   const [categories, setCategories] = useState<Category[]>([])
   const [accounts, setAccounts] = useState<Account[]>([])
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null)
@@ -110,13 +112,17 @@ export default function AddTransactionScreen() {
     const [{ data: cats }, { data: accs }, { data: profile }, { data: catDefaults }, { data: income }] = await Promise.all([
       supabase.from('budget_categories').select('id, label, icon').in('user_id', userIds),
       supabase.from('accounts').select('id, label, type').in('user_id', userIds),
-      supabase.from('profiles').select('default_account_id, budget_cycle').eq('id', user.id).single(),
+      supabase.from('profiles').select('default_account_id, budget_cycle, subscription_tier').eq('id', user.id).single(),
       supabase.from('category_account_defaults').select('category_id, account_id').eq('user_id', user.id),
       supabase.from('income_sources').select('*').in('user_id', userIds),
     ])
 
     if (cats) setCategories(cats)
     if (accs) setAccounts(accs)
+
+    const dbTier = (profile?.subscription_tier as 'free' | 'pro') ?? 'free'
+    const rcTier = await getSubscriptionTier()
+    setTier(dbTier === 'pro' || rcTier === 'pro' ? 'pro' : 'free')
 
     const globalDefault = profile?.default_account_id || null
     setGlobalDefaultAccountId(globalDefault)
@@ -246,7 +252,7 @@ export default function AddTransactionScreen() {
       if (!toAccount) { Alert.alert('Missing account', 'Please select the To account.'); return }
       if (selectedAccount.id === toAccount.id) { Alert.alert('Same account', 'From and To accounts must be different.'); return }
     } else {
-      if (!selectedAccount) { setError('Please select a payment account before saving.'); return }
+      if (tier === 'pro' && !selectedAccount) { setError('Please select a payment account before saving.'); return }
     }
 
     setSaving(true)
@@ -261,8 +267,8 @@ export default function AddTransactionScreen() {
       if (type === 'transfer') {
           await supabase.from('transactions').insert({
             user_id: user.id,
-            account_id: selectedAccount.id,
-            from_account_id: selectedAccount.id,
+            account_id: selectedAccount?.id ?? null,
+            from_account_id: selectedAccount?.id ?? null,
             to_account_id: toAccount!.id,
             label: label || `Transfer → ${toAccount!.label}`,
             amount: parsedAmount,
@@ -272,10 +278,12 @@ export default function AddTransactionScreen() {
             category_id: null,
           })
 
-          const { data: fromAcc } = await supabase.from('accounts').select('balance').eq('id', selectedAccount.id).single()
-          if (fromAcc) {
-            const current = parseFloat(fromAcc.balance) || 0
-            await supabase.from('accounts').update({ balance: current + balanceChangeOnTransferFrom(selectedAccount.type, parsedAmount) }).eq('id', selectedAccount.id)
+          if (selectedAccount) {
+            const { data: fromAcc } = await supabase.from('accounts').select('balance').eq('id', selectedAccount.id).single()
+            if (fromAcc) {
+              const current = parseFloat(fromAcc.balance) || 0
+              await supabase.from('accounts').update({ balance: current + balanceChangeOnTransferFrom(selectedAccount.type, parsedAmount) }).eq('id', selectedAccount.id)
+            }
           }
 
           const { data: toAcc } = await supabase.from('accounts').select('balance').eq('id', toAccount!.id).single()
@@ -288,7 +296,7 @@ export default function AddTransactionScreen() {
           await supabase.from('transactions').insert({
             user_id: user.id,
             category_id: type === 'unexpected' ? null : selectedCategory?.id || null,
-            account_id: selectedAccount.id,
+            account_id: selectedAccount?.id ?? null,
             label: label || selectedCategory?.label || 'Transaction',
             amount: parsedAmount,
             date: formatDateForDB(date),
@@ -296,24 +304,26 @@ export default function AddTransactionScreen() {
             is_unexpected: type === 'unexpected',
           })
 
-          const { data: currentAccount } = await supabase
-            .from('accounts').select('balance').eq('id', selectedAccount.id).single()
-          if (currentAccount) {
-            const current = parseFloat(currentAccount.balance) || 0
-            const delta = type === 'income'
-              ? balanceChangeOnIncome(selectedAccount.type, parsedAmount)
-              : balanceChangeOnExpense(selectedAccount.type, parsedAmount)
-            await supabase.from('accounts').update({ balance: current + delta }).eq('id', selectedAccount.id)
+          if (selectedAccount) {
+            const { data: currentAccount } = await supabase
+              .from('accounts').select('balance').eq('id', selectedAccount.id).single()
+            if (currentAccount) {
+              const current = parseFloat(currentAccount.balance) || 0
+              const delta = type === 'income'
+                ? balanceChangeOnIncome(selectedAccount.type, parsedAmount)
+                : balanceChangeOnExpense(selectedAccount.type, parsedAmount)
+              await supabase.from('accounts').update({ balance: current + delta }).eq('id', selectedAccount.id)
+            }
           }
         }
 
-      if (setAsDefault && selectedCategory) {
+      if (setAsDefault && selectedCategory && selectedAccount) {
         await supabase.from('category_account_defaults').upsert({
           user_id: user.id,
           category_id: selectedCategory.id,
           account_id: selectedAccount.id,
         }, { onConflict: 'user_id,category_id' })
-        setCategoryDefaults(prev => ({ ...prev, [selectedCategory.id]: selectedAccount.id }))
+        setCategoryDefaults(prev => ({ ...prev, [selectedCategory.id]: selectedAccount!.id }))
       }
 
       const { data: profile } = await supabase
@@ -743,7 +753,7 @@ export default function AddTransactionScreen() {
               </View>
             )}
 
-            {(selectedCategory || type === 'unexpected') && (
+            {tier === 'pro' && (selectedCategory || type === 'unexpected') && (
               <View style={styles.accountSection}>
                 <TouchableOpacity
                   style={styles.sectionHeader}
@@ -815,7 +825,7 @@ export default function AddTransactionScreen() {
               </View>
             )}
 
-            {type === 'income' && (
+            {tier === 'pro' && type === 'income' && (
               <View style={styles.accountSection}>
                 <Text style={styles.fieldLabel}>Deposit to account</Text>
                 <View style={styles.accountList}>

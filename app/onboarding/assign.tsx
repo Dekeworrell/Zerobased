@@ -57,11 +57,28 @@ export default function AssignScreen() {
       category_type: e.category_type || 'variable'
     }))
   )
+  const [tier, setTier] = useState<'free' | 'pro'>('free')
   const [saving, setSaving] = useState(false)
   const [showAddCategory, setShowAddCategory] = useState<'fixed' | 'variable' | 'priority' | null>(null)
   const [error, setError] = useState('')
   const [celebrated, setCelebrated] = useState(false)
   const celebrationAnim = useRef(new Animated.Value(0)).current
+
+  useEffect(() => {
+    async function loadTier() {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user) return
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('subscription_tier')
+        .eq('id', session.user.id)
+        .single()
+      if (profile?.subscription_tier === 'pro') setTier('pro')
+    }
+    loadTier()
+  }, [])
+
+  const atLimit = tier === 'free' && expenses.length >= 4
 
   const totalMonthlyIncome = data.incomeSources.reduce(
     (sum, s) => sum + toMonthly(s.amount, s.frequency), 0
@@ -268,7 +285,7 @@ export default function AssignScreen() {
           {fixedExpenses.map(e => renderExpenseRow(e))}
           <TouchableOpacity
             style={styles.addCircleBtn}
-            onPress={() => setShowAddCategory(showAddCategory === 'fixed' ? null : 'fixed')}
+            onPress={() => atLimit ? router.push('/upgrade') : setShowAddCategory(showAddCategory === 'fixed' ? null : 'fixed')}
           >
             <Text style={styles.addCircleBtnText}>+</Text>
           </TouchableOpacity>
@@ -310,7 +327,7 @@ export default function AssignScreen() {
           {variableExpenses.map(e => renderExpenseRow(e))}
           <TouchableOpacity
             style={styles.addCircleBtn}
-            onPress={() => setShowAddCategory(showAddCategory === 'variable' ? null : 'variable')}
+            onPress={() => atLimit ? router.push('/upgrade') : setShowAddCategory(showAddCategory === 'variable' ? null : 'variable')}
           >
             <Text style={styles.addCircleBtnText}>+</Text>
           </TouchableOpacity>
@@ -373,14 +390,17 @@ export default function AssignScreen() {
               <TouchableOpacity
                 key={item.id}
                 style={styles.priorityChip}
-                onPress={() => setExpenses([...expenses, {
-                  id: item.id,
-                  label: item.label,
-                  icon: item.icon,
-                  amount: '',
-                  frequency: 'monthly',
-                  category_type: 'priority',
-                }])}
+                onPress={() => {
+                  if (atLimit) { router.push('/upgrade'); return }
+                  setExpenses([...expenses, {
+                    id: item.id,
+                    label: item.label,
+                    icon: item.icon,
+                    amount: '',
+                    frequency: 'monthly',
+                    category_type: 'priority',
+                  }])
+                }}
               >
                 <Text style={styles.priorityChipIcon}>{item.icon}</Text>
                 <Text style={styles.priorityChipText}>{item.label}</Text>
