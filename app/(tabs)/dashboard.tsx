@@ -332,7 +332,7 @@ export default function DashboardScreen() {
           <View style={styles.statCardHeader}>
             <Text style={styles.statLabel}>Unassigned</Text>
             {unassigned > 0 && (
-              <TouchableOpacity onPress={() => router.push('/onboarding/assign')}>
+              <TouchableOpacity onPress={() => router.push('/budget')}>
                 <Text style={styles.editLink}>Assign</Text>
               </TouchableOpacity>
             )}
