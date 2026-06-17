@@ -158,8 +158,9 @@ export default function TransactionEditSheet({ visible, transaction, categories,
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={() => { Keyboard.dismiss(); onClose() }} />
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+        <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={() => { Keyboard.dismiss(); onClose() }} />
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <TouchableOpacity activeOpacity={1} onPress={Keyboard.dismiss}>
           <View style={styles.sheet}>
             <View style={styles.handle} />
@@ -283,6 +284,7 @@ export default function TransactionEditSheet({ visible, transaction, categories,
           </View>
         </TouchableOpacity>
       </KeyboardAvoidingView>
+      </View>
     </Modal>
   )
 }
