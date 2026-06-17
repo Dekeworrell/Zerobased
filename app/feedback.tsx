@@ -153,7 +153,7 @@ const styles = StyleSheet.create({
   },
   error: { color: Colors.danger, fontSize: 13, textAlign: 'center' },
   primaryBtn: {
-    backgroundColor: Colors.primary, paddingVertical: 16,
+    backgroundColor: Colors.primary, paddingVertical: 16, paddingHorizontal: 40,
     borderRadius: 14, alignItems: 'center', marginTop: 4
   },
   disabled: { opacity: 0.4 },
