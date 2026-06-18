@@ -8,7 +8,7 @@ import { Colors } from '../constants/colors'
 import { supabase } from '../lib/supabase'
 
 const OWNER_EMAIL = 'Dekeworrell@shaw.ca'
-type AdminTab = 'overview' | 'subscribers' | 'affiliates' | 'campaigns' | 'feedback' | 'settings'
+type AdminTab = 'overview' | 'subscribers' | 'feedback' | 'settings'
 
 type AffiliateRow = {
   id: string; name: string; email: string; referral_code: string
@@ -212,12 +212,10 @@ export default function AdminScreen() {
     a.referral_code.toLowerCase().includes(affiliateSearch.toLowerCase())
   ).sort((a, b) => b.total_earned - a.total_earned)
 
-  const newFeedbackCount = feedback.filter(f => f.status === 'new').length
+  const newFeedbackCount = feedback.filter(f => f.status !== 'resolved').length
   const TABS: { key: AdminTab; label: string }[] = [
     { key: 'overview', label: 'Overview' },
     { key: 'subscribers', label: 'Subscribers' },
-    { key: 'affiliates', label: 'Affiliates' },
-    { key: 'campaigns', label: 'Campaigns' },
     { key: 'feedback', label: 'Feedback' },
     { key: 'settings', label: 'Settings' },
   ]
@@ -247,8 +245,8 @@ export default function AdminScreen() {
         {TABS.map(t => (
           <TouchableOpacity key={t.key} style={[s.tab, activeTab === t.key && s.tabActive]} onPress={() => setActiveTab(t.key)}>
             <Text style={[s.tabText, activeTab === t.key && s.tabTextActive]}>{t.label}</Text>
-            {t.key === 'affiliates' && pending.length > 0 && (
-              <View style={s.tabBadge}><Text style={s.tabBadgeText}>{pending.length}</Text></View>
+           {t.key === 'feedback' && newFeedbackCount > 0 && (
+              <View style={s.tabBadge}><Text style={s.tabBadgeText}>{newFeedbackCount}</Text></View>
             )}
             {t.key === 'feedback' && newFeedbackCount > 0 && (
               <View style={s.tabBadge}><Text style={s.tabBadgeText}>{newFeedbackCount}</Text></View>
@@ -348,176 +346,6 @@ export default function AdminScreen() {
           </View>
         )}
 
-        {/* ── AFFILIATES ── */}
-        {activeTab === 'affiliates' && (
-          <View style={s.section}>
-            <View style={s.pageHeader}>
-              <Text style={s.pageTitle}>Affiliates</Text>
-              <View style={s.searchBox}>
-                <Text>🔍</Text>
-                <TextInput style={s.searchInput} placeholder="Search name or code..." placeholderTextColor={Colors.textSecondary} value={affiliateSearch} onChangeText={setAffiliateSearch} />
-              </View>
-            </View>
-
-            {pending.length > 0 && (
-              <>
-                <Text style={s.secLabel}>⏳ Pending Approval ({pending.length})</Text>
-                <View style={s.tableCard}>
-                  <View style={[s.tableRow, s.tableHead]}>
-                    <Text style={[s.cell, { flex: 2 }]}>Applicant</Text>
-                    <Text style={s.cell}>Code</Text>
-                    <Text style={s.cell}>Applied</Text>
-                    <Text style={[s.cell, { flex: 2 }]}>Actions</Text>
-                  </View>
-                  {pending.map(aff => (
-                    <View key={aff.id} style={s.tableRow}>
-                      <View style={[s.cell, { flex: 2 }]}>
-                        <Text style={s.cellName}>{aff.name}</Text>
-                        <Text style={s.cellSub}>{aff.email}</Text>
-                      </View>
-                      <Text style={s.cell}>{aff.referral_code}</Text>
-                      <Text style={s.cell}>{fmtDate(aff.applied_at)}</Text>
-                      <View style={[s.cell, { flex: 2, flexDirection: 'row', gap: 6, flexWrap: 'wrap' }]}>
-                        <TouchableOpacity style={s.btnGreen} onPress={() => handleManage(aff.id, 'approve')} disabled={!!actionLoading}>
-                          <Text style={s.btnTextLight}>✅ Approve</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={s.btnPurple} onPress={() => handleManage(aff.id, 'approve', { tier: 'creator', commission_rate: 0.25 })} disabled={!!actionLoading}>
-                          <Text style={s.btnTextLight}>⭐ Creator</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={s.btnRed} onPress={() => handleManage(aff.id, 'reject')} disabled={!!actionLoading}>
-                          <Text style={s.btnTextLight}>✕</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  ))}
-                </View>
-              </>
-            )}
-
-            <Text style={s.secLabel}>Active Affiliates ({filteredAff.length})</Text>
-            <View style={s.tableCard}>
-              <View style={[s.tableRow, s.tableHead]}>
-                <Text style={[s.cell, { flex: 2 }]}>Name / Handle</Text>
-                <Text style={s.cell}>Tier</Text>
-                <Text style={s.cell}>Refs</Text>
-                <Text style={s.cell}>Pending</Text>
-                <Text style={s.cell}>Total</Text>
-                <Text style={[s.cell, { width: 80 }]}></Text>
-              </View>
-              {filteredAff.length === 0
-                ? <View style={s.emptyBox}><Text style={s.emptyTitle}>No active affiliates yet</Text></View>
-                : filteredAff.map(aff => {
-                  const isExp = expandedAffiliate === aff.id
-                  return (
-                    <View key={aff.id}>
-                      <TouchableOpacity style={s.tableRow} onPress={() => setExpandedAffiliate(isExp ? null : aff.id)}>
-                        <View style={[s.cell, { flex: 2 }]}>
-                          <Text style={s.cellName}>{aff.name}</Text>
-                          <Text style={s.cellSub}>{aff.referral_code}</Text>
-                        </View>
-                        <Text style={s.cell}>{tierBadge(aff.tier)}</Text>
-                        <Text style={s.cell}>{aff.total_conversions}</Text>
-                        <Text style={[s.cell, { color: '#f59e0b', fontWeight: '700' }]}>{fmt(aff.pending_payout)}</Text>
-                        <Text style={s.cell}>{fmt(aff.total_earned)}</Text>
-                        <Text style={[s.cell, { width: 80, color: Colors.primary }]}>{isExp ? 'Close ▲' : 'Actions ▾'}</Text>
-                      </TouchableOpacity>
-                      {isExp && (
-                        <View style={s.expandPanel}>
-                          <Text style={s.expandLabel}>Pending: {fmt(aff.pending_payout)} CAD</Text>
-                          {aff.pending_payout > 0 && (
-                            <View style={s.payRow}>
-                              <TextInput
-                                style={s.payInput}
-                                placeholder={(+(aff.pending_payout ?? 0)).toFixed(2)}
-                                placeholderTextColor={Colors.textSecondary}
-                                value={payoutAmounts[aff.id] ?? ''}
-                                onChangeText={v => setPayoutAmounts(p => ({ ...p, [aff.id]: v }))}
-                                keyboardType="decimal-pad"
-                              />
-                              <TouchableOpacity style={s.btnGreen} onPress={() => handleManage(aff.id, 'payout', { amount: parseFloat(payoutAmounts[aff.id] ?? String(aff.pending_payout)) })} disabled={!!actionLoading}>
-                                {actionLoading === aff.id + 'payout'
-                                  ? <ActivityIndicator size="small" color="#fff" />
-                                  : <Text style={s.btnTextLight}>🔄 Trigger Payout</Text>}
-                              </TouchableOpacity>
-                            </View>
-                          )}
-                          <View style={s.expandActions}>
-                            <TouchableOpacity style={s.btnOutline} onPress={() => handleManage(aff.id, 'update_commission', { commission_rate: 0.30, tier: 'launch' })}>
-                              <Text style={s.btnTextDark}>⭐ Override commission rate</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity style={[s.btnOutline, { borderColor: Colors.danger }]} onPress={() => handleManage(aff.id, 'reject')}>
-                              <Text style={[s.btnTextDark, { color: Colors.danger }]}>🚫 Suspend affiliate</Text>
-                            </TouchableOpacity>
-                          </View>
-                        </View>
-                      )}
-                    </View>
-                  )
-                })
-              }
-            </View>
-
-            {others.length > 0 && (
-              <>
-                <Text style={[s.secLabel, { opacity: 0.6 }]}>Other Applications ({others.length})</Text>
-                <View style={s.tableCard}>
-                  {others.map(aff => (
-                    <View key={aff.id} style={[s.tableRow, { opacity: 0.6 }]}>
-                      <View style={[s.cell, { flex: 2 }]}>
-                        <Text style={s.cellName}>{aff.name}</Text>
-                        <Text style={s.cellSub}>{aff.email}</Text>
-                      </View>
-                      <Text style={[s.cell, { color: aff.status === 'rejected' ? Colors.danger : Colors.textSecondary }]}>{aff.status}</Text>
-                      <TouchableOpacity style={s.btnGreen} onPress={() => handleManage(aff.id, 'approve')}>
-                        <Text style={s.btnTextLight}>Re-approve</Text>
-                      </TouchableOpacity>
-                    </View>
-                  ))}
-                </View>
-              </>
-            )}
-          </View>
-        )}
-
-        {/* ── CAMPAIGNS ── */}
-        {activeTab === 'campaigns' && (
-          <View style={s.section}>
-            <View style={s.pageHeader}>
-              <Text style={s.pageTitle}>Campaigns</Text>
-            </View>
-
-            <View style={s.campaignCard}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <View style={[s.dot, { backgroundColor: '#22c55e' }]} />
-                <Text style={s.campCode}>LAUNCH50</Text>
-              </View>
-              <Text style={s.campDesc}>50% off first month — All tiers</Text>
-              <Text style={s.campMeta}>Applied to: All affiliates · Expires: Dec 31 2026</Text>
-              <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
-                <TouchableOpacity style={s.btnOutline}><Text style={s.btnTextDark}>Edit</Text></TouchableOpacity>
-                <TouchableOpacity style={[s.btnOutline, { borderColor: Colors.danger }]}><Text style={[s.btnTextDark, { color: Colors.danger }]}>End</Text></TouchableOpacity>
-              </View>
-            </View>
-
-            <Text style={s.secLabel}>New Campaign</Text>
-            <View style={s.formCard}>
-              {[
-                { label: 'Code', val: campCode, set: (v: string) => setCampCode(v.toUpperCase()), placeholder: 'SUMMER25' },
-                { label: 'Discount %', val: campDiscount, set: setCampDiscount, placeholder: '50' },
-                { label: 'Expires (YYYY-MM-DD)', val: campExpiry, set: setCampExpiry, placeholder: '2026-12-31' },
-              ].map(f => (
-                <View key={f.label} style={s.formRow}>
-                  <Text style={s.formLabel}>{f.label}</Text>
-                  <TextInput style={s.formInput} value={f.val} onChangeText={f.set} placeholder={f.placeholder} placeholderTextColor={Colors.textSecondary} />
-                </View>
-              ))}
-              <TouchableOpacity style={[s.primaryBtn, { alignSelf: 'flex-end', marginTop: 8 }]}>
-                <Text style={s.primaryBtnText}>Create Campaign</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-
         {/* ── FEEDBACK ── */}
         {activeTab === 'feedback' && (
           <View style={s.section}>
@@ -561,7 +389,7 @@ export default function AdminScreen() {
                 </View>
               ) : (
                 feedback
-                  .filter(f => feedbackFilter === 'all' || f.type === feedbackFilter)
+                  .filter(f => feedbackFilter === 'resolved' ? f.status === 'resolved' : (feedbackFilter === 'all' ? f.status !== 'resolved' : (f.type === feedbackFilter && f.status !== 'resolved')))
                   .map((f, i) => (
                     <View key={f.id} style={[s.tableRow, { flexDirection: 'column', alignItems: 'flex-start', gap: 6 }]}>
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%' }}>
@@ -590,6 +418,15 @@ export default function AdminScreen() {
                   <Text style={s.btnTextDark}>✅ Mark resolved</Text>
                 </TouchableOpacity>
               )}
+              <TouchableOpacity
+                style={[s.btnOutline, { alignSelf: 'flex-start', marginTop: 4, borderColor: Colors.danger }]}
+                onPress={async () => {
+                  await supabase.from('feedback').delete().eq('id', f.id)
+                  setFeedback(prev => prev.filter(item => item.id !== f.id))
+                }}
+              >
+                <Text style={[s.btnTextDark, { color: Colors.danger }]}>🗑 Delete</Text>
+              </TouchableOpacity>
                     </View>
                   ))
               )}
