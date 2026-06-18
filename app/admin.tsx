@@ -74,7 +74,7 @@ export default function AdminScreen() {
   const [minPayout, setMinPayout] = useState('50.00')
   const [announcement, setAnnouncement] = useState('')
   const [feedback, setFeedback] = useState<any[]>([])
-  const [feedbackFilter, setFeedbackFilter] = useState<'all' | 'bug' | 'suggestion'>('all')
+  const [feedbackFilter, setFeedbackFilter] = useState<'all' | 'bug' | 'suggestion' | 'resolved'>('all')
 
   useFocusEffect(useCallback(() => { loadStats() }, []))
 
@@ -271,7 +271,7 @@ export default function AdminScreen() {
             <View style={s.cardRow}>
               {[
                 { label: 'MRR', value: fmt(stats.mrr), sub: 'Estimated', color: Colors.primary },
-                { label: 'Total Users', value: (stats.subscribers?.total ?? 0).toLocaleString(), sub: `${stats.subscribers?.pro ?? 0} Pro`, color: '#6c63ff' },
+                { label: 'Total Users', value: (stats.subscribers?.total ?? 0).toLocaleString(), sub: `${stats.subscribers?.pro ?? 0} Pro · ${stats.subscribers?.free ?? 0} Free`, color: '#6c63ff' },
                 { label: 'Active Affiliates', value: String(approved.length), sub: `${pending.length} pending`, color: Colors.success ?? '#22c55e' },
                 { label: 'Commissions Due', value: fmt(stats.total_commissions_pending), sub: 'CAD', color: Colors.warning ?? '#f59e0b' },
               ].map(c => (
@@ -524,14 +524,14 @@ export default function AdminScreen() {
             <View style={s.pageHeader}>
               <Text style={s.pageTitle}>Feedback & Bug Reports</Text>
               <View style={{ flexDirection: 'row', gap: 8 }}>
-                {(['all', 'bug', 'suggestion'] as const).map(f => (
+                {(['all', 'bug', 'suggestion', 'resolved'] as const).map(f => (
                   <TouchableOpacity
                     key={f}
                     style={[s.btnOutline, feedbackFilter === f && { backgroundColor: Colors.primary, borderColor: Colors.primary }]}
                     onPress={() => setFeedbackFilter(f)}
                   >
                     <Text style={[s.btnTextDark, feedbackFilter === f && { color: '#fff' }]}>
-                      {f === 'all' ? 'All' : f === 'bug' ? '🐛 Bugs' : '💡 Ideas'}
+                      {f === 'all' ? 'All' : f === 'bug' ? '🐛 Bugs' : f === 'suggestion' ? '💡 Ideas' : '✅ Resolved'}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -554,7 +554,7 @@ export default function AdminScreen() {
 
             <View style={s.tableCard}>
               {feedback
-                .filter(f => feedbackFilter === 'all' || f.type === feedbackFilter)
+                .filter(f => feedbackFilter === 'resolved' ? f.status === 'resolved' : (feedbackFilter === 'all' ? f.status !== 'resolved' : (f.type === feedbackFilter && f.status !== 'resolved')))
                 .length === 0 ? (
                 <View style={s.emptyBox}>
                   <Text style={s.emptyTitle}>No feedback yet</Text>
@@ -579,6 +579,17 @@ export default function AdminScreen() {
                         <Text style={s.cellSub}>{fmtDate(f.created_at)}</Text>
                       </View>
                       <Text style={{ fontSize: 14, color: Colors.text, lineHeight: 20 }}>{f.message}</Text>
+              {f.status !== 'resolved' && (
+                <TouchableOpacity
+                  style={[s.btnOutline, { alignSelf: 'flex-start', marginTop: 4 }]}
+                  onPress={async () => {
+                    await supabase.from('feedback').update({ status: 'resolved' }).eq('id', f.id)
+                    setFeedback(prev => prev.map(item => item.id === f.id ? { ...item, status: 'resolved' } : item))
+                  }}
+                >
+                  <Text style={s.btnTextDark}>✅ Mark resolved</Text>
+                </TouchableOpacity>
+              )}
                     </View>
                   ))
               )}
