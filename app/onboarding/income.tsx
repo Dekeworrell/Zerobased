@@ -37,7 +37,7 @@ type IncomeSource = {
 export default function IncomeScreen() {
   const { width: windowWidth } = useWindowDimensions()
   // content paddingHorizontal:32 each side + card padding:20 each side = 104
-  const pickerWidth = Math.min(windowWidth, 500) - 104
+  const pickerWidth = Math.max(Math.min(windowWidth, 500) - 64, 280)
   const { from } = useLocalSearchParams<{ from?: string }>()
   const isEditing = from === 'dashboard'
   const isHouseholdJoin = from === 'household_join'
@@ -351,7 +351,7 @@ export default function IncomeScreen() {
                   display="spinner"
                   themeVariant="light"
                   minimumDate={new Date()}
-maximumDate={new Date(new Date().getFullYear(), 11, 31)}
+maximumDate={new Date(new Date().getFullYear() + 1, 11, 31)}
                   style={{ width: pickerWidth }}
                   onChange={(event, selectedDate) => {
                     if (selectedDate) {
@@ -410,7 +410,7 @@ maximumDate={new Date(new Date().getFullYear(), 11, 31)}
                       display="spinner"
                       themeVariant="light"
                       minimumDate={new Date()}
-maximumDate={new Date(new Date().getFullYear(), 11, 31)}
+maximumDate={new Date(new Date().getFullYear() + 1, 11, 31)}
                       style={{ width: pickerWidth }}
                       onChange={(event, selectedDate) => {
                         if (selectedDate) {
@@ -573,7 +573,7 @@ maximumDate={new Date(new Date().getFullYear(), 11, 31)}
                       display="spinner"
                       themeVariant="light"
                       minimumDate={new Date()}
-maximumDate={new Date(new Date().getFullYear(), 11, 31)}
+maximumDate={new Date(new Date().getFullYear() + 1, 11, 31)}
                       style={{ width: pickerWidth }}
                       onChange={(event, selectedDate) => {
                         if (selectedDate) {
