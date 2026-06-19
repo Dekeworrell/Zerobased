@@ -1,5 +1,5 @@
-import * as WebBrowser from 'expo-web-browser'
 import { router, useFocusEffect } from 'expo-router'
+import * as WebBrowser from 'expo-web-browser'
 import { useCallback, useState } from 'react'
 import {
   ActivityIndicator,
@@ -133,7 +133,7 @@ export default function ConnectBankScreen() {
       const plaidUrl = `https://cdn.plaid.com/link/v2/stable/link.html?token=${linkData.link_token}`
       const result = await WebBrowser.openAuthSessionAsync(
         plaidUrl,
-        'zerobased://connect-bank' // deep link redirect URI
+        'https://zerobased.ca/connect-bank' // universal link redirect URI
       )
 
       if (result.type !== 'success') {
