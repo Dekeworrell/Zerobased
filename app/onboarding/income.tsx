@@ -29,7 +29,7 @@ type IncomeSource = {
   amount: string
   frequency: string
   type: string
-  income_type: 'variable' | 'variable'
+  income_type: 'variable' | 'fixed'
   next_payday: string
   second_payday: string
 }
@@ -351,6 +351,7 @@ export default function IncomeScreen() {
                   display="spinner"
                   themeVariant="light"
                   minimumDate={new Date()}
+maximumDate={new Date(new Date().getFullYear(), 11, 31)}
                   style={{ width: pickerWidth }}
                   onChange={(event, selectedDate) => {
                     if (selectedDate) {
@@ -409,6 +410,7 @@ export default function IncomeScreen() {
                       display="spinner"
                       themeVariant="light"
                       minimumDate={new Date()}
+maximumDate={new Date(new Date().getFullYear(), 11, 31)}
                       style={{ width: pickerWidth }}
                       onChange={(event, selectedDate) => {
                         if (selectedDate) {
@@ -571,6 +573,7 @@ export default function IncomeScreen() {
                       display="spinner"
                       themeVariant="light"
                       minimumDate={new Date()}
+maximumDate={new Date(new Date().getFullYear(), 11, 31)}
                       style={{ width: pickerWidth }}
                       onChange={(event, selectedDate) => {
                         if (selectedDate) {
