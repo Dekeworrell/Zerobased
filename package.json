@@ -9,7 +9,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
-"vercel-build": "expo export --platform web && cp landing.html dist/landing.html"
+"vercel-build": "expo export --platform web && node -e \"require('fs').copyFileSync('landing.html', 'dist/landing.html')\""
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
