@@ -38,7 +38,7 @@ export async function getOfferings(): Promise<{
     const offerings = await RC.getOfferings()
     const packages = offerings.current?.availablePackages ?? []
     const monthly = packages.find(p => p.product.identifier === 'monthly')
-    const annual = packages.find(p => p.product.identifier === 'yearly1')
+    const annual = packages.find(p => p.product.identifier === 'yearly')
     return {
       monthlyPrice: monthly?.product.priceString ?? '$12.99',
       annualPrice: annual?.product.priceString ?? '$89.99',
