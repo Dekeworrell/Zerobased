@@ -179,6 +179,16 @@ export default function UpgradeScreen() {
 
       <Text style={styles.legalText}>Cancel anytime. Billed through the App Store.</Text>
 
+<View style={styles.legalLinks}>
+  <TouchableOpacity onPress={() => router.push('/terms')}>
+    <Text style={styles.legalLink}>Terms of Use</Text>
+  </TouchableOpacity>
+  <Text style={styles.legalLinkSeparator}> · </Text>
+  <TouchableOpacity onPress={() => router.push('/privacy')}>
+    <Text style={styles.legalLink}>Privacy Policy</Text>
+  </TouchableOpacity>
+</View>
+
       <TouchableOpacity
         style={styles.restoreButton}
         onPress={handleRestore}
@@ -442,4 +452,19 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     textDecorationLine: 'underline',
   },
+  legalLinks: {
+  flexDirection: 'row',
+  justifyContent: 'center',
+  alignItems: 'center',
+  marginBottom: 16,
+},
+legalLink: {
+  fontSize: 12,
+  color: Colors.textSecondary,
+  textDecorationLine: 'underline',
+},
+legalLinkSeparator: {
+  fontSize: 12,
+  color: Colors.textSecondary,
+},
 })
