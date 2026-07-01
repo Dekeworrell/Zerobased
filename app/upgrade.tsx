@@ -1,8 +1,8 @@
 import { router } from 'expo-router'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { Colors } from '../constants/colors'
-import { purchaseAnnual, purchaseMonthly, restorePurchases } from '../lib/purchases'
+import { getOfferings, purchaseAnnual, purchaseMonthly, restorePurchases } from '../lib/purchases'
 import { supabase } from '../lib/supabase'
 
 const FEATURES: { label: string; free: string; pro: string }[] = [
@@ -26,6 +26,17 @@ export default function UpgradeScreen() {
   const [purchasing, setPurchasing] = useState(false)
   const [restoring, setRestoring] = useState(false)
   const [purchaseError, setPurchaseError] = useState('')
+  const [monthlyPrice, setMonthlyPrice] = useState('$12.99')
+  const [annualPrice, setAnnualPrice] = useState('$89.99')
+
+  useEffect(() => {
+    getOfferings().then(o => {
+      if (o) {
+        setMonthlyPrice(o.monthlyPrice)
+        setAnnualPrice(o.annualPrice)
+      }
+    })
+  }, [])
 
   async function handlePurchase() {
     setPurchasing(true)
@@ -141,7 +152,7 @@ export default function UpgradeScreen() {
           disabled={purchasing}
         >
           <Text style={styles.planName}>Monthly</Text>
-          <Text style={styles.planPrice}>$12.99</Text>
+          <Text style={styles.planPrice}>{monthlyPrice}</Text>
           <Text style={styles.planUnit}>CAD / month</Text>
         </TouchableOpacity>
 
@@ -155,7 +166,7 @@ export default function UpgradeScreen() {
             <Text style={styles.saveBadgeText}>Save 42%</Text>
           </View>
           <Text style={[styles.planName, { marginTop: 10 }]}>Annual</Text>
-          <Text style={styles.planPrice}>$89.99</Text>
+          <Text style={styles.planPrice}>{annualPrice}</Text>
           <Text style={styles.planUnit}>CAD / year</Text>
         </TouchableOpacity>
       </View>

@@ -29,6 +29,25 @@ export async function getSubscriptionTier(): Promise<'free' | 'pro'> {
   }
 }
 
+export async function getOfferings(): Promise<{
+  monthlyPrice: string
+  annualPrice: string
+} | null> {
+  if (!RC) return null
+  try {
+    const offerings = await RC.getOfferings()
+    const packages = offerings.current?.availablePackages ?? []
+    const monthly = packages.find(p => p.product.identifier === 'monthly')
+    const annual = packages.find(p => p.product.identifier === 'yearly1')
+    return {
+      monthlyPrice: monthly?.product.priceString ?? '$12.99',
+      annualPrice: annual?.product.priceString ?? '$89.99',
+    }
+  } catch {
+    return null
+  }
+}
+
 export async function purchaseMonthly(): Promise<'free' | 'pro'> {
   if (!RC) throw new Error('Purchases not available on this platform')
   const offerings = await RC.getOfferings()
