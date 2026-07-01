@@ -28,12 +28,14 @@ export default function UpgradeScreen() {
   const [purchaseError, setPurchaseError] = useState('')
   const [monthlyPrice, setMonthlyPrice] = useState('$12.99')
   const [annualPrice, setAnnualPrice] = useState('$89.99')
+  const [debugInfo, setDebugInfo] = useState('')
 
   useEffect(() => {
     getOfferings().then(o => {
       if (o) {
         setMonthlyPrice(o.monthlyPrice)
         setAnnualPrice(o.annualPrice)
+        setDebugInfo(`M:${o.monthlyPrice} A:${o.annualPrice}`)
       }
     })
   }, [])
@@ -187,7 +189,7 @@ export default function UpgradeScreen() {
       {purchaseError ? (
         <Text style={styles.errorText}>{purchaseError}</Text>
       ) : null}
-
+      {debugInfo ? <Text style={{fontSize:10, color:'red', textAlign:'center'}}>{debugInfo}</Text> : null}
       <Text style={styles.legalText}>Cancel anytime. Billed through the App Store.</Text>
 
 <View style={styles.legalLinks}>
