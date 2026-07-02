@@ -28,12 +28,14 @@ export default function UpgradeScreen() {
   const [purchaseError, setPurchaseError] = useState('')
   const [monthlyPrice, setMonthlyPrice] = useState('$12.99')
   const [annualPrice, setAnnualPrice] = useState('$89.99')
+  const [currencyCode, setCurrencyCode] = useState('CAD')
 
   useEffect(() => {
     getOfferings().then(o => {
       if (o) {
         setMonthlyPrice(o.monthlyPrice)
         setAnnualPrice(o.annualPrice)
+        setCurrencyCode(o.currencyCode)
       }
     })
   }, [])
@@ -153,7 +155,7 @@ export default function UpgradeScreen() {
         >
           <Text style={styles.planName}>Monthly</Text>
           <Text style={styles.planPrice}>{monthlyPrice}</Text>
-          <Text style={styles.planUnit}>CAD / month</Text>
+          <Text style={styles.planUnit}>{currencyCode} / month</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -167,7 +169,7 @@ export default function UpgradeScreen() {
           </View>
           <Text style={[styles.planName, { marginTop: 10 }]}>Annual</Text>
           <Text style={styles.planPrice}>{annualPrice}</Text>
-          <Text style={styles.planUnit}>CAD / year</Text>
+          <Text style={styles.planUnit}>{currencyCode} / year</Text>
         </TouchableOpacity>
       </View>
 

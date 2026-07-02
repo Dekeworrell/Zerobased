@@ -29,6 +29,7 @@ export async function getSubscriptionTier(): Promise<'free' | 'pro'> {
 export async function getOfferings(): Promise<{
   monthlyPrice: string
   annualPrice: string
+  currencyCode: string
 } | null> {
   if (!RC) return null
   try {
@@ -40,6 +41,7 @@ export async function getOfferings(): Promise<{
     return {
       monthlyPrice: monthly?.product.priceString ?? '$12.99',
       annualPrice: annual?.product.priceString ?? '$89.99',
+      currencyCode: monthly?.product.currencyCode ?? 'CAD',
     }
   } catch {
     return null
