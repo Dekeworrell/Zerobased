@@ -62,10 +62,10 @@ export async function purchaseAnnual(): Promise<'free' | 'pro'> {
   if (!RC) throw new Error('Purchases not available on this platform')
   const { PACKAGE_TYPE } = require('react-native-purchases')
   const offerings = await RC.getOfferings()
-  const pkg = offerings.current?.availablePackages.find(
-    p => p.packageType === PACKAGE_TYPE.ANNUAL
-  )
-  if (!pkg) throw new Error('Annual plan not available. Please try again.')
+  const packages = offerings.current?.availablePackages ?? []
+  const types = packages.map(p => p.packageType).join(', ')
+  const pkg = packages.find(p => p.packageType === PACKAGE_TYPE.ANNUAL)
+  if (!pkg) throw new Error(`Annual not found. Types: ${types}. ANNUAL=${PACKAGE_TYPE.ANNUAL}`)
   const { customerInfo } = await RC.purchasePackage(pkg)
   return customerInfo.entitlements.active['pro'] ? 'pro' : 'free'
 }
