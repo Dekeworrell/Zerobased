@@ -32,10 +32,11 @@ export async function getOfferings(): Promise<{
 } | null> {
   if (!RC) return null
   try {
+    const { PACKAGE_TYPE } = require('react-native-purchases')
     const offerings = await RC.getOfferings()
     const packages = offerings.current?.availablePackages ?? []
-    const monthly = packages.find(p => p.packageType === 'MONTHLY')
-    const annual = packages.find(p => p.packageType === 'ANNUAL')
+    const monthly = packages.find(p => p.packageType === PACKAGE_TYPE.MONTHLY)
+    const annual = packages.find(p => p.packageType === PACKAGE_TYPE.ANNUAL)
     return {
       monthlyPrice: monthly?.product.priceString ?? '$12.99',
       annualPrice: annual?.product.priceString ?? '$89.99',
@@ -47,9 +48,10 @@ export async function getOfferings(): Promise<{
 
 export async function purchaseMonthly(): Promise<'free' | 'pro'> {
   if (!RC) throw new Error('Purchases not available on this platform')
+  const { PACKAGE_TYPE } = require('react-native-purchases')
   const offerings = await RC.getOfferings()
   const pkg = offerings.current?.availablePackages.find(
-    p => p.packageType === 'MONTHLY'
+    p => p.packageType === PACKAGE_TYPE.MONTHLY
   )
   if (!pkg) throw new Error('Monthly plan not available. Please try again.')
   const { customerInfo } = await RC.purchasePackage(pkg)
@@ -58,9 +60,10 @@ export async function purchaseMonthly(): Promise<'free' | 'pro'> {
 
 export async function purchaseAnnual(): Promise<'free' | 'pro'> {
   if (!RC) throw new Error('Purchases not available on this platform')
+  const { PACKAGE_TYPE } = require('react-native-purchases')
   const offerings = await RC.getOfferings()
   const pkg = offerings.current?.availablePackages.find(
-    p => p.packageType === 'ANNUAL'
+    p => p.packageType === PACKAGE_TYPE.ANNUAL
   )
   if (!pkg) throw new Error('Annual plan not available. Please try again.')
   const { customerInfo } = await RC.purchasePackage(pkg)
