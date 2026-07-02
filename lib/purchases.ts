@@ -1,10 +1,7 @@
 import { Platform } from 'react-native'
 
-// React Native Purchases is a native-only module — all entry points guard web.
-// On web, every function returns safe defaults so the app stays functional.
 let RC: typeof import('react-native-purchases').default | null = null
 if (Platform.OS !== 'web') {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   RC = require('react-native-purchases').default
 }
 
@@ -37,8 +34,8 @@ export async function getOfferings(): Promise<{
   try {
     const offerings = await RC.getOfferings()
     const packages = offerings.current?.availablePackages ?? []
-    const monthly = packages.find(p => p.product.identifier === 'monthly')
-    const annual = packages.find(p => p.product.identifier === 'yearly')
+    const monthly = packages.find(p => p.packageType === 'MONTHLY')
+    const annual = packages.find(p => p.packageType === 'ANNUAL')
     return {
       monthlyPrice: monthly?.product.priceString ?? '$12.99',
       annualPrice: annual?.product.priceString ?? '$89.99',
@@ -52,7 +49,7 @@ export async function purchaseMonthly(): Promise<'free' | 'pro'> {
   if (!RC) throw new Error('Purchases not available on this platform')
   const offerings = await RC.getOfferings()
   const pkg = offerings.current?.availablePackages.find(
-    p => p.product.identifier === 'monthly'
+    p => p.packageType === 'MONTHLY'
   )
   if (!pkg) throw new Error('Monthly plan not available. Please try again.')
   const { customerInfo } = await RC.purchasePackage(pkg)
@@ -63,7 +60,7 @@ export async function purchaseAnnual(): Promise<'free' | 'pro'> {
   if (!RC) throw new Error('Purchases not available on this platform')
   const offerings = await RC.getOfferings()
   const pkg = offerings.current?.availablePackages.find(
-    p => p.product.identifier === 'yearly'
+    p => p.packageType === 'ANNUAL'
   )
   if (!pkg) throw new Error('Annual plan not available. Please try again.')
   const { customerInfo } = await RC.purchasePackage(pkg)
