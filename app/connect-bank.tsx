@@ -172,6 +172,34 @@ export default function ConnectBankScreen() {
     setSyncing(false)
   }
 
+  function handleDisconnect(bankId: string, bankName: string) {
+    Alert.alert(
+      `Disconnect ${bankName}?`,
+      'Zerobased will no longer access this bank. Your imported transactions and accounts are kept.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Disconnect',
+          style: 'destructive',
+          onPress: async () => {
+            setError('')
+            try {
+              const { data, error: dcError } = await supabase.functions.invoke(
+                'plaid-disconnect-bank',
+                { body: { bank_id: bankId } }
+              )
+              if (dcError) throw new Error(dcError.message)
+              if (data?.error) throw new Error(data.error)
+              await loadData()
+            } catch (err: any) {
+              setError(err.message)
+            }
+          },
+        },
+      ]
+    )
+  }
+
   function formatBalance(amount: number | null, currency: string) {
     if (amount == null) return '—'
     return amount.toLocaleString('en-CA', { style: 'currency', currency: currency || 'CAD', maximumFractionDigits: 2 })
@@ -279,6 +307,11 @@ export default function ConnectBankScreen() {
                 <Text style={styles.bankName}>{bank.institution_name ?? 'Connected bank'}</Text>
                 <Text style={styles.bankMeta}>{formatSynced(bank.last_synced_at)}</Text>
               </View>
+              <TouchableOpacity
+                onPress={() => handleDisconnect(bank.id, bank.institution_name ?? 'this bank')}
+              >
+                <Text style={styles.disconnectText}>Disconnect</Text>
+              </TouchableOpacity>
             </View>
           ))}
         </>
@@ -472,6 +505,11 @@ const styles = StyleSheet.create({
   bankMeta: {
     fontSize: 12,
     color: Colors.textSecondary,
+  },
+  disconnectText: {
+    color: Colors.danger,
+    fontSize: 13,
+    fontWeight: '600',
   },
 
   // Account card
