@@ -1,6 +1,6 @@
 import DateTimePicker from '@react-native-community/datetimepicker'
 import { useEffect, useState } from 'react'
-import { ActivityIndicator, Alert, Keyboard, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { ActivityIndicator, Alert, Dimensions, Keyboard, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import { balanceChangeOnExpense, balanceChangeOnIncome } from '../constants/categories'
 import { Colors } from '../constants/colors'
 import { supabase } from '../lib/supabase'
@@ -160,8 +160,11 @@ export default function TransactionEditSheet({ visible, transaction, categories,
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={{ flex: 1, justifyContent: 'flex-end' }}>
         <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={() => { Keyboard.dismiss(); onClose() }} />
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <TouchableOpacity activeOpacity={1} onPress={Keyboard.dismiss}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ height: Dimensions.get('window').height * 0.92 }}
+        >
+        <TouchableOpacity activeOpacity={1} onPress={Keyboard.dismiss} style={{ flex: 1 }}>
           <View style={styles.sheet}>
             <View style={styles.handle} />
             <View style={styles.header}>
@@ -170,7 +173,7 @@ export default function TransactionEditSheet({ visible, transaction, categories,
                 <Text style={styles.closeBtn}>✕</Text>
               </TouchableOpacity>
             </View>
-            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+            <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
               <Text style={styles.fieldLabel}>Amount</Text>
               <CurrencyInput style={styles.amountInput} placeholder="$0.00" value={amount} onChangeText={setAmount} />
 
@@ -297,7 +300,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 24,
     padding: 24,
     paddingBottom: Platform.OS === 'ios' ? 48 : 24,
-    maxHeight: '85%',
+    flex: 1,
     maxWidth: 600,
     width: '100%',
     alignSelf: 'center',
