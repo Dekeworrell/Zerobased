@@ -88,6 +88,12 @@ Deno.serve(async (req) => {
       })
     }
 
+    // Connecting a bank switches the user's tracking method automatically
+    await supabase
+      .from('profiles')
+      .update({ tracking_method: 'bank' })
+      .eq('id', user.id)
+
     // Fetch accounts for this item
     const accountsRes = await fetch(`${PLAID_BASE_URL[PLAID_ENV]}/accounts/get`, {
       method: 'POST',
