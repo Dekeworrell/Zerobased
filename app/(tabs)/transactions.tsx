@@ -1,9 +1,10 @@
 import DateTimePicker from '@react-native-community/datetimepicker'
 import { router, useFocusEffect } from 'expo-router'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import TransactionEditSheet from '../../components/TransactionEditSheet'
 import { Colors } from '../../constants/colors'
+import { getSubscriptionTier } from '../../lib/purchases'
 import { supabase } from '../../lib/supabase'
 import { getCachedHouseholdIds, getCachedUserId } from '../../lib/userCache'
 
@@ -28,7 +29,8 @@ export default function TransactionsScreen() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
-  const [filter, setFilter] = useState<'all' | 'expense' | 'income' | 'unexpected'>('all')
+  const [filter, setFilter] = useState<'all' | 'expense' | 'income' | 'unexpected' | 'uncategorized'>('all')
+  const [tier, setTier] = useState<'free' | 'pro'>('free')
   const [startDate, setStartDate] = useState<Date | null>(null)
   const [endDate, setEndDate] = useState<Date | null>(null)
   const [showStartPicker, setShowStartPicker] = useState(false)
@@ -57,7 +59,7 @@ export default function TransactionsScreen() {
     if (!userId) return
     const userIds = await getCachedHouseholdIds(userId)
 
-    const [{ data }, { data: cats }, { data: accs }] = await Promise.all([
+    const [{ data }, { data: cats }, { data: accs }, { data: profile }, rcTier] = await Promise.all([
       supabase
         .from('transactions')
         .select(`
@@ -75,7 +77,12 @@ export default function TransactionsScreen() {
         .limit(500),
       supabase.from('budget_categories').select('id, label, icon').in('user_id', userIds),
       supabase.from('accounts').select('id, label, type').in('user_id', userIds),
+      supabase.from('profiles').select('subscription_tier').eq('id', userId).single(),
+      getSubscriptionTier(),
     ])
+
+    const dbTier = (profile?.subscription_tier as 'free' | 'pro') ?? 'free'
+    setTier(dbTier === 'pro' || rcTier === 'pro' ? 'pro' : 'free')
     if (accs) setAllAccounts(accs)
 
     if (data) {
@@ -97,6 +104,7 @@ export default function TransactionsScreen() {
       if (filter === 'expense' && (t.type !== 'expense' || t.is_unexpected)) return false
       if (filter === 'income' && t.type !== 'income') return false
       if (filter === 'unexpected' && !t.is_unexpected) return false
+      if (filter === 'uncategorized' && (t.type !== 'expense' || t.is_unexpected || t.category_id != null)) return false
       if (startDate && new Date(t.date + 'T00:00:00') < startDate) return false
       if (endDate && new Date(t.date + 'T00:00:00') > endDate) return false
       return true
@@ -291,7 +299,10 @@ export default function TransactionsScreen() {
       )}
 
       <View style={styles.filterRow}>
-        {(['all', 'expense', 'income', 'unexpected'] as const).map(f => (
+        {(tier === 'pro'
+          ? (['all', 'expense', 'income', 'unexpected', 'uncategorized'] as const)
+          : (['all', 'expense', 'income', 'unexpected'] as const)
+        ).map(f => (
           <TouchableOpacity
             key={f}
             style={[styles.filterChip, filter === f && styles.filterChipActive]}
@@ -452,6 +463,7 @@ const styles = StyleSheet.create({
   },
   filterRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
   },
   filterChip: {
