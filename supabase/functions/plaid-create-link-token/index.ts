@@ -34,7 +34,7 @@ Deno.serve(async (req) => {
         client_name: 'Zerobased',
         user: { client_user_id: user.id },
         products: ['transactions'],
-        country_codes: ['CA'],
+        country_codes: ['CA', 'US'],
         language: 'en',
         redirect_uri: 'https://zerobased.ca/connect-bank',
         hosted_link: {
