@@ -140,6 +140,19 @@ Deno.serve(async (req) => {
       catIdByLabel[c.label.toLowerCase()] = c.id
     }
 
+    // Map Plaid's account ids → the user's app account ids
+    const { data: acctLinks } = await supabase
+      .from('accounts')
+      .select('id, plaid_account_id, plaid_accounts!inner(plaid_account_id)')
+      .eq('user_id', user.id)
+      .not('plaid_account_id', 'is', null)
+
+    const appAcctByPlaidId: Record<string, string> = {}
+    for (const a of (acctLinks ?? [])) {
+      const pid = (a as any).plaid_accounts?.plaid_account_id
+      if (pid) appAcctByPlaidId[pid] = a.id
+    }
+
     // Fetch all plaid items for this user
     const { data: items } = await supabase
       .from('plaid_items')
@@ -209,6 +222,7 @@ Deno.serve(async (req) => {
             type: isCredit ? 'income' : 'expense',
             category_id: isCredit ? null : categoryId,
             source: 'plaid',
+            account_id: appAcctByPlaidId[txn.account_id] ?? null,
             plaid_transaction_id: txn.transaction_id,
             merchant_name: txn.merchant_name ?? null,
             pending: false,

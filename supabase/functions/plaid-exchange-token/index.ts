@@ -115,9 +115,37 @@ Deno.serve(async (req) => {
         mask: a.mask ?? null,
       }))
 
-      await supabase
+      const { data: savedAccounts } = await supabase
         .from('plaid_accounts')
         .upsert(rows, { onConflict: 'plaid_account_id' })
+        .select('id, name, mask, type, subtype, balance_current')
+
+      // Mirror budget-relevant bank accounts into the app's accounts table.
+      // Mortgages/investments stay out of the selector — they're not spending accounts.
+      const budgetable = (savedAccounts ?? []).filter(
+        (a: any) => a.type === 'depository' || a.type === 'credit'
+      )
+
+      if (budgetable.length > 0) {
+        const now = Date.now()
+        const appAccounts = budgetable.map((a: any, i: number) => {
+          const prefix =
+            a.type === 'credit' ? 'credit_card'
+            : a.subtype === 'savings' ? 'savings'
+            : 'chequing'
+          return {
+            user_id: user.id,
+            plaid_account_id: a.id,
+            label: a.mask ? `${a.name} ····${a.mask}` : a.name,
+            type: `${prefix}_${now + i}`,   // matches your app's category_timestamp pattern
+            balance: a.balance_current ?? 0,
+          }
+        })
+
+        await supabase
+          .from('accounts')
+          .upsert(appAccounts, { onConflict: 'plaid_account_id', ignoreDuplicates: true })
+      }
     }
 
     return new Response(JSON.stringify({
