@@ -1,80 +1,59 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient } from 'jsr:@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-const SUPABASE_URL = 'https://tkldjaqcovjdiwjpnphf.supabase.co'
-const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-const PLAID_CLIENT_ID = Deno.env.get('PLAID_CLIENT_ID') ?? ''
-const PLAID_SECRET = Deno.env.get('PLAID_SECRET') ?? ''
-const PLAID_ENV = Deno.env.get('PLAID_ENV') ?? 'sandbox' // sandbox | development | production
-
-const PLAID_BASE_URL: Record<string, string> = {
-  sandbox: 'https://sandbox.plaid.com',
-  development: 'https://development.plaid.com',
-  production: 'https://production.plaid.com',
-}
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  })
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
-  }
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   try {
-    // Authenticate caller
-    const authHeader = req.headers.get('Authorization')
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'No authorization header' }), {
-        status: 401, headers: corsHeaders,
-      })
-    }
+    // Identify the logged-in user from the request's JWT
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: req.headers.get('Authorization')! } } },
+    )
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return json({ error: 'Not logged in' }, 401)
 
-    const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    })
-
-    const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token)
-    if (userError || !user) {
-      return new Response(JSON.stringify({ error: 'Invalid token' }), {
-        status: 401, headers: corsHeaders,
-      })
-    }
-
-    // Create Plaid link token
-    const plaidRes = await fetch(`${PLAID_BASE_URL[PLAID_ENV]}/link/token/create`, {
+    const env = Deno.env.get('PLAID_ENV') ?? 'sandbox'
+    const res = await fetch(`https://${env}.plaid.com/link/token/create`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        client_id: PLAID_CLIENT_ID,
-        secret: PLAID_SECRET,
+        client_id: Deno.env.get('PLAID_CLIENT_ID'),
+        secret: Deno.env.get('PLAID_SECRET'),
         client_name: 'Zerobased',
         user: { client_user_id: user.id },
         products: ['transactions'],
-        country_codes: ['CA', 'US'],
+        country_codes: ['CA'],
         language: 'en',
-        // android_package_name: 'com.zerobased.app',  // add when going to production
+        redirect_uri: 'https://zerobased.ca/connect-bank',
+        hosted_link: {
+          completion_redirect_uri: 'zerobased://plaid-done',
+          is_mobile_app: true,
+          url_lifetime_seconds: 900,
+        },
       }),
     })
 
-    const plaidData = await plaidRes.json()
-
-    if (!plaidRes.ok) {
-      console.error('Plaid link token error:', JSON.stringify(plaidData))
-      return new Response(JSON.stringify({ error: plaidData.error_message ?? 'Plaid error' }), {
-        status: 500, headers: corsHeaders,
-      })
+    const data = await res.json()
+    if (!res.ok) {
+      console.error('Plaid link/token/create error:', JSON.stringify(data))
+      return json({ error: data.error_message ?? 'Plaid /link/token/create failed' })
     }
 
-    return new Response(JSON.stringify({ link_token: plaidData.link_token }), {
-      status: 200, headers: corsHeaders,
-    })
-
-  } catch (err: any) {
-    return new Response(JSON.stringify({ error: err.message }), {
-      status: 500, headers: corsHeaders,
-    })
+    return json({ link_token: data.link_token, hosted_link_url: data.hosted_link_url })
+  } catch (err) {
+    console.error(err)
+    return json({ error: String((err as Error)?.message ?? err) })
   }
 })

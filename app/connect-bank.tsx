@@ -119,46 +119,36 @@ export default function ConnectBankScreen() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) throw new Error('Not logged in')
 
-      // 1. Get a link token from our edge function
+      // 1. Get a Hosted Link session from our edge function
       const { data: linkData, error: linkError } = await supabase.functions.invoke(
         'plaid-create-link-token'
       )
-      if (linkError || !linkData?.link_token) {
-        const detail = linkData?.error ?? linkError?.message ?? 'Could not start bank connection'
+      if (linkError || !linkData?.hosted_link_url) {
+        const detail =
+          linkData?.error ?? linkError?.message ?? `Bad response: ${JSON.stringify(linkData)}`
         throw new Error(detail)
       }
 
-      // 2. Open Plaid Link hosted flow in the browser
-      //    Plaid sandbox: use https://sandbox.plaid.com/oauth/callback as redirect
-      const plaidUrl = `https://cdn.plaid.com/link/v2/stable/link.html?token=${linkData.link_token}`
-      const result = await WebBrowser.openAuthSessionAsync(
-        plaidUrl,
-        'https://zerobased.ca/connect-bank' // universal link redirect URI
+      // 2. Open Plaid Hosted Link — Plaid handles the full flow, including CIBC OAuth
+      await WebBrowser.openAuthSessionAsync(
+        linkData.hosted_link_url,
+        'zerobased://plaid-done'
       )
 
-      if (result.type !== 'success') {
+      // 3. The redirect fires on success AND on cancel — ask the server which it was.
+      //    public_token is retrieved and exchanged entirely server-side.
+      const { data: done, error: doneError } = await supabase.functions.invoke(
+        'plaid-complete-link',
+        { body: { link_token: linkData.link_token } }
+      )
+      if (doneError) throw new Error(doneError.message)
+      if (done?.error) throw new Error(done.error)
+      if (done?.status !== 'linked') {
         setConnecting(false)
-        return // user cancelled or dismissed
+        return // user cancelled or didn't finish
       }
 
-      // 3. Extract public_token from redirect URL
-      const url = new URL(result.url)
-      const publicToken = url.searchParams.get('public_token')
-      const institutionId = url.searchParams.get('institution_id')
-      const institutionName = url.searchParams.get('institution_name')
-
-      if (!publicToken) {
-        throw new Error('Bank connection incomplete — please try again.')
-      }
-
-      // 4. Exchange with our edge function (stores access_token server-side)
-      const { data: exchangeData, error: exchangeError } = await supabase.functions.invoke(
-        'plaid-exchange-token',
-        { body: { public_token: publicToken, institution_id: institutionId, institution_name: institutionName } }
-      )
-      if (exchangeError) throw new Error(exchangeError.message)
-
-      // 5. Reload data
+      // 4. Reload data
       await loadData()
 
     } catch (err: any) {
