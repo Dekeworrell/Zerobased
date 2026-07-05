@@ -5,6 +5,7 @@ import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, TextInput, T
 import TransactionEditSheet from '../../components/TransactionEditSheet'
 import { Colors } from '../../constants/colors'
 import { getSubscriptionTier } from '../../lib/purchases'
+import { getPayPeriodDates } from '../../lib/store'
 import { supabase } from '../../lib/supabase'
 import { getCachedHouseholdIds, getCachedUserId } from '../../lib/userCache'
 
@@ -31,6 +32,11 @@ export default function TransactionsScreen() {
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [filter, setFilter] = useState<'all' | 'expense' | 'income' | 'unexpected' | 'uncategorized'>('all')
   const [tier, setTier] = useState<'free' | 'pro'>('free')
+  const [periodStart, setPeriodStart] = useState<Date | null>(null)
+  const [periodEnd, setPeriodEnd] = useState<Date | null>(null)
+  const [payCycleStart, setPayCycleStart] = useState<Date | null>(null)
+  const [payCycleEnd, setPayCycleEnd] = useState<Date | null>(null)
+  const [rangeMode, setRangeMode] = useState<'custom' | 'paycycle'>('custom')
   const [startDate, setStartDate] = useState<Date | null>(null)
   const [endDate, setEndDate] = useState<Date | null>(null)
   const [showStartPicker, setShowStartPicker] = useState(false)
@@ -59,7 +65,7 @@ export default function TransactionsScreen() {
     if (!userId) return
     const userIds = await getCachedHouseholdIds(userId)
 
-    const [{ data }, { data: cats }, { data: accs }, { data: profile }, rcTier] = await Promise.all([
+    const [{ data }, { data: cats }, { data: accs }, { data: profile }, rcTier, { data: income }] = await Promise.all([
       supabase
         .from('transactions')
         .select(`
@@ -77,12 +83,37 @@ export default function TransactionsScreen() {
         .limit(500),
       supabase.from('budget_categories').select('id, label, icon').in('user_id', userIds),
       supabase.from('accounts').select('id, label, type').in('user_id', userIds),
-      supabase.from('profiles').select('subscription_tier').eq('id', userId).single(),
+      supabase.from('profiles').select('subscription_tier, budget_cycle').eq('id', userId).single(),
       getSubscriptionTier(),
+      supabase.from('income_sources').select('next_payday, frequency').in('user_id', userIds),
     ])
 
     const dbTier = (profile?.subscription_tier as 'free' | 'pro') ?? 'free'
     setTier(dbTier === 'pro' || rcTier === 'pro' ? 'pro' : 'free')
+
+    // Current budget period — calendar month, or pay cycle if that's the user's setting
+    const now = new Date()
+    let pStart = new Date(now.getFullYear(), now.getMonth(), 1)
+    let pEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+    const cycle = profile?.budget_cycle || 'monthly'
+    let payStart: Date | null = null
+    let payEnd: Date | null = null
+    if (income && income.length > 0) {
+      const primary = income.find((s: any) => s.next_payday) || income[0]
+      if (primary?.next_payday) {
+        const { start, end } = getPayPeriodDates(primary.next_payday, primary.frequency)
+        payStart = start
+        payEnd = end
+      }
+    }
+    if (cycle === 'paycycle' && payStart && payEnd) {
+      pStart = payStart
+      pEnd = payEnd
+    }
+    setPayCycleStart(payStart)
+    setPayCycleEnd(payEnd)
+    setPeriodStart(pStart)
+    setPeriodEnd(pEnd)
     if (accs) setAllAccounts(accs)
 
     if (data) {
@@ -105,21 +136,26 @@ export default function TransactionsScreen() {
       if (filter === 'income' && t.type !== 'income') return false
       if (filter === 'unexpected' && !t.is_unexpected) return false
       if (filter === 'uncategorized' && (t.type !== 'expense' || t.is_unexpected || t.category_id != null)) return false
-      if (startDate && new Date(t.date + 'T00:00:00') < startDate) return false
-      if (endDate && new Date(t.date + 'T00:00:00') > endDate) return false
+      const effStart = rangeMode === 'paycycle' ? payCycleStart : startDate
+      const effEnd = rangeMode === 'paycycle' ? payCycleEnd : endDate
+      if (effStart && new Date(t.date + 'T00:00:00') < effStart) return false
+      if (effEnd && new Date(t.date + 'T00:00:00') > effEnd) return false
       return true
     })
-  }, [transactions, debouncedSearch, filter, startDate, endDate])
+  }, [transactions, debouncedSearch, filter, startDate, endDate, rangeMode, payCycleStart, payCycleEnd])
 
   const { totalExpenses, totalIncome, unexpectedTotal } = useMemo(() => {
     let totalExpenses = 0, totalIncome = 0, unexpectedTotal = 0
     for (const t of transactions) {
+      const d = new Date(t.date + 'T00:00:00')
+      if (periodStart && d < periodStart) continue
+      if (periodEnd && d > periodEnd) continue
       if (t.type === 'expense') totalExpenses += t.amount
       else if (t.type === 'income') totalIncome += t.amount
       if (t.is_unexpected) unexpectedTotal += t.amount
     }
     return { totalExpenses, totalIncome, unexpectedTotal }
-  }, [transactions])
+  }, [transactions, periodStart, periodEnd])
 
   const groups = useMemo(() => {
     const g: { [key: string]: Transaction[] } = {}
@@ -192,33 +228,62 @@ export default function TransactionsScreen() {
         onChangeText={handleSearchChange}
       />
 
-      <View style={styles.dateRow}>
-        <TouchableOpacity
-          style={styles.dateBtn}
-          onPress={() => setShowStartPicker(!showStartPicker)}
-        >
-          <Text style={styles.dateBtnText}>
-            {startDate ? startDate.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' }) : '📅 From'}
-          </Text>
-        </TouchableOpacity>
-        <Text style={styles.dateSeparator}>→</Text>
-        <TouchableOpacity
-          style={styles.dateBtn}
-          onPress={() => setShowEndPicker(!showEndPicker)}
-        >
-          <Text style={styles.dateBtnText}>
-            {endDate ? endDate.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' }) : '📅 To'}
-          </Text>
-        </TouchableOpacity>
-        {(startDate || endDate) && (
+      {tier === 'pro' && payCycleStart && payCycleEnd && (
+        <View style={styles.rangeModeToggle}>
           <TouchableOpacity
-            style={styles.dateClearBtn}
-            onPress={() => { setStartDate(null); setEndDate(null) }}
+            style={[styles.rangeModeBtn, rangeMode === 'custom' && styles.rangeModeBtnActive]}
+            onPress={() => setRangeMode('custom')}
           >
-            <Text style={styles.dateClearBtnText}>✕ Clear</Text>
+            <Text style={[styles.rangeModeBtnText, rangeMode === 'custom' && styles.rangeModeBtnTextActive]}>📅 Date range</Text>
           </TouchableOpacity>
-        )}
-      </View>
+          <TouchableOpacity
+            style={[styles.rangeModeBtn, rangeMode === 'paycycle' && styles.rangeModeBtnActive]}
+            onPress={() => {
+              setRangeMode('paycycle')
+              setShowStartPicker(false)
+              setShowEndPicker(false)
+            }}
+          >
+            <Text style={[styles.rangeModeBtnText, rangeMode === 'paycycle' && styles.rangeModeBtnTextActive]}>💰 Pay cycle</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {rangeMode === 'custom' ? (
+        <View style={styles.dateRow}>
+          <TouchableOpacity
+            style={styles.dateBtn}
+            onPress={() => setShowStartPicker(!showStartPicker)}
+          >
+            <Text style={styles.dateBtnText}>
+              {startDate ? startDate.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' }) : '📅 From'}
+            </Text>
+          </TouchableOpacity>
+          <Text style={styles.dateSeparator}>→</Text>
+          <TouchableOpacity
+            style={styles.dateBtn}
+            onPress={() => setShowEndPicker(!showEndPicker)}
+          >
+            <Text style={styles.dateBtnText}>
+              {endDate ? endDate.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' }) : '📅 To'}
+            </Text>
+          </TouchableOpacity>
+          {(startDate || endDate) && (
+            <TouchableOpacity
+              style={styles.dateClearBtn}
+              onPress={() => { setStartDate(null); setEndDate(null) }}
+            >
+              <Text style={styles.dateClearBtnText}>✕ Clear</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      ) : (
+        <View style={styles.payCycleSummary}>
+          <Text style={styles.payCycleSummaryText}>
+            💰 Current pay cycle: {payCycleStart?.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })} – {payCycleEnd?.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })}
+          </Text>
+        </View>
+      )}
 
       {showStartPicker && (
         Platform.OS === 'web' ? (
@@ -567,6 +632,7 @@ const styles = StyleSheet.create({
   dateRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
     gap: 8,
   },
   dateBtn: {
@@ -599,6 +665,47 @@ const styles = StyleSheet.create({
   dateClearBtnText: {
     fontSize: 13,
     color: Colors.danger,
+    fontWeight: '500',
+  },
+  rangeModeToggle: {
+    flexDirection: 'row',
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 4,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: '#e3e8e3',
+  },
+  rangeModeBtn: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  rangeModeBtnActive: {
+    backgroundColor: Colors.primary,
+  },
+  rangeModeBtnText: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    fontWeight: '500',
+  },
+  rangeModeBtnTextActive: {
+    color: Colors.text,
+    fontWeight: '600',
+  },
+  payCycleSummary: {
+    backgroundColor: '#edf7f1',
+    borderWidth: 1.5,
+    borderColor: '#b6dfc0',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  payCycleSummaryText: {
+    fontSize: 14,
+    color: Colors.text,
     fontWeight: '500',
   },
   datePickerDoneBtn: {

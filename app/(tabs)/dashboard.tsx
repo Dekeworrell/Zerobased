@@ -58,7 +58,7 @@ export default function DashboardScreen() {
         { data: members },
         rcTier,
       ] = await Promise.all([
-        supabase.from('profiles').select('name, budget_cycle, default_account_id, last_payday_check, household_id, subscription_tier, paycheque_reminders').eq('id', userId).single(),
+        supabase.from('profiles').select('name, budget_cycle, default_account_id, last_payday_check, household_id, subscription_tier, paycheque_reminders, summary_view').eq('id', userId).single(),
         supabase.from('income_sources').select('id, label, amount, frequency, next_payday, income_type, user_id').in('user_id', userIds),
         supabase.from('budget_categories').select('id, label, icon, budgeted_amount, frequency, category_type, sort_order').in('user_id', userIds).order('sort_order', { ascending: true }),
         supabase.from('accounts').select('id, label, type, balance, user_id').in('user_id', userIds),
@@ -78,6 +78,7 @@ export default function DashboardScreen() {
       // Budget cycle — use own profile setting (household members inherit via shared categories)
       const cycle = profile?.budget_cycle || 'monthly'
       setBudgetCycle(cycle)
+      setSummaryView(profile?.summary_view === 'cycle' ? 'cycle' : 'monthly')
       if (profile?.default_account_id) setGlobalDefaultAccountId(profile.default_account_id)
 
       // Payday check — only fires for the current user's own income sources
@@ -375,7 +376,13 @@ export default function DashboardScreen() {
                     if (subscriptionTier !== 'pro') {
                       router.push('/upgrade')
                     } else {
-                      setSummaryView(v => v === 'cycle' ? 'monthly' : 'cycle')
+                      const next = summaryView === 'cycle' ? 'monthly' : 'cycle'
+                      setSummaryView(next)
+                      getCachedUserId().then(uid => {
+                        if (uid) {
+                          supabase.from('profiles').update({ summary_view: next }).eq('id', uid)
+                        }
+                      })
                     }
                   }}
                   style={styles.togglePill}
