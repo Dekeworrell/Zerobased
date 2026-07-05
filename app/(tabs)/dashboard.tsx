@@ -378,9 +378,13 @@ export default function DashboardScreen() {
                     } else {
                       const next = summaryView === 'cycle' ? 'monthly' : 'cycle'
                       setSummaryView(next)
-                      getCachedUserId().then(uid => {
+                      getCachedUserId().then(async uid => {
                         if (uid) {
-                          supabase.from('profiles').update({ summary_view: next }).eq('id', uid)
+                          const { error: svError } = await supabase
+                            .from('profiles')
+                            .update({ summary_view: next })
+                            .eq('id', uid)
+                          if (svError) console.error('summary_view save failed:', svError.message)
                         }
                       })
                     }

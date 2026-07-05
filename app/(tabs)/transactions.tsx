@@ -25,6 +25,12 @@ type Transaction = {
   to_account: { label: string } | null
 }
 
+function toYMD(d: Date) {
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${d.getFullYear()}-${m}-${day}`
+}
+
 export default function TransactionsScreen() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(true)
@@ -32,10 +38,9 @@ export default function TransactionsScreen() {
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [filter, setFilter] = useState<'all' | 'expense' | 'income' | 'unexpected' | 'uncategorized'>('all')
   const [tier, setTier] = useState<'free' | 'pro'>('free')
-  const [periodStart, setPeriodStart] = useState<Date | null>(null)
-  const [periodEnd, setPeriodEnd] = useState<Date | null>(null)
-  const [payCycleStart, setPayCycleStart] = useState<Date | null>(null)
-  const [payCycleEnd, setPayCycleEnd] = useState<Date | null>(null)
+  const [payPeriods, setPayPeriods] = useState<{ start: Date; end: Date }[]>([])
+  const [periodIndex, setPeriodIndex] = useState(0)
+  const [showPeriodPicker, setShowPeriodPicker] = useState(false)
   const [rangeMode, setRangeMode] = useState<'custom' | 'paycycle'>('custom')
   const [startDate, setStartDate] = useState<Date | null>(null)
   const [endDate, setEndDate] = useState<Date | null>(null)
@@ -91,29 +96,26 @@ export default function TransactionsScreen() {
     const dbTier = (profile?.subscription_tier as 'free' | 'pro') ?? 'free'
     setTier(dbTier === 'pro' || rcTier === 'pro' ? 'pro' : 'free')
 
-    // Current budget period — calendar month, or pay cycle if that's the user's setting
-    const now = new Date()
-    let pStart = new Date(now.getFullYear(), now.getMonth(), 1)
-    let pEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0)
-    const cycle = profile?.budget_cycle || 'monthly'
-    let payStart: Date | null = null
-    let payEnd: Date | null = null
+    // Build the current pay period plus earlier ones covering ~90 days back
+    const periods: { start: Date; end: Date }[] = []
     if (income && income.length > 0) {
       const primary = income.find((s: any) => s.next_payday) || income[0]
       if (primary?.next_payday) {
         const { start, end } = getPayPeriodDates(primary.next_payday, primary.frequency)
-        payStart = start
-        payEnd = end
+        const stepDays = Math.round((end.getTime() - start.getTime()) / 86400000) + 1
+        const cutoff = new Date()
+        cutoff.setDate(cutoff.getDate() - 90)
+        const s = new Date(start)
+        const e = new Date(end)
+        while (e >= cutoff && periods.length < 30) {
+          periods.push({ start: new Date(s), end: new Date(e) })
+          s.setDate(s.getDate() - stepDays)
+          e.setDate(e.getDate() - stepDays)
+        }
       }
     }
-    if (cycle === 'paycycle' && payStart && payEnd) {
-      pStart = payStart
-      pEnd = payEnd
-    }
-    setPayCycleStart(payStart)
-    setPayCycleEnd(payEnd)
-    setPeriodStart(pStart)
-    setPeriodEnd(pEnd)
+    setPayPeriods(periods)
+    setPeriodIndex(0)
     if (accs) setAllAccounts(accs)
 
     if (data) {
@@ -136,26 +138,44 @@ export default function TransactionsScreen() {
       if (filter === 'income' && t.type !== 'income') return false
       if (filter === 'unexpected' && !t.is_unexpected) return false
       if (filter === 'uncategorized' && (t.type !== 'expense' || t.is_unexpected || t.category_id != null)) return false
-      const effStart = rangeMode === 'paycycle' ? payCycleStart : startDate
-      const effEnd = rangeMode === 'paycycle' ? payCycleEnd : endDate
-      if (effStart && new Date(t.date + 'T00:00:00') < effStart) return false
-      if (effEnd && new Date(t.date + 'T00:00:00') > effEnd) return false
+      const effStart = rangeMode === 'paycycle' ? (payPeriods[periodIndex]?.start ?? null) : startDate
+      const effEnd = rangeMode === 'paycycle' ? (payPeriods[periodIndex]?.end ?? null) : endDate
+      if (effStart && t.date < toYMD(effStart)) return false
+      if (effEnd && t.date > toYMD(effEnd)) return false
       return true
     })
-  }, [transactions, debouncedSearch, filter, startDate, endDate, rangeMode, payCycleStart, payCycleEnd])
+  }, [transactions, debouncedSearch, filter, startDate, endDate, rangeMode, payPeriods, periodIndex])
 
   const { totalExpenses, totalIncome, unexpectedTotal } = useMemo(() => {
+    // Cards summarize whatever range the screen is showing:
+    // pay cycle mode → pay cycle; custom dates → those dates; nothing → current month
+    let effStart: Date | null
+    let effEnd: Date | null
+    if (rangeMode === 'paycycle') {
+      effStart = payPeriods[periodIndex]?.start ?? null
+      effEnd = payPeriods[periodIndex]?.end ?? null
+    } else if (startDate || endDate) {
+      effStart = startDate
+      effEnd = endDate
+    } else {
+      const now = new Date()
+      effStart = new Date(now.getFullYear(), now.getMonth(), 1)
+      effEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+    }
+
+    const startStr = effStart ? toYMD(effStart) : null
+    const endStr = effEnd ? toYMD(effEnd) : null
+
     let totalExpenses = 0, totalIncome = 0, unexpectedTotal = 0
     for (const t of transactions) {
-      const d = new Date(t.date + 'T00:00:00')
-      if (periodStart && d < periodStart) continue
-      if (periodEnd && d > periodEnd) continue
+      if (startStr && t.date < startStr) continue
+      if (endStr && t.date > endStr) continue
       if (t.type === 'expense') totalExpenses += t.amount
       else if (t.type === 'income') totalIncome += t.amount
       if (t.is_unexpected) unexpectedTotal += t.amount
     }
     return { totalExpenses, totalIncome, unexpectedTotal }
-  }, [transactions, periodStart, periodEnd])
+  }, [transactions, rangeMode, payPeriods, periodIndex, startDate, endDate])
 
   const groups = useMemo(() => {
     const g: { [key: string]: Transaction[] } = {}
@@ -228,7 +248,7 @@ export default function TransactionsScreen() {
         onChangeText={handleSearchChange}
       />
 
-      {tier === 'pro' && payCycleStart && payCycleEnd && (
+      {tier === 'pro' && payPeriods.length > 0 && (
         <View style={styles.rangeModeToggle}>
           <TouchableOpacity
             style={[styles.rangeModeBtn, rangeMode === 'custom' && styles.rangeModeBtnActive]}
@@ -240,6 +260,8 @@ export default function TransactionsScreen() {
             style={[styles.rangeModeBtn, rangeMode === 'paycycle' && styles.rangeModeBtnActive]}
             onPress={() => {
               setRangeMode('paycycle')
+              setPeriodIndex(0)
+              setShowPeriodPicker(false)
               setShowStartPicker(false)
               setShowEndPicker(false)
             }}
@@ -278,11 +300,29 @@ export default function TransactionsScreen() {
           )}
         </View>
       ) : (
-        <View style={styles.payCycleSummary}>
-          <Text style={styles.payCycleSummaryText}>
-            💰 Current pay cycle: {payCycleStart?.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })} – {payCycleEnd?.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })}
-          </Text>
-        </View>
+        <>
+          <TouchableOpacity style={styles.payCycleSummary} onPress={() => setShowPeriodPicker(!showPeriodPicker)}>
+            <Text style={styles.payCycleSummaryText}>
+              💰 {payPeriods[periodIndex]?.start.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })} – {payPeriods[periodIndex]?.end.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })}{periodIndex === 0 ? ' (current)' : ''}   {showPeriodPicker ? '▲' : '▼'}
+            </Text>
+          </TouchableOpacity>
+          {showPeriodPicker && (
+            <View style={styles.periodList}>
+              {payPeriods.map((p, i) => (
+                <TouchableOpacity
+                  key={i}
+                  style={[styles.periodRow, i === periodIndex && styles.periodRowActive]}
+                  onPress={() => { setPeriodIndex(i); setShowPeriodPicker(false) }}
+                >
+                  <Text style={[styles.periodRowText, i === periodIndex && styles.periodRowTextActive]}>
+                    {p.start.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })} – {p.end.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })}{i === 0 ? ' (current)' : ''}
+                  </Text>
+                  {i === periodIndex && <Text style={styles.periodRowCheck}>✓</Text>}
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+        </>
       )}
 
       {showStartPicker && (
@@ -707,6 +747,37 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.text,
     fontWeight: '500',
+  },
+  periodList: {
+    gap: 6,
+  },
+  periodRow: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e3e8e3',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  periodRowActive: {
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primary + '22',
+  },
+  periodRowText: {
+    fontSize: 14,
+    color: Colors.text,
+  },
+  periodRowTextActive: {
+    color: Colors.primary,
+    fontWeight: '600',
+  },
+  periodRowCheck: {
+    color: Colors.primary,
+    fontSize: 16,
+    fontWeight: '600',
   },
   datePickerDoneBtn: {
     backgroundColor: Colors.primary,
