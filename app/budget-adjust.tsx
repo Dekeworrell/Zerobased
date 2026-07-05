@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import CurrencyInput from '../components/CurrencyInput'
 import { Colors } from '../constants/colors'
+import { maybeRequestReview } from '../lib/requestReview'
 import { toMonthly } from '../lib/store'
 import { supabase } from '../lib/supabase'
 
@@ -96,6 +97,8 @@ export default function BudgetAdjustScreen() {
       }))
 
       await supabase.from('budget_overrides').insert(overrides)
+
+      if (isZero) maybeRequestReview()
 
       router.replace('/dashboard')
     } catch (err: any) {

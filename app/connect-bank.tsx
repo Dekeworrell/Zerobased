@@ -13,6 +13,7 @@ import {
 } from 'react-native'
 import { Colors } from '../constants/colors'
 import { getSubscriptionTier } from '../lib/purchases'
+import { maybeRequestReview } from '../lib/requestReview'
 import { supabase } from '../lib/supabase'
 
 type ConnectedBank = {
@@ -151,6 +152,9 @@ export default function ConnectBankScreen() {
       // 4. Reload data
       await loadData()
 
+      // Happy moment: bank just connected — maybe ask for a rating
+      maybeRequestReview()
+
     } catch (err: any) {
       setError(err.message)
     }
@@ -166,6 +170,7 @@ export default function ConnectBankScreen() {
       if (syncError) throw new Error(syncError.message)
       setSyncResult(`✅ ${data?.synced ?? 0} new transactions imported`)
       await loadData()
+      maybeRequestReview()
     } catch (err: any) {
       setError(err.message)
     }
@@ -202,13 +207,13 @@ export default function ConnectBankScreen() {
 
   function formatBalance(amount: number | null, currency: string) {
     if (amount == null) return '—'
-    return amount.toLocaleString('en-CA', { style: 'currency', currency: currency || 'CAD', maximumFractionDigits: 2 })
+    return amount.toLocaleString(undefined, { style: 'currency', currency: currency || 'CAD', maximumFractionDigits: 2 })
   }
 
   function formatSynced(iso: string | null) {
     if (!iso) return 'Never synced'
     const d = new Date(iso)
-    return `Last synced ${d.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })} at ${d.toLocaleTimeString('en-CA', { hour: 'numeric', minute: '2-digit' })}`
+    return `Last synced ${d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} at ${d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`
   }
 
   function accountTypeIcon(type: string, subtype: string | null) {
@@ -239,7 +244,7 @@ export default function ConnectBankScreen() {
           <Text style={styles.lockedIcon}>🏦</Text>
           <Text style={styles.lockedTitle}>Bank connections are Pro</Text>
           <Text style={styles.lockedBody}>
-            Connect your Canadian bank and automatically import and categorize transactions.
+            Connect your bank and automatically import and categorize transactions.
           </Text>
           <TouchableOpacity style={styles.upgradeButton} onPress={() => router.push('/upgrade')}>
             <Text style={styles.upgradeButtonText}>Upgrade to Pro</Text>
@@ -359,7 +364,7 @@ export default function ConnectBankScreen() {
             Tap "Connect a bank" to securely link your Canadian bank accounts and start importing transactions automatically.
           </Text>
           <View style={styles.institutionGrid}>
-            {['TD', 'RBC', 'BMO', 'Scotiabank', 'CIBC', 'EQ Bank'].map(name => (
+            {['TD', 'RBC', 'BMO', 'Scotiabank', 'CIBC', 'Chase'].map(name => (
               <View key={name} style={styles.institutionChip}>
                 <Text style={styles.institutionChipText}>{name}</Text>
               </View>

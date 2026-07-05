@@ -7,6 +7,7 @@ import CurrencyInput from '../../components/CurrencyInput'
 import { EXPENSE_CATEGORIES } from '../../constants/categories'
 import { Colors } from '../../constants/colors'
 import { getSubscriptionTier } from '../../lib/purchases'
+import { maybeRequestReview } from '../../lib/requestReview'
 import { calculateBudgetStatus, toMonthly } from '../../lib/store'
 import { supabase } from '../../lib/supabase'
 import { getCachedHouseholdIds, getCachedUserId } from '../../lib/userCache'
@@ -186,6 +187,7 @@ export default function BudgetScreen() {
       }
 
       setSuccess(true)
+      if (Math.abs(remaining) < 0.5) maybeRequestReview()
       setTimeout(() => {
         router.replace('/dashboard')
       }, 1000)
