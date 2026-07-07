@@ -5,6 +5,7 @@
     { "source": "/", "destination": "/landing.html", "permanent": false }
   ],
   "rewrites": [
+    { "source": "/reset-password", "destination": "/reset-password.html" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
