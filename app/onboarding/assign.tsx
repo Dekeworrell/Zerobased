@@ -1,6 +1,6 @@
 import { router } from 'expo-router'
 import { useEffect, useRef, useState } from 'react'
-import { Animated, ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { ActivityIndicator, Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import CurrencyInput from '../../components/CurrencyInput'
 import KeyboardScrollView from '../../components/KeyboardScrollView'
 import { EXPENSE_CATEGORIES } from '../../constants/categories'
@@ -139,6 +139,7 @@ export default function AssignScreen() {
   }
 
   async function handleFinish() {
+    if (saving) return
     setSaving(true)
     setError('')
 
@@ -424,7 +425,7 @@ export default function AssignScreen() {
         }
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={handleFinish} style={{ paddingVertical: 12, alignItems: 'center' }}>
+      <TouchableOpacity onPress={handleFinish} disabled={saving} style={{ paddingVertical: 12, alignItems: 'center' }}>
         <Text style={{ color: Colors.textSecondary, fontSize: 14 }}>Skip for now</Text>
       </TouchableOpacity>
     </KeyboardScrollView>

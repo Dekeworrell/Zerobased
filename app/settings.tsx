@@ -118,7 +118,6 @@ export default function SettingsScreen() {
   async function handleLogout() {
     invalidateUserCache()
     await supabase.auth.signOut()
-    clearOnboardingData()
     router.replace('/')
   }
 
