@@ -21,6 +21,7 @@ type ConnectedBank = {
   institution_name: string | null
   account_count: number
   last_synced_at: string | null
+  needs_reconnect: boolean
 }
 
 type PlaidAccount = {
@@ -48,9 +49,16 @@ export default function ConnectBankScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      loadData()
+      loadData().then(() => { silentSync() })
     }, [])
   )
+
+  async function silentSync() {
+    try {
+      await supabase.functions.invoke('plaid-sync-transactions')
+      await loadData()
+    } catch { /* quiet — don't interrupt the user */ }
+  }
 
   async function loadData() {
     setLoading(true)
@@ -73,7 +81,7 @@ export default function ConnectBankScreen() {
       // Load connected banks
       const { data: bankData } = await supabase
         .from('plaid_items')
-        .select('id, institution_name, last_synced_at')
+        .select('id, institution_name, last_synced_at, needs_reconnect')
         .eq('user_id', user.id)
 
       // Load plaid accounts with institution name
@@ -91,6 +99,7 @@ export default function ConnectBankScreen() {
           id: b.id,
           institution_name: b.institution_name,
           last_synced_at: b.last_synced_at,
+          needs_reconnect: b.needs_reconnect,
           account_count: (accountData ?? []).filter((a: any) => a.item_id === b.id).length,
         })))
       }
@@ -160,6 +169,25 @@ export default function ConnectBankScreen() {
     }
     setConnecting(false)
   }
+  async function handleReconnect(bankId: string) {
+      setConnecting(true)
+      setError('')
+      try {
+        const { data: linkData, error: linkError } = await supabase.functions.invoke(
+          'plaid-create-link-token',
+          { body: { bank_id: bankId } }
+        )
+        if (linkError || !linkData?.hosted_link_url) throw new Error(linkData?.error ?? 'Could not start reconnect')
+
+        await WebBrowser.openAuthSessionAsync(linkData.hosted_link_url, 'zerobased://plaid-done')
+        await supabase.functions.invoke('plaid-complete-link', { body: { link_token: linkData.link_token } })
+        await loadData()
+        await handleSync()
+      } catch (err: any) {
+        setError(err.message)
+      }
+      setConnecting(false)
+    }
 
   async function handleSync() {
     setSyncing(true)
@@ -312,11 +340,16 @@ export default function ConnectBankScreen() {
                 <Text style={styles.bankName}>{bank.institution_name ?? 'Connected bank'}</Text>
                 <Text style={styles.bankMeta}>{formatSynced(bank.last_synced_at)}</Text>
               </View>
-              <TouchableOpacity
-                onPress={() => handleDisconnect(bank.id, bank.institution_name ?? 'this bank')}
-              >
-                <Text style={styles.disconnectText}>Disconnect</Text>
-              </TouchableOpacity>
+              <View style={{ alignItems: 'flex-end', gap: 6 }}>
+                {bank.needs_reconnect && (
+                  <TouchableOpacity onPress={() => handleReconnect(bank.id)}>
+                    <Text style={{ color: Colors.primary, fontSize: 13, fontWeight: '700' }}>⚠️ Reconnect</Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity onPress={() => handleDisconnect(bank.id, bank.institution_name ?? 'this bank')}>
+                  <Text style={styles.disconnectText}>Disconnect</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           ))}
         </>

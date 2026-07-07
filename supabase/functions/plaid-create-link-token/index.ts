@@ -24,6 +24,25 @@ Deno.serve(async (req) => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return json({ error: 'Not logged in' }, 401)
 
+    // If a bank_id is passed, this is a "repair" (update mode) for an existing bank
+    let repairAccessToken: string | null = null
+    try {
+      const body = await req.json()
+      if (body?.bank_id) {
+        const admin = createClient(
+          Deno.env.get('SUPABASE_URL')!,
+          Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+        )
+        const { data: item } = await admin
+          .from('plaid_items')
+          .select('access_token')
+          .eq('id', body.bank_id)
+          .eq('user_id', user.id)
+          .single()
+        if (item) repairAccessToken = item.access_token
+      }
+    } catch { /* no body = normal new connection */ }
+
     const env = Deno.env.get('PLAID_ENV') ?? 'sandbox'
     const res = await fetch(`https://${env}.plaid.com/link/token/create`, {
       method: 'POST',
@@ -33,7 +52,9 @@ Deno.serve(async (req) => {
         secret: Deno.env.get('PLAID_SECRET'),
         client_name: 'Zerobased',
         user: { client_user_id: user.id },
-        products: ['transactions'],
+        ...(repairAccessToken
+          ? { access_token: repairAccessToken }
+          : { products: ['transactions'] }),
         country_codes: ['CA', 'US'],
         language: 'en',
         redirect_uri: 'https://zerobased.ca/connect-bank',
