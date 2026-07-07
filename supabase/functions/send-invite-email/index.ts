@@ -57,10 +57,10 @@ Deno.serve(async (req) => {
       <td align="center">
         <table width="100%" style="max-width:520px;background:#ffffff;border-radius:16px;border:1px solid #e3e8e3;overflow:hidden;">
           <tr>
-            <td style="background:#8bc4a0;padding:32px;text-align:center;">
-              <div style="font-size:40px;margin-bottom:8px;">💚</div>
-              <div style="font-size:22px;font-weight:700;color:#1a1a1a;">Zerobased</div>
-              <div style="font-size:14px;color:#2d5a3d;margin-top:4px;">Zero-based budgeting, together</div>
+            <td style="background:#3db870;padding:32px;text-align:center;">
+              <div style="font-size:40px;margin-bottom:8px;">💰</div>
+              <div style="font-size:22px;font-weight:700;color:#ffffff;">Zerobased</div>
+              <div style="font-size:14px;color:#d9f2e3;margin-top:4px;">Zero-based budgeting, together</div>
             </td>
           </tr>
           <tr>

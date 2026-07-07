@@ -26,6 +26,7 @@ export default function SettingsScreen() {
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteSent, setInviteSent] = useState(false)
   const [inviteCode, setInviteCode] = useState('')
+  const [enteredCode, setEnteredCode] = useState('')
   const [pendingInvite, setPendingInvite] = useState<any>(null)
   const [pendingInviteeEmail, setPendingInviteeEmail] = useState('')
   const [householdLoading, setHouseholdLoading] = useState(false)
@@ -70,13 +71,11 @@ export default function SettingsScreen() {
         if (members && members.length > 0) {
           setPartnerEmail(members[0].name || 'Your partner')
         } else {
-          const { data: outgoing } = await supabase
-            .from('household_invitations')
-            .select('invited_email')
-            .eq('household_id', profile.household_id)
-            .eq('accepted', false)
-            .maybeSingle()
-          if (outgoing) setPendingInviteeEmail(outgoing.invited_email)
+          const { data: outgoing } = await supabase.rpc('get_outgoing_invite')
+          if (outgoing) {
+            setPendingInviteeEmail(outgoing.invited_email)
+            setInviteCode(outgoing.token)
+          }
         }
       } else {
         setPartnerEmail('')
@@ -125,11 +124,12 @@ export default function SettingsScreen() {
 
   async function acceptInvite() {
     if (!pendingInvite) return
+    if (!enteredCode.trim()) { setError('Please enter the code your partner shared with you'); return }
     setHouseholdLoading(true)
     setError('')
     try {
       const { data, error } = await supabase.rpc('accept_household_invite', {
-        invite_token: pendingInvite.token
+        invite_token: enteredCode.trim()
       })
       if (error) throw error
       invalidateUserCache()
@@ -157,38 +157,36 @@ export default function SettingsScreen() {
     if (!confirm) return
     setHouseholdLoading(true)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      const user = session?.user
-      if (!user) return
-      await supabase.from('profiles').update({ household_id: null }).eq('id', user.id)
+      const { error } = await supabase.rpc('leave_household')
+      if (error) throw error
       invalidateUserCache()
       setHouseholdId(null)
       setPartnerEmail('')
+      setPendingInviteeEmail('')
+      await loadProfile()
     } catch (err: any) {
       setError(err.message)
     }
     setHouseholdLoading(false)
   }
 
-async function sendInvite() {
-    if (!inviteEmail.trim()) return
+  async function sendInvite(targetEmail?: string) {
+    const emailToUse = (targetEmail || inviteEmail).trim().toLowerCase()
+    if (!emailToUse) return
     setHouseholdLoading(true)
     setError('')
     try {
       const { data, error } = await supabase.rpc('create_household_and_invite', {
-        invited_email_param: inviteEmail.trim().toLowerCase()
+        invited_email_param: emailToUse
       })
-
       if (error) throw error
-
-      const sentTo = inviteEmail.trim().toLowerCase()
       setHouseholdId(data.household_id)
       setInviteCode(data.token)
       setInviteSent(true)
       setInviteEmail('')
-      setPendingInviteeEmail(sentTo)
+      setPendingInviteeEmail(emailToUse)
       supabase.functions.invoke('send-invite-email', {
-        body: { invited_email: sentTo, inviter_name: name || email }
+        body: { invited_email: emailToUse, inviter_name: name || email }
       }).catch(() => {})
     } catch (err: any) {
       setError(err.message)
@@ -255,7 +253,6 @@ async function sendInvite() {
             placeholderTextColor={Colors.textSecondary}
             value={name}
             onChangeText={setName}
-            selectTextOnFocus
           />
         </View>
         <View style={styles.field}>
@@ -439,10 +436,11 @@ async function sendInvite() {
           <Text style={styles.linkRowChevron}>›</Text>
         </TouchableOpacity>
       </View>
-<View style={styles.section}>
+
+      <View style={styles.section}>
         <Text style={styles.sectionTitle}>Household</Text>
 
-        {subscriptionTier === 'free' ? (
+        {subscriptionTier === 'free' && !pendingInvite ? (
           <View style={styles.upgradeCard}>
             <Text style={styles.upgradeCardTitle}>Share your budget with a partner.</Text>
             <Text style={styles.upgradeCardBody}>Available on Zerobased Pro.</Text>
@@ -450,98 +448,82 @@ async function sendInvite() {
               <Text style={styles.upgradeButtonText}>Upgrade to Pro</Text>
             </TouchableOpacity>
           </View>
-        ) : householdId && (partnerEmail || pendingInviteeEmail) ? (
+        ) : pendingInvite ? (
+          <View style={styles.inviteCard}>
+            <Text style={styles.inviteCardTitle}>📬 You have a pending invite!</Text>
+            <Text style={styles.switchSubLabel}>
+              Enter the code your partner shared with you to join their budget.
+            </Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter code"
+              placeholderTextColor={Colors.textSecondary}
+              value={enteredCode}
+              onChangeText={(t) => setEnteredCode(t.toUpperCase())}
+              autoCapitalize="characters"
+            />
+            <TouchableOpacity style={styles.acceptBtn} onPress={acceptInvite} disabled={householdLoading}>
+              {householdLoading
+                ? <ActivityIndicator color={Colors.text} />
+                : <Text style={styles.acceptBtnText}>Accept Invite</Text>}
+            </TouchableOpacity>
+          </View>
+        ) : householdId && partnerEmail ? (
           <>
             <View style={styles.partnerCard}>
-              <Text style={styles.partnerIcon}>{partnerEmail ? '👫' : '⏳'}</Text>
+              <Text style={styles.partnerIcon}>👫</Text>
               <View style={styles.partnerInfo}>
-                <Text style={styles.partnerName}>
-                  {partnerEmail
-                    ? `Sharing with ${partnerEmail}`
-                    : `Sharing with ${pendingInviteeEmail}`}
-                </Text>
-                <Text style={styles.switchSubLabel}>
-                  {partnerEmail
-                    ? 'You share the same budget and transactions'
-                    : 'Invite pending — waiting for them to accept'}
-                </Text>
+                <Text style={styles.partnerName}>Sharing with {partnerEmail}</Text>
+                <Text style={styles.switchSubLabel}>You share the same budget and transactions</Text>
               </View>
             </View>
-            <TouchableOpacity
-              style={styles.leaveBtn}
-              onPress={leaveHousehold}
-              disabled={householdLoading}
-            >
+            <TouchableOpacity style={styles.leaveBtn} onPress={leaveHousehold} disabled={householdLoading}>
               <Text style={styles.leaveBtnText}>Leave household</Text>
+            </TouchableOpacity>
+          </>
+        ) : householdId && pendingInviteeEmail ? (
+          <>
+            <View style={styles.inviteCard}>
+              <Text style={styles.inviteCardTitle}>⏳ Invite pending</Text>
+              <Text style={styles.switchSubLabel}>
+                Waiting for {pendingInviteeEmail} to accept. Share this code with them:
+              </Text>
+              <Text style={styles.inviteCode}>{inviteCode}</Text>
+              <TouchableOpacity onPress={() => sendInvite(pendingInviteeEmail)} disabled={householdLoading}>
+                <Text style={[styles.switchSubLabel, { color: Colors.primary, marginTop: 4 }]}>
+                  {householdLoading ? 'Working…' : '🔄 Send a new code (cancels the old one)'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity style={styles.leaveBtn} onPress={leaveHousehold} disabled={householdLoading}>
+              <Text style={styles.leaveBtnText}>Cancel invite</Text>
             </TouchableOpacity>
           </>
         ) : (
           <>
-            {pendingInvite && (
-              <View style={styles.inviteCard}>
-                <Text style={styles.inviteCardTitle}>📬 You have a pending invite!</Text>
-                <Text style={styles.switchSubLabel}>
-                  Someone invited you to share their budget.
-                </Text>
-                <TouchableOpacity
-                  style={styles.acceptBtn}
-                  onPress={acceptInvite}
-                  disabled={householdLoading}
-                >
-                  {householdLoading
-                    ? <ActivityIndicator color={Colors.text} />
-                    : <Text style={styles.acceptBtnText}>Accept Invite</Text>
-                  }
-                </TouchableOpacity>
-              </View>
-            )}
-
-            {!pendingInvite && (
-              <>
-                <Text style={styles.switchSubLabel}>
-                  Invite a partner to share your budget. They'll be able to log transactions and see the same dashboard.
-                </Text>
-                {inviteSent ? (
-                  <View style={styles.inviteCard}>
-                    <Text style={styles.inviteCardTitle}>✅ Invite sent!</Text>
-                    <Text style={styles.switchSubLabel}>
-                      Share this code with your partner:
-                    </Text>
-                    <Text style={styles.inviteCode}>{inviteCode}</Text>
-                    <Text style={styles.switchSubLabel}>
-                      They'll see the invite when they open the app on their device.
-                    </Text>
-                    <TouchableOpacity onPress={() => setInviteSent(false)}>
-                      <Text style={[styles.switchSubLabel, { color: Colors.primary, marginTop: 4 }]}>
-                        Send another invite
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                ) : (
-                  <View style={styles.inviteRow}>
-                    <TextInput
-                      style={[styles.input, { flex: 1 }]}
-                      placeholder="Partner's email"
-                      placeholderTextColor={Colors.textSecondary}
-                      value={inviteEmail}
-                      onChangeText={setInviteEmail}
-                      keyboardType="email-address"
-                      autoCapitalize="none"
-                    />
-                    <TouchableOpacity
-                      style={[styles.sendBtn, householdLoading && styles.disabled]}
-                      onPress={sendInvite}
-                      disabled={householdLoading}
-                    >
-                      {householdLoading
-                        ? <ActivityIndicator color={Colors.text} size="small" />
-                        : <Text style={styles.sendBtnText}>Invite</Text>
-                      }
-                    </TouchableOpacity>
-                  </View>
-                )}
-              </>
-            )}
+            <Text style={styles.switchSubLabel}>
+              Invite a partner to share your budget. They'll be able to log transactions and see the same dashboard.
+            </Text>
+            <View style={styles.inviteRow}>
+              <TextInput
+                style={[styles.input, { flex: 1 }]}
+                placeholder="Partner's email"
+                placeholderTextColor={Colors.textSecondary}
+                value={inviteEmail}
+                onChangeText={setInviteEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+              <TouchableOpacity
+                style={[styles.sendBtn, householdLoading && styles.disabled]}
+                onPress={() => sendInvite()}
+                disabled={householdLoading}
+              >
+                {householdLoading
+                  ? <ActivityIndicator color={Colors.text} size="small" />
+                  : <Text style={styles.sendBtnText}>Invite</Text>}
+              </TouchableOpacity>
+            </View>
           </>
         )}
       </View>
