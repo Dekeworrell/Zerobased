@@ -132,22 +132,12 @@ export default function PaydayModal({ visible, incomeSources, accounts, defaultA
       let totalActual = 0
       let balanceDelta = 0
 
-      // Expected = the sum of expected pay for the sources on this cheque
-      // (each source's own per-cheque amount). Anything above this is "extra".
-      for (const source of fixedSources) totalBudgeted += source.amount
-      for (const source of variableSources) totalBudgeted += source.amount
+      // Expected = each source's original planned pay (from income setup).
+      // Actual = what the user typed. Extra = actual − expected.
+      for (const source of incomeSources) totalBudgeted += source.amount
 
-      for (const source of fixedSources) {
-        await supabase.from('transactions').insert({
-          user_id: user.id, label: source.label, amount: source.amount,
-          date: paydayDate, type: 'income', is_unexpected: false, category_id: null,
-        })
-        totalActual += source.amount
-        balanceDelta += source.amount
-      }
-
-      for (const source of variableSources) {
-        const actualAmount = parseFloat(variableAmounts[source.id] || '0') || 0
+      for (const source of incomeSources) {
+        const actualAmount = parseFloat(variableAmounts[source.id] ?? source.amount?.toString() ?? '0') || 0
         if (actualAmount > 0) {
           await supabase.from('transactions').insert({
             user_id: user.id, label: source.label, amount: actualAmount,
@@ -333,13 +323,13 @@ export default function PaydayModal({ visible, incomeSources, accounts, defaultA
               </View>
             )}
 
-            {variableSources.map(source => (
+            {incomeSources.map(source => (
               <View key={source.id} style={{ marginBottom: 4 }}>
-                <Text style={styles.fieldLabel}>{source.label} — actual amount</Text>
+                <Text style={styles.fieldLabel}>{source.label} — amount you got paid</Text>
                 <CurrencyInput
                   style={styles.input}
                   placeholder={`Expected $${source.amount.toLocaleString('en-CA', { maximumFractionDigits: 2 })}`}
-                  value={variableAmounts[source.id] || ''}
+                  value={variableAmounts[source.id] ?? (source.amount ? source.amount.toString() : '')}
                   onChangeText={(val) => setVariableAmounts(prev => ({ ...prev, [source.id]: val }))}
                 />
               </View>
