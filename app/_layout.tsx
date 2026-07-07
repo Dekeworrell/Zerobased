@@ -22,6 +22,7 @@ export default function RootLayout() {
       <Stack.Screen name="upgrade" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
       <Stack.Screen name="signup" />
       <Stack.Screen name="login" />
+      <Stack.Screen name="forgot-password" />
       <Stack.Screen name="welcome" />
       <Stack.Screen name="onboarding" />
       <Stack.Screen name="settings" />

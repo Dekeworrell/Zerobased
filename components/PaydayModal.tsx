@@ -5,7 +5,6 @@ import {
   StyleSheet, Text, TouchableOpacity, View,
 } from 'react-native'
 import { Colors } from '../constants/colors'
-import { toMonthly } from '../lib/store'
 import { supabase } from '../lib/supabase'
 import CurrencyInput from './CurrencyInput'
 
@@ -133,9 +132,10 @@ export default function PaydayModal({ visible, incomeSources, accounts, defaultA
       let totalActual = 0
       let balanceDelta = 0
 
-      const { data: cats } = await supabase
-        .from('budget_categories').select('budgeted_amount, frequency').eq('user_id', user.id)
-      if (cats) cats.forEach((c: any) => { totalBudgeted += toMonthly(c.budgeted_amount, c.frequency) / 2 })
+      // Expected = the sum of expected pay for the sources on this cheque
+      // (each source's own per-cheque amount). Anything above this is "extra".
+      for (const source of fixedSources) totalBudgeted += source.amount
+      for (const source of variableSources) totalBudgeted += source.amount
 
       for (const source of fixedSources) {
         await supabase.from('transactions').insert({
