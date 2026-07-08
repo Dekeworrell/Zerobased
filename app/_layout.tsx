@@ -26,6 +26,7 @@ export default function RootLayout() {
       <Stack.Screen name="welcome" />
       <Stack.Screen name="onboarding" />
       <Stack.Screen name="settings" />
+      <Stack.Screen name="claim-income" />
       <Stack.Screen name="add-transaction" />
       <Stack.Screen name="budget-adjust" />
       <Stack.Screen name="connect-bank" />
