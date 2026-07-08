@@ -1,6 +1,7 @@
-import { router, useFocusEffect } from 'expo-router'
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router'
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import InviteModal from '../../components/InviteModal'
 import PaydayModal from '../../components/PaydayModal'
 import { Colors } from '../../constants/colors'
 import { getSubscriptionTier } from '../../lib/purchases'
@@ -25,6 +26,8 @@ export default function DashboardScreen() {
   const [categoryDefaults, setCategoryDefaults] = useState<{ [categoryId: string]: string }>({})
   const [globalDefaultAccountId, setGlobalDefaultAccountId] = useState<string | null>(null)
   const [showPaydayModal, setShowPaydayModal] = useState(false)
+  const { invite } = useLocalSearchParams()
+  const [showInvite, setShowInvite] = useState(false)
   const [paydayIncomeSources, setPaydayIncomeSources] = useState<any[]>([])
   const [paydayUserName, setPaydayUserName] = useState('')
   const [paydayActualDate, setPaydayActualDate] = useState('')
@@ -32,6 +35,12 @@ export default function DashboardScreen() {
   const [subscriptionTier, setSubscriptionTier] = useState<'free' | 'pro'>('free')
   const scrollRef = useRef<ScrollView>(null)
   const paydayShownRef = useRef(false)
+
+  useFocusEffect(
+    useCallback(() => {
+      if (invite === '1') setShowInvite(true)
+    }, [invite])
+  )
 
   useFocusEffect(
     useCallback(() => {
@@ -507,6 +516,13 @@ export default function DashboardScreen() {
       </View>
 
     </ScrollView>
+    {showInvite && (
+      <InviteModal
+        visible={showInvite}
+        onClose={() => setShowInvite(false)}
+        onAccepted={() => { setShowInvite(false); router.replace('/claim-income' as any) }}
+      />
+    )}
     {showPaydayModal && (
       <PaydayModal
         visible={showPaydayModal}

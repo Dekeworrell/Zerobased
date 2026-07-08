@@ -156,8 +156,24 @@ export default function SettingsScreen() {
     if (!confirm) return
     setHouseholdLoading(true)
     try {
-      const { error } = await supabase.rpc('leave_household')
+      const { data: leaveData, error } = await supabase.rpc('leave_household')
       if (error) throw error
+
+      // Notify whoever was still in the household
+      const tokens = (leaveData?.tokens || []).filter(Boolean)
+      if (tokens.length > 0) {
+        const messages = tokens.map((t: string) => ({
+          to: t,
+          title: 'Household update',
+          body: `${name || 'Your partner'} has left the shared budget.`,
+          sound: 'default',
+        }))
+        fetch('https://exp.host/--/api/v2/push/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(messages),
+        }).catch(() => {})
+      }
       invalidateUserCache()
       setHouseholdId(null)
       setPartnerEmail('')
