@@ -70,10 +70,15 @@ Deno.serve(async (req) => {
                 <strong>${senderName}</strong> has invited you to share their Zerobased budget.
                 Once you accept, you'll both see the same dashboard, transactions, and spending — in real time.
               </p>
+              <div style="text-align:center;margin-bottom:24px;">
+                <a href="https://apps.apple.com/app/id6761318306" style="display:inline-block;background:#3db870;color:#ffffff;font-size:16px;font-weight:600;text-decoration:none;padding:14px 32px;border-radius:12px;">
+                  Get Zerobased
+                </a>
+              </div>
               <div style="background:#f2f4f2;border:1px solid #e3e8e3;border-radius:12px;padding:20px;margin-bottom:24px;">
                 <p style="margin:0 0 8px;font-size:13px;color:#6b6b6b;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">How to accept</p>
                 <ol style="margin:0;padding-left:20px;font-size:14px;color:#4a4a4a;line-height:1.8;">
-                  <li>Download the Zerobased app (if you haven't already)</li>
+                  <li>Tap <strong>Get Zerobased</strong> above to download the app</li>
                   <li>Sign up or log in with this email address</li>
                   <li>Open <strong>Settings → Household</strong></li>
                   <li>Tap <strong>Accept Invite</strong></li>
