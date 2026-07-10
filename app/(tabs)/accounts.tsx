@@ -4,7 +4,7 @@ import { ActivityIndicator, Platform, StyleSheet, Text, TextInput, TouchableOpac
 import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist'
 import { GestureHandlerRootView, Pressable as GHPressable } from 'react-native-gesture-handler'
 import CurrencyInput from '../../components/CurrencyInput'
-import { ASSET_TYPE_OPTIONS, LIABILITY_ACCOUNTS as LIABILITY_TYPE_OPTIONS, getAccountIcon } from '../../constants/accounts'
+import { getAccountIcon, getAssetTypeOptions, LIABILITY_ACCOUNTS as LIABILITY_TYPE_OPTIONS } from '../../constants/accounts'
 import { isLiabilityAccount } from '../../constants/categories'
 import { Colors } from '../../constants/colors'
 import { getSubscriptionTier } from '../../lib/purchases'
@@ -27,6 +27,7 @@ export default function AccountsScreen() {
   const [listData, setListData] = useState<ListItem[]>([])
   const [loading, setLoading] = useState(true)
   const [subscriptionTier, setSubscriptionTier] = useState<'free' | 'pro' | null>(null)
+  const [country, setCountry] = useState<string>('CA')
   const [saving, setSaving] = useState(false)
   const [showAddType, setShowAddType] = useState<'asset' | 'liability' | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -53,12 +54,13 @@ export default function AccountsScreen() {
     if (!userId) { router.replace('/'); return }
 
     const [{ data: profile }, rcTier, userIds] = await Promise.all([
-      supabase.from('profiles').select('subscription_tier').eq('id', userId).single(),
+      supabase.from('profiles').select('subscription_tier, country').eq('id', userId).single(),
       getSubscriptionTier(),
       getCachedHouseholdIds(userId),
     ])
     const dbTier = (profile?.subscription_tier as 'free' | 'pro') ?? 'free'
     setSubscriptionTier(dbTier === 'pro' || rcTier === 'pro' ? 'pro' : 'free')
+    setCountry((profile?.country as string) ?? 'CA')
 
     const { data } = await supabase
       .from('accounts')
@@ -235,7 +237,7 @@ export default function AccountsScreen() {
       </TouchableOpacity>
       {showAddType === 'asset' && (
         <View style={styles.typeGrid}>
-          {[...ASSET_TYPE_OPTIONS].sort((a, b) => a.label.localeCompare(b.label)).map(type => (
+          {[...getAssetTypeOptions(country)].sort((a, b) => a.label.localeCompare(b.label)).map(type => (
             <TouchableOpacity key={type.id} style={styles.typeChip} onPress={() => addAccount(type.id, type.label)}>
               <Text style={styles.typeChipIcon}>{type.icon}</Text>
               <Text style={styles.typeChipLabel}>{type.label}</Text>

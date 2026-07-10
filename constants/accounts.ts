@@ -64,11 +64,22 @@ export const LIABILITY_ACCOUNTS: AccountTypeOption[] = [
 ]
 
 // Combined asset options for the accounts screen (non-liability)
+// Kept for backwards-compatibility; defaults to Canadian investment accounts.
 export const ASSET_TYPE_OPTIONS: AccountTypeOption[] = [
   ...EVERYDAY_ACCOUNTS.map(a => ({ ...a, multi: undefined })),
   ...CA_INVESTMENT_ACCOUNTS,
   ...ASSET_ACCOUNTS,
 ]
+
+// Country-aware version — US users get US investment accounts, everyone else gets Canadian.
+export function getAssetTypeOptions(country?: string): AccountTypeOption[] {
+  const investment = country === 'US' ? US_INVESTMENT_ACCOUNTS : CA_INVESTMENT_ACCOUNTS
+  return [
+    ...EVERYDAY_ACCOUNTS.map(a => ({ ...a, multi: undefined })),
+    ...investment,
+    ...ASSET_ACCOUNTS,
+  ]
+}
 
 // Icon lookup — derives from all account types
 export const ACCOUNT_ICONS: { [key: string]: string } = {}
