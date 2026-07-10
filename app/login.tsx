@@ -18,7 +18,13 @@ export default function LoginScreen() {
     if (error) {
       setError(error.message)
     } else {
-      router.replace('/dashboard')
+      // Check for a pending household invite — if one exists, land on the dashboard with the invite prompt
+      const { data: pendingInvite } = await supabase.rpc('get_pending_invite')
+      if (pendingInvite) {
+        router.replace('/dashboard?invite=1')
+      } else {
+        router.replace('/dashboard')
+      }
     }
     setLoading(false)
   }
