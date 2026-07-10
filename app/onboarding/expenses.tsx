@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import CurrencyInput from '../../components/CurrencyInput'
 import KeyboardScrollView from '../../components/KeyboardScrollView'
-import { EXPENSE_CATEGORIES } from '../../constants/categories'
+import { Category, getExpenseCategories } from '../../constants/categories'
 import { Colors } from '../../constants/colors'
 import { getOnboardingData, setExpenses as saveExpensesToStore } from '../../lib/store'
 
@@ -32,7 +32,7 @@ export default function ExpensesScreen() {
   const atNudge = expenses.length === FREE_TIER_NUDGE_AT
   const atLimit = expenses.length >= FREE_TIER_LIMIT
 
-  function addExpense(category: typeof EXPENSE_CATEGORIES[0]) {
+  function addExpense(category: Category) {
     if (atLimit) return
     const newId = `${category.id}_${Date.now()}`
     setExpenses([...expenses, {
@@ -166,7 +166,7 @@ export default function ExpensesScreen() {
         <>
           <Text style={styles.addLabel}>Add a category</Text>
           <View style={styles.typeGrid}>
-            {EXPENSE_CATEGORIES.sort((a, b) => a.label.localeCompare(b.label)).map((category) => (
+            {getExpenseCategories(getOnboardingData().country).sort((a, b) => a.label.localeCompare(b.label)).map((category) => (
               <TouchableOpacity
                 key={category.id}
                 style={styles.typeChip}

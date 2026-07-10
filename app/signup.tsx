@@ -2,7 +2,7 @@ import { router } from 'expo-router'
 import { useState } from 'react'
 import { Image, Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import { Colors } from '../constants/colors'
-import { setCountry } from '../lib/store'
+import { clearOnboardingData, setCountry } from '../lib/store'
 import { supabase } from '../lib/supabase'
 
 export default function SignUpScreen() {
@@ -46,6 +46,7 @@ export default function SignUpScreen() {
         })
         if (upsertErr) { setError(upsertErr.message); setLoading(false); return }
       }
+      clearOnboardingData()
       setCountry(country)
       router.replace({ pathname: '/welcome', params: { country } })
     } else {
@@ -56,6 +57,7 @@ export default function SignUpScreen() {
           country,
         })
         if (upsertErr) { setError(upsertErr.message); setLoading(false); return }
+        clearOnboardingData()
         setCountry(country)
       }
       setEmailSent(true)

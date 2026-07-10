@@ -144,9 +144,25 @@ export const EXPENSE_CATEGORIES: Category[] = [
   // Priority
   { id: 'savings', label: 'Savings', icon: '💰', type: 'priority' },
   { id: 'investments', label: 'Investments', icon: '📈', type: 'priority' },
-  { id: 'rrsp', label: 'RRSP', icon: '📈', type: 'priority' },
-  { id: 'tfsa', label: 'TFSA', icon: '🌱', type: 'priority' },
-  { id: 'fhsa', label: 'FHSA', icon: '🏠', type: 'priority' },
+  // Canadian/US registered accounts are added per-country — see CA_PRIORITY_CATEGORIES / US_PRIORITY_CATEGORIES below
   { id: 'mortgage_extra', label: 'Mortgage overpayment', icon: '🏦', type: 'priority' },
   { id: 'emergency_fund', label: 'Emergency fund', icon: '🆘', type: 'priority' },
 ]
+// Country-specific priority categories (registered/retirement accounts)
+export const CA_PRIORITY_CATEGORIES: Category[] = [
+  { id: 'rrsp', label: 'RRSP', icon: '📈', type: 'priority' },
+  { id: 'tfsa', label: 'TFSA', icon: '🌱', type: 'priority' },
+  { id: 'fhsa', label: 'FHSA', icon: '🏠', type: 'priority' },
+]
+
+export const US_PRIORITY_CATEGORIES: Category[] = [
+  { id: '401k', label: '401(k)', icon: '📈', type: 'priority' },
+  { id: 'ira', label: 'IRA', icon: '🏦', type: 'priority' },
+  { id: 'roth_ira', label: 'Roth IRA', icon: '🌱', type: 'priority' },
+]
+
+// Returns the full expense category list for a given country
+export function getExpenseCategories(country?: string): Category[] {
+  const priority = country === 'US' ? US_PRIORITY_CATEGORIES : CA_PRIORITY_CATEGORIES
+  return [...EXPENSE_CATEGORIES, ...priority]
+}
