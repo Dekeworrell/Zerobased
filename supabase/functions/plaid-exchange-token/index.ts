@@ -69,6 +69,48 @@ Deno.serve(async (req) => {
 
     const { access_token, item_id } = exchangeData
 
+    // Reconnecting the same bank replaces the old connection instead of
+    // stacking a new one. Plaid issues brand-new IDs on every fresh
+    // connection, so without this you get duplicate accounts.
+    if (institution_id) {
+      const { data: oldItems } = await supabase
+        .from('plaid_items')
+        .select('id, access_token')
+        .eq('user_id', user.id)
+        .eq('institution_id', institution_id)
+        .neq('item_id', item_id)
+
+      for (const old of oldItems ?? []) {
+        // Tell Plaid to retire the stale connection (stops billing too)
+        await fetch(`${PLAID_BASE_URL[PLAID_ENV]}/item/remove`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            client_id: PLAID_CLIENT_ID,
+            secret: PLAID_SECRET,
+            access_token: old.access_token,
+          }),
+        })
+
+        // Unhook app accounts so they can re-match to the new connection below
+        const { data: oldAccounts } = await supabase
+          .from('plaid_accounts')
+          .select('id')
+          .eq('item_id', old.id)
+
+        const oldIds = (oldAccounts ?? []).map((a: any) => a.id)
+        if (oldIds.length > 0) {
+          await supabase
+            .from('accounts')
+            .update({ plaid_account_id: null })
+            .in('plaid_account_id', oldIds)
+        }
+
+        await supabase.from('plaid_accounts').delete().eq('item_id', old.id)
+        await supabase.from('plaid_items').delete().eq('id', old.id)
+      }
+    }
+
     // Upsert plaid_items row (access_token never leaves this function)
     const { data: itemRow, error: itemError } = await supabase
       .from('plaid_items')
@@ -133,24 +175,40 @@ Deno.serve(async (req) => {
       )
 
       if (budgetable.length > 0) {
-        const now = Date.now()
-        const appAccounts = budgetable.map((a: any, i: number) => {
-          const prefix =
-            a.type === 'credit' ? 'credit_card'
-            : a.subtype === 'savings' ? 'savings'
-            : 'chequing'
-          return {
-            user_id: user.id,
-            plaid_account_id: a.id,
-            label: a.mask ? `${a.name} ····${a.mask}` : a.name,
-            type: `${prefix}_${now + i}`,   // matches your app's category_timestamp pattern
-            balance: a.balance_current ?? 0,
-          }
-        })
-
-        await supabase
+        // Match against the user's existing app accounts by label, so a
+        // reconnect reuses the same account (keeping its transaction
+        // history) instead of creating a duplicate.
+        const { data: existingAccounts } = await supabase
           .from('accounts')
-          .upsert(appAccounts, { onConflict: 'plaid_account_id', ignoreDuplicates: true })
+          .select('id, label')
+          .eq('user_id', user.id)
+
+        const now = Date.now()
+        let i = 0
+        for (const a of budgetable as any[]) {
+          const label = a.mask ? `${a.name} ····${a.mask}` : a.name
+          const match = (existingAccounts ?? []).find((e: any) => e.label === label)
+
+          if (match) {
+            await supabase
+              .from('accounts')
+              .update({ plaid_account_id: a.id, balance: a.balance_current ?? 0 })
+              .eq('id', match.id)
+          } else {
+            const prefix =
+              a.type === 'credit' ? 'credit_card'
+              : a.subtype === 'savings' ? 'savings'
+              : 'chequing'
+            await supabase.from('accounts').insert({
+              user_id: user.id,
+              plaid_account_id: a.id,
+              label,
+              type: `${prefix}_${now + i}`,   // matches your app's category_timestamp pattern
+              balance: a.balance_current ?? 0,
+            })
+          }
+          i++
+        }
       }
     }
 

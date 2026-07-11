@@ -32,9 +32,6 @@ Deno.serve(async (req) => {
     })
     const info = await res.json()
 
-    // Keep this log until your first successful CIBC link, then remove
-    console.log('link_sessions:', JSON.stringify(info.link_sessions))
-
     const addResult = info.link_sessions?.[0]?.results?.item_add_results?.[0]
     if (!addResult?.public_token) {
       return json({ status: 'incomplete' }) // user cancelled or didn't finish

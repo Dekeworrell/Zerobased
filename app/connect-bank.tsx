@@ -79,7 +79,7 @@ export default function ConnectBankScreen() {
       if (tier !== 'pro') { setLoading(false); return }
 
       // Load connected banks
-      const { data: bankData } = await supabase
+      const { data: bankData, error: bankError } = await supabase
         .from('plaid_items')
         .select('id, institution_name, last_synced_at, needs_reconnect')
         .eq('user_id', user.id)
@@ -265,7 +265,10 @@ export default function ConnectBankScreen() {
   if (subscriptionTier !== 'pro') {
     return (
       <View style={styles.center}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/settings'))}
+          style={styles.backButton}
+        >
           <Text style={styles.backText}>← Back</Text>
         </TouchableOpacity>
         <View style={styles.lockedContainer}>
@@ -284,7 +287,10 @@ export default function ConnectBankScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+      <TouchableOpacity
+        onPress={() => (router.canGoBack() ? router.back() : router.replace('/settings'))}
+        style={styles.backButton}
+      >
         <Text style={styles.backText}>← Back</Text>
       </TouchableOpacity>
 

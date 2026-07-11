@@ -170,6 +170,7 @@ Deno.serve(async (req) => {
     for (const item of items) {
       let cursor = item.cursor ?? null
       let hasMore = true
+      let syncFailed = false
 
       while (hasMore) {
         const body: any = {
@@ -192,6 +193,7 @@ Deno.serve(async (req) => {
           if (syncData?.error_code === 'ITEM_LOGIN_REQUIRED') {
             await supabase.from('plaid_items').update({ needs_reconnect: true }).eq('id', item.id)
           }
+          syncFailed = true
           break
         }
 
@@ -235,11 +237,13 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Save the new cursor and clear any reconnect flag (sync succeeded)
-      await supabase
-        .from('plaid_items')
-        .update({ cursor, last_synced_at: new Date().toISOString(), needs_reconnect: false })
-        .eq('id', item.id)
+      // Save the new cursor and clear any reconnect flag — only if sync succeeded
+      if (!syncFailed) {
+        await supabase
+          .from('plaid_items')
+          .update({ cursor, last_synced_at: new Date().toISOString(), needs_reconnect: false })
+          .eq('id', item.id)
+      }
     }
 
     return new Response(JSON.stringify({ synced: totalSynced }), {

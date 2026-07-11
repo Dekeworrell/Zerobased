@@ -4,6 +4,7 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View
 import InviteModal from '../../components/InviteModal'
 import PaydayModal from '../../components/PaydayModal'
 import { Colors } from '../../constants/colors'
+import { maybeSyncPlaid } from '../../lib/plaidSync'
 import { getSubscriptionTier } from '../../lib/purchases'
 import { calculateBudgetStatus, getPayPeriodDates, toMonthly, toPeriodAmount } from '../../lib/store'
 import { supabase } from '../../lib/supabase'
@@ -47,6 +48,7 @@ export default function DashboardScreen() {
       setCategoriesExpanded(false)
       scrollRef.current?.scrollTo({ y: 0, animated: false })
       loadDashboard()
+      maybeSyncPlaid()
     }, [])
   )
 
