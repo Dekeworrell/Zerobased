@@ -23,7 +23,16 @@ export default function LoginScreen() {
       if (pendingInvite) {
         router.replace('/dashboard?invite=1')
       } else {
-        router.replace('/dashboard')
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('onboarding_complete')
+          .eq('id', data.user.id)
+          .single()
+        if (profile && !profile.onboarding_complete) {
+          router.replace('/welcome')
+        } else {
+          router.replace('/dashboard')
+        }
       }
     }
     setLoading(false)
