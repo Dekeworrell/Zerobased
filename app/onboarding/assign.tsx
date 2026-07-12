@@ -5,6 +5,7 @@ import CurrencyInput from '../../components/CurrencyInput'
 import KeyboardScrollView from '../../components/KeyboardScrollView'
 import { EXPENSE_CATEGORIES } from '../../constants/categories'
 import { Colors } from '../../constants/colors'
+import { markOnboardingStep } from '../../lib/onboardingStep'
 import { clearOnboardingData, getOnboardingData, toMonthly } from '../../lib/store'
 import { supabase } from '../../lib/supabase'
 
@@ -76,9 +77,10 @@ export default function AssignScreen() {
       if (profile?.subscription_tier === 'pro') setTier('pro')
     }
     loadTier()
+    markOnboardingStep('assign')
   }, [])
 
-  const atLimit = tier === 'free' && expenses.length >= 4
+  const atLimit = tier === 'free' && expenses.length >= 10
 
   const totalMonthlyIncome = data.incomeSources.reduce(
     (sum, s) => sum + toMonthly(s.amount, s.frequency), 0
@@ -197,7 +199,7 @@ export default function AssignScreen() {
       }
 
       clearOnboardingData()
-      await supabase.from('profiles').update({ onboarding_complete: true }).eq('id', user.id)
+      await supabase.from('profiles').update({ onboarding_complete: true, onboarding_step: 'complete' }).eq('id', user.id)
       router.replace('/dashboard')
 
     } catch (err: any) {

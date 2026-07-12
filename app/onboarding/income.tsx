@@ -5,6 +5,7 @@ import { ActivityIndicator, Platform, StyleSheet, Text, TextInput, TouchableOpac
 import CurrencyInput from '../../components/CurrencyInput'
 import KeyboardScrollView from '../../components/KeyboardScrollView'
 import { Colors } from '../../constants/colors'
+import { markOnboardingStep } from '../../lib/onboardingStep'
 import { getOnboardingData, setIncomeSources } from '../../lib/store'
 import { supabase } from '../../lib/supabase'
 
@@ -62,6 +63,7 @@ export default function IncomeScreen() {
       if (saved.length > 0) {
         setSources(saved.map((s: any) => ({ ...s, next_payday: s.next_payday || '' })))
       }
+      markOnboardingStep('income')
     }
   }, [])
 

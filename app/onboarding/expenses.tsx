@@ -1,10 +1,11 @@
 import { router } from 'expo-router'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import CurrencyInput from '../../components/CurrencyInput'
 import KeyboardScrollView from '../../components/KeyboardScrollView'
 import { Category, getExpenseCategories } from '../../constants/categories'
 import { Colors } from '../../constants/colors'
+import { markOnboardingStep } from '../../lib/onboardingStep'
 import { getOnboardingData, setExpenses as saveExpensesToStore } from '../../lib/store'
 
 type LocalExpense = {
@@ -17,8 +18,8 @@ type LocalExpense = {
   permanent?: boolean
 }
 
-const FREE_TIER_LIMIT = 4
-const FREE_TIER_NUDGE_AT = 3
+const FREE_TIER_LIMIT = 10
+const FREE_TIER_NUDGE_AT = 9
 
 export default function ExpensesScreen() {
   const [masterFrequency, setMasterFrequency] = useState<'monthly' | 'biweekly'>('monthly')
@@ -28,6 +29,10 @@ export default function ExpensesScreen() {
       { id: 'mortgage', label: 'Mortgage/Rent', icon: '🏠', amount: '', frequency: 'monthly', category_type: 'fixed' },
     ]
   })
+
+  useEffect(() => {
+    markOnboardingStep('expenses')
+  }, [])
 
   const atNudge = expenses.length === FREE_TIER_NUDGE_AT
   const atLimit = expenses.length >= FREE_TIER_LIMIT
@@ -156,7 +161,7 @@ export default function ExpensesScreen() {
         <View style={styles.limitCard}>
           <Text style={styles.limitTitle}>You've reached the free plan limit.</Text>
           <Text style={styles.limitBody}>
-            Free accounts can have up to 8 budget categories. You can add more after upgrading, or continue with these 8 and adjust later.
+            Free accounts can have up to 10 budget categories. You can add more after upgrading, or continue with these 10 and adjust later.
           </Text>
           <TouchableOpacity style={styles.limitUpgradeBtn} onPress={() => router.push('/upgrade')}>
             <Text style={styles.limitUpgradeBtnText}>Upgrade to Pro — Unlimited categories</Text>

@@ -12,8 +12,8 @@ import { calculateBudgetStatus, toMonthly } from '../../lib/store'
 import { supabase } from '../../lib/supabase'
 import { getCachedHouseholdIds, getCachedUserId } from '../../lib/userCache'
 
-const FREE_TIER_LIMIT = 4
-const FREE_TIER_NUDGE_AT = 3
+const FREE_TIER_LIMIT = 10
+const FREE_TIER_NUDGE_AT = 9
 
 type Category = {
   id: string
