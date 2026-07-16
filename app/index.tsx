@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router'
 import { useEffect } from 'react'
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { supabase } from '../lib/supabase'
 
 export default function WelcomeScreen() {
@@ -37,7 +37,7 @@ export default function WelcomeScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.scroll} contentContainerStyle={styles.container}>
       <View style={styles.hero}>
         <View style={styles.logoMark}>
           <View style={styles.logoInner}>
@@ -46,7 +46,7 @@ export default function WelcomeScreen() {
             <View style={[styles.bar, { height: 26 }]} />
           </View>
         </View>
-        <Text style={styles.wordmark}>
+        <Text style={styles.wordmark} maxFontSizeMultiplier={1.4}>
           Zero<Text style={styles.wordmarkAccent}>based</Text>
         </Text>
         <Text style={styles.tagline}>Budget every dollar.{'\n'}Build real wealth.</Text>
@@ -76,14 +76,17 @@ export default function WelcomeScreen() {
           By continuing you agree to our Terms of Service and Privacy Policy
         </Text>
       </View>
-    </View>
+    </ScrollView>
   )
 }
 
 const styles = StyleSheet.create({
-  container: {
+  scroll: {
     flex: 1,
     backgroundColor: '#f2f4f2',
+  },
+  container: {
+    flexGrow: 1,
     justifyContent: 'space-between',
     paddingVertical: 80,
     paddingHorizontal: 32,

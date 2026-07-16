@@ -67,7 +67,7 @@ export default function SignUpScreen() {
 
   if (emailSent) {
     return (
-      <View style={styles.container}>
+      <ScrollView style={styles.container} contentContainerStyle={{ flexGrow: 1 }}>
         <View style={styles.inner}>
           <Text style={styles.title}>Check your email 📬</Text>
           <Text style={styles.subtitle}>
@@ -90,7 +90,7 @@ export default function SignUpScreen() {
           </TouchableOpacity>
           {error ? <Text style={[styles.error, { textAlign: 'center', marginTop: 12 }]}>{error}</Text> : null}
         </View>
-      </View>
+      </ScrollView>
     )
   }
 

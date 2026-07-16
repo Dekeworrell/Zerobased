@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router'
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { Colors } from '../constants/colors'
 
 export default function WelcomeScreen() {
@@ -7,7 +7,7 @@ export default function WelcomeScreen() {
   const isUS = country === 'US'
   return (
     <View style={styles.container}>
-      <View style={styles.content}>
+      <ScrollView contentContainerStyle={styles.content}>
 
         <Text style={styles.emoji}>💰</Text>
         <Text style={styles.title}>Welcome to Zerobased</Text>
@@ -61,7 +61,7 @@ export default function WelcomeScreen() {
           <Text style={styles.skipText}>Skip intro</Text>
         </TouchableOpacity>
 
-      </View>
+      </ScrollView>
     </View>
   )
 }
