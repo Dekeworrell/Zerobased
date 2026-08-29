@@ -201,6 +201,14 @@ Deno.serve(async (req) => {
         hasMore = syncData.has_more ?? false
         cursor = syncData.next_cursor
 
+        console.log('Plaid sync page:', JSON.stringify({
+          institution: item.institution_name,
+          added: (syncData.added ?? []).length,
+          modified: (syncData.modified ?? []).length,
+          removed: (syncData.removed ?? []).length,
+          has_more: syncData.has_more,
+        }))
+
         // Insert new transactions (skip transfers and income)
         for (const txn of added) {
           const pfc = txn.personal_finance_category?.primary

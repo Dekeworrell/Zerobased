@@ -10,6 +10,8 @@ import { calculateBudgetStatus, getPayPeriodDates, toMonthly, toPeriodAmount } f
 import { supabase } from '../../lib/supabase'
 import { getCachedHouseholdIds, getCachedUserId } from '../../lib/userCache'
 
+let paydaySkippedThisSession = false
+
 export default function DashboardScreen() {
   const [loading, setLoading] = useState(true)
   const [categoriesExpanded, setCategoriesExpanded] = useState(false)
@@ -102,7 +104,7 @@ export default function DashboardScreen() {
       const tier = dbTier === 'pro' || rcTier === 'pro' ? 'pro' : 'free'
       const remindersOn = profile?.paycheque_reminders ?? true
 
-      if (tier === 'pro' && remindersOn && !showPaydayModal && !paydayShownRef.current && myIncome.length > 0) {
+      if (tier === 'pro' && remindersOn && !showPaydayModal && !paydayShownRef.current && !paydaySkippedThisSession && myIncome.length > 0) {
         const isPendingSkip = lastCheck.startsWith('SKIP:')
         const skippedDate = isPendingSkip ? lastCheck.replace('SKIP:', '') : null
 
@@ -544,6 +546,7 @@ export default function DashboardScreen() {
               .update({ last_payday_check: `SKIP:${paydayActualDate}` })
               .eq('id', user.id)
           }
+          paydaySkippedThisSession = true
           setShowPaydayModal(false)
         }}
       />

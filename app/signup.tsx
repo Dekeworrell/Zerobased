@@ -48,7 +48,12 @@ export default function SignUpScreen() {
       }
       clearOnboardingData()
       setCountry(country)
-      router.replace({ pathname: '/welcome', params: { country } })
+      const { data: pendingInvite } = await supabase.rpc('get_pending_invite')
+      if (pendingInvite) {
+        router.replace('/dashboard?invite=1')
+      } else {
+        router.replace({ pathname: '/welcome', params: { country } })
+      }
     } else {
       if (data.user) {
         const { error: upsertErr } = await supabase.from('profiles').upsert({

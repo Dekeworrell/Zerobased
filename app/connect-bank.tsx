@@ -55,7 +55,8 @@ export default function ConnectBankScreen() {
 
   async function silentSync() {
     try {
-      await supabase.functions.invoke('plaid-sync-transactions')
+      const { data } = await supabase.functions.invoke('plaid-sync-transactions')
+      if (data?.synced > 0) setSyncResult(`✅ ${data.synced} new transactions imported`)
       await loadData()
     } catch { /* quiet — don't interrupt the user */ }
   }
