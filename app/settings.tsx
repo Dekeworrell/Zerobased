@@ -32,6 +32,7 @@ export default function SettingsScreen() {
   const [householdLoading, setHouseholdLoading] = useState(false)
   const [subscriptionTier, setSubscriptionTier] = useState<'free' | 'pro'>('free')
   const [showPayCycleLock, setShowPayCycleLock] = useState(false)
+  const [canReset, setCanReset] = useState(false)
 
   useFocusEffect(
     useCallback(() => {
@@ -49,10 +50,12 @@ export default function SettingsScreen() {
     setInviteCode('')
     setPendingInviteeEmail('')
 
-    const [{ data: profile }, rcTier] = await Promise.all([
+    const [{ data: profile }, rcTier, { data: canResetData }] = await Promise.all([
       supabase.from('profiles').select('name, tracking_method, budget_cycle, notifications_enabled, notify_at_percent_1, notify_at_percent_2, paycheque_reminders, household_id, subscription_tier').eq('id', user.id).single(),
       getSubscriptionTier(),
+      supabase.rpc('can_reset_budget'),
     ])
+    setCanReset(canResetData === true)
 
     if (profile) {
       setName(profile.name || '')
@@ -119,6 +122,26 @@ export default function SettingsScreen() {
     invalidateUserCache()
     await supabase.auth.signOut()
     router.replace('/')
+  }
+
+  async function confirmRedoBudget() {
+    const sharing = !!householdId && !!partnerEmail
+    const partnerLabel = partnerEmail === 'Your partner' ? "your partner's" : `${partnerEmail}'s`
+    const message =
+      `This erases your ${sharing ? "household's " : ''}budget, income, accounts and transactions` +
+      `${sharing ? `, including ${partnerLabel},` : ''} and takes you back through setup like a new user. ` +
+      `Nothing is erased until you finish setup.\n\n` +
+      `Just want to change your categories? Use "Edit budget categories" instead.`
+    const confirmed = Platform.OS === 'web'
+      ? window.confirm('Start over from scratch?\n\n' + message)
+      : await new Promise<boolean>(resolve => Alert.alert(
+          'Start over from scratch?',
+          message,
+          [{ text: 'Cancel', onPress: () => resolve(false), style: 'cancel' },
+           { text: 'Start over', onPress: () => resolve(true), style: 'destructive' }]
+        ))
+    if (!confirmed) return
+    router.replace('/onboarding/income')
   }
 
   async function acceptInvite() {
@@ -446,10 +469,12 @@ export default function SettingsScreen() {
           <Text style={styles.linkRowText}>Manage accounts</Text>
           <Text style={styles.linkRowChevron}>›</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.linkRow} onPress={() => router.replace('/onboarding/income')}>
-          <Text style={styles.linkRowText}>Redo budget setup</Text>
-          <Text style={styles.linkRowChevron}>›</Text>
-        </TouchableOpacity>
+        {canReset && (
+          <TouchableOpacity style={styles.linkRow} onPress={confirmRedoBudget}>
+            <Text style={styles.linkRowText}>Redo budget setup</Text>
+            <Text style={styles.linkRowChevron}>›</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <View style={styles.section}>

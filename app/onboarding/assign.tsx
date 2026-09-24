@@ -152,18 +152,19 @@ export default function AssignScreen() {
 
       const onboarding = getOnboardingData()
 
-      await supabase.from('profiles').upsert({
+      const { error: profileError } = await supabase.from('profiles').upsert({
         id: user.id,
         tracking_method: onboarding.trackingMethod,
         budget_cycle: onboarding.budgetCycle || 'monthly',
       })
+      if (profileError) throw profileError
 
-      await supabase.from('budget_categories').delete().eq('user_id', user.id)
-      await supabase.from('income_sources').delete().eq('user_id', user.id)
-      await supabase.from('accounts').delete().eq('user_id', user.id)
+      // Start fresh: erases the household's budget data in one all-or-nothing step (owner only)
+      const { error: resetError } = await supabase.rpc('reset_household_budget')
+      if (resetError) throw resetError
 
       if (onboarding.accounts.length > 0) {
-        await supabase.from('accounts').insert(
+        const { error: accountsError } = await supabase.from('accounts').insert(
           onboarding.accounts.map(a => ({
             user_id: user.id,
             label: a.label,
@@ -171,10 +172,11 @@ export default function AssignScreen() {
             balance: parseFloat(a.balance) || 0,
           }))
         )
+        if (accountsError) throw accountsError
       }
 
       if (onboarding.incomeSources.length > 0) {
-        await supabase.from('income_sources').insert(
+        const { error: incomeError } = await supabase.from('income_sources').insert(
           onboarding.incomeSources.map(s => ({
             user_id: user.id,
             label: s.label,
@@ -183,10 +185,11 @@ export default function AssignScreen() {
             type: s.type,
           }))
         )
+        if (incomeError) throw incomeError
       }
 
       if (expenses.length > 0) {
-        await supabase.from('budget_categories').insert(
+        const { error: categoriesError } = await supabase.from('budget_categories').insert(
           expenses.map(e => ({
             user_id: user.id,
             label: e.label,
@@ -196,14 +199,19 @@ export default function AssignScreen() {
             category_type: e.category_type || 'variable',
           }))
         )
+        if (categoriesError) throw categoriesError
       }
 
       clearOnboardingData()
-      await supabase.from('profiles').update({ onboarding_complete: true, onboarding_step: 'complete' }).eq('id', user.id)
+      const { error: completeError } = await supabase.from('profiles').update({ onboarding_complete: true, onboarding_step: 'complete' }).eq('id', user.id)
+      if (completeError) throw completeError
       router.replace('/dashboard')
 
     } catch (err: any) {
-      setError(err.message || 'Something went wrong')
+      console.error('Finish setup failed:', err?.message ?? err)
+      setError(err?.message?.includes('household owner')
+        ? 'Only the household owner can start the budget over.'
+        : "Couldn't finish setting up your budget. Please try again.")
     }
 
     setSaving(false)
