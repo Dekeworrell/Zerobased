@@ -18,6 +18,7 @@ export default function DashboardScreen() {
   const [categoriesExpanded, setCategoriesExpanded] = useState(true)
   const [hasAnyExpense, setHasAnyExpense] = useState<boolean | null>(null)
   const [loggedBanner, setLoggedBanner] = useState('')
+  const [loggedOver, setLoggedOver] = useState(false)
   const [name, setName] = useState('')
   const [monthlyIncome, setMonthlyIncome] = useState(0)
   const [categories, setCategories] = useState<any[]>([])
@@ -272,7 +273,8 @@ export default function DashboardScreen() {
                   : monthlyAmt / 2)
             const left = catAmount - loggedCat.spent
             const leftText = Math.abs(left).toLocaleString('en-CA', { maximumFractionDigits: 0 })
-            const periodText = view === 'monthly' ? 'this month' : 'this pay period'
+              const periodText = view === 'monthly' ? 'this month' : 'this pay period'
+            setLoggedOver(left < 0)
             setLoggedBanner(left >= 0
               ? `✓ ${loggedCat.icon} ${loggedCat.label}: $${leftText} left ${periodText}`
               : `⚠️ ${loggedCat.icon} ${loggedCat.label}: $${leftText} over ${periodText}`)
@@ -390,7 +392,7 @@ export default function DashboardScreen() {
       </View>
 
       {!!loggedBanner && (
-        <View style={styles.loggedBanner}>
+        <View style={[styles.loggedBanner, loggedOver && styles.loggedBannerOver]}>
           <Text style={styles.loggedBannerText}>{loggedBanner}</Text>
         </View>
       )}
@@ -895,6 +897,10 @@ const styles = StyleSheet.create({
     borderColor: '#b6dfc0',
     borderRadius: 14,
     padding: 14,
+  },
+  loggedBannerOver: {
+    backgroundColor: '#fdecec',
+    borderColor: Colors.danger,
   },
   loggedBannerText: {
     fontSize: 14,
