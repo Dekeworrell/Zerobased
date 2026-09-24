@@ -18,89 +18,88 @@ const PLAID_BASE_URL: Record<string, string> = {
 }
 
 // ----------------------------------------------------------------
-// Map Plaid personal finance categories → Zerobased category IDs
-// Plaid category reference: https://plaid.com/docs/transactions/categories/
+// Map Plaid's DETAILED personal finance categories → Zerobased category NAMES.
+// Names are matched against the household's active budget categories
+// (capitals, spaces and underscores ignored). No match → uncategorized.
+// Verified against Plaid's category list (pfc-taxonomy-all.csv), Sep 24, 2026.
 // ----------------------------------------------------------------
 const CATEGORY_MAP: Record<string, string> = {
-  // Food & Drink
-  'FOOD_AND_DRINK_GROCERIES': 'groceries',
-  'FOOD_AND_DRINK_RESTAURANTS': 'dining',
-  'FOOD_AND_DRINK_FAST_FOOD': 'dining',
-  'FOOD_AND_DRINK_COFFEE': 'dining',
-  'FOOD_AND_DRINK_ALCOHOL_AND_BAR': 'entertainment',
+  // Food & drink
+  FOOD_AND_DRINK_GROCERIES: 'groceries',
+  FOOD_AND_DRINK_RESTAURANT: 'dining out',
+  FOOD_AND_DRINK_FAST_FOOD: 'dining out',
+  FOOD_AND_DRINK_COFFEE: 'dining out',
+  FOOD_AND_DRINK_BEER_WINE_AND_LIQUOR: 'entertainment',
 
   // Transportation
-  'TRANSPORTATION_GAS': 'fuel',
-  'TRANSPORTATION_FUEL': 'fuel',
-  'TRANSPORTATION_PARKING': 'transport',
-  'TRANSPORTATION_PUBLIC_TRANSIT': 'transport',
-  'TRANSPORTATION_TAXIS_AND_RIDE_SHARING': 'transport',
-  'TRANSPORTATION_CAR_SERVICE': 'transport',
-  'TRANSPORTATION_AUTOMOTIVE': 'vehicle_maintenance',
+  TRANSPORTATION_GAS: 'fuel',
+  TRANSPORTATION_PARKING: 'transport',
+  TRANSPORTATION_PUBLIC_TRANSIT: 'transport',
+  TRANSPORTATION_TAXIS_AND_RIDE_SHARES: 'transport',
+  TRANSPORTATION_TOLLS: 'transport',
+  TRAVEL_RENTAL_CARS: 'transport',
+  GENERAL_SERVICES_AUTOMOTIVE: 'vehicle maintenance',
 
-  // Entertainment
-  'ENTERTAINMENT_MUSIC_AND_AUDIO': 'entertainment',
-  'ENTERTAINMENT_SPORTING_EVENTS_AMUSEMENT_PARKS_AND_MUSEUMS': 'entertainment',
-  'ENTERTAINMENT_TV_AND_MOVIES': 'entertainment',
-  'ENTERTAINMENT_VIDEO_GAMES': 'entertainment',
+  // Loan payments → matching fixed expense
+  LOAN_PAYMENTS_MORTGAGE_PAYMENT: 'mortgage/rent',
+  LOAN_PAYMENTS_CAR_PAYMENT: 'car loan',
+  LOAN_PAYMENTS_STUDENT_LOAN_PAYMENT: 'student loan',
 
-  // General merchandise / shopping
-  'GENERAL_MERCHANDISE_CLOTHING_AND_ACCESSORIES': 'clothing',
-  'GENERAL_MERCHANDISE_ONLINE_MARKETPLACES': 'other',
-  'GENERAL_MERCHANDISE_SPORTING_GOODS': 'sports',
-  'GENERAL_MERCHANDISE_BOOKSTORES_AND_NEWSSTANDS': 'education',
-  'GENERAL_MERCHANDISE_PET_SUPPLIES': 'pets',
+  // Entertainment & travel
+  ENTERTAINMENT_MUSIC_AND_AUDIO: 'entertainment',
+  ENTERTAINMENT_SPORTING_EVENTS_AMUSEMENT_PARKS_AND_MUSEUMS: 'entertainment',
+  ENTERTAINMENT_TV_AND_MOVIES: 'entertainment',
+  ENTERTAINMENT_VIDEO_GAMES: 'entertainment',
+  ENTERTAINMENT_OTHER_ENTERTAINMENT: 'entertainment',
+  TRAVEL_FLIGHTS: 'entertainment',
+  TRAVEL_LODGING: 'entertainment',
 
-  // Home improvement
-  'HOME_IMPROVEMENT_HARDWARE': 'other',
-  'HOME_IMPROVEMENT_FURNITURE': 'other',
+  // Shopping
+  GENERAL_MERCHANDISE_CLOTHING_AND_ACCESSORIES: 'clothing',
+  GENERAL_MERCHANDISE_SPORTING_GOODS: 'sports',
+  GENERAL_MERCHANDISE_BOOKSTORES_AND_NEWSSTANDS: 'education',
+  GENERAL_MERCHANDISE_PET_SUPPLIES: 'pets',
+  GENERAL_MERCHANDISE_ONLINE_MARKETPLACES: 'other',
+  HOME_IMPROVEMENT_HARDWARE: 'other',
+  HOME_IMPROVEMENT_FURNITURE: 'other',
 
-  // Medical
-  'MEDICAL_PHARMACIES_AND_SUPPLEMENTS': 'health',
-  'MEDICAL_DENTAL_CARE': 'health',
-  'MEDICAL_VISION_CARE': 'health',
-  'MEDICAL_PRIMARY_CARE': 'health',
+  // Health & personal care
+  MEDICAL_PHARMACIES_AND_SUPPLEMENTS: 'health',
+  MEDICAL_DENTAL_CARE: 'health',
+  MEDICAL_EYE_CARE: 'health',
+  MEDICAL_PRIMARY_CARE: 'health',
+  MEDICAL_OTHER_MEDICAL: 'health',
+  MEDICAL_VETERINARY_SERVICES: 'pets',
+  PERSONAL_CARE_GYMS_AND_FITNESS_CENTERS: 'fitness',
+  PERSONAL_CARE_HAIR_AND_BEAUTY: 'other',
 
-  // Personal care / fitness
-  'PERSONAL_CARE_GYMS_AND_FITNESS_CENTERS': 'fitness',
-  'PERSONAL_CARE_HAIR_AND_BEAUTY': 'other',
+  // Services
+  GENERAL_SERVICES_EDUCATION: 'education',
+  GENERAL_SERVICES_CHILDCARE: 'childcare',
 
-  // Travel
-  'TRAVEL_FLIGHTS': 'entertainment',
-  'TRAVEL_LODGING': 'entertainment',
-  'TRAVEL_RENTAL_CARS': 'transport',
+  // Bills & utilities
+  RENT_AND_UTILITIES_RENT: 'mortgage/rent',
+  RENT_AND_UTILITIES_TELEPHONE: 'phone',
+  RENT_AND_UTILITIES_INTERNET_AND_CABLE: 'internet',
+  RENT_AND_UTILITIES_GAS_AND_ELECTRICITY: 'utilities',
+  RENT_AND_UTILITIES_OTHER_UTILITIES: 'utilities',
+  RENT_AND_UTILITIES_WATER: 'water & sewer',
+  RENT_AND_UTILITIES_SEWAGE_AND_WASTE_MANAGEMENT: 'water & sewer',
+}
 
-  // Utilities / phone
-  'HOME_SERVICES_TELEPHONE': 'phone',
-  'HOME_SERVICES_UTILITIES': 'utilities',
-  'HOME_SERVICES_INTERNET_AND_CABLE': 'internet',
+// Money moving in or out that isn't spending: skipped entirely (same as before)
+const SKIP_PRIMARY = ['TRANSFER_IN', 'TRANSFER_OUT', 'INCOME']
 
-  // Transfer / income (skip)
-  'TRANSFER_IN': '__skip__',
-  'TRANSFER_OUT': '__skip__',
-  'INCOME': '__skip__',
-  'INCOME_WAGES': '__skip__',
+function normalizeLabel(s: string): string {
+  return s.toLowerCase().replace(/[_\s]+/g, ' ').trim()
 }
 
 function plaidCategoryToZerobased(
-  personalFinanceCategory: string | null | undefined,
-  plaidCategories: string[] | null | undefined
+  primary: string | null | undefined,
+  detailed: string | null | undefined
 ): string | null {
-  // Try new personal_finance_category first (Plaid's detailed taxonomy)
-  if (personalFinanceCategory) {
-    const mapped = CATEGORY_MAP[personalFinanceCategory]
-    if (mapped === '__skip__') return '__skip__'
-    if (mapped) return mapped
-  }
-
-  // Fallback to legacy category array
-  if (plaidCategories && plaidCategories.length > 0) {
-    const joined = plaidCategories.join('_').toUpperCase()
-    for (const [key, val] of Object.entries(CATEGORY_MAP)) {
-      if (joined.includes(key) || key.includes(joined)) return val === '__skip__' ? null : val
-    }
-  }
-
+  if (primary && SKIP_PRIMARY.includes(primary)) return '__skip__'
+  if (detailed && CATEGORY_MAP[detailed]) return CATEGORY_MAP[detailed]
   return null // uncategorized
 }
 
@@ -129,15 +128,34 @@ Deno.serve(async (req) => {
       })
     }
 
-    // Load user's budget categories so we can resolve label → id
+    // Household members share one budget, so match against everyone's active categories
+    const { data: myProfile } = await supabase
+      .from('profiles')
+      .select('household_id')
+      .eq('id', user.id)
+      .single()
+
+    let memberIds: string[] = [user.id]
+    if (myProfile?.household_id) {
+      const { data: members } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('household_id', myProfile.household_id)
+      if (members && members.length > 0) memberIds = members.map((m: any) => m.id)
+    }
+
     const { data: budgetCats } = await supabase
       .from('budget_categories')
       .select('id, label')
-      .eq('user_id', user.id)
+      .in('user_id', memberIds)
+      .is('archived_at', null)
+      .order('sort_order', { ascending: true })
 
+    // Name → category id. If two categories share a name, the first in budget order wins.
     const catIdByLabel: Record<string, string> = {}
     for (const c of (budgetCats ?? [])) {
-      catIdByLabel[c.label.toLowerCase()] = c.id
+      const key = normalizeLabel(c.label)
+      if (!catIdByLabel[key]) catIdByLabel[key] = c.id
     }
 
     // Map Plaid's account ids → the user's app account ids
@@ -211,18 +229,20 @@ Deno.serve(async (req) => {
 
         // Insert new transactions (skip transfers and income)
         for (const txn of added) {
-          const pfc = txn.personal_finance_category?.primary
-            ? `${txn.personal_finance_category.primary}`
-            : null
+          const pfcPrimary = txn.personal_finance_category?.primary ?? null
+          const pfcDetailed = txn.personal_finance_category?.detailed ?? null
 
-          const zbCategory = plaidCategoryToZerobased(pfc, txn.category)
+          const zbCategory = plaidCategoryToZerobased(pfcPrimary, pfcDetailed)
           if (zbCategory === '__skip__') continue
 
           // Skip pending
           if (txn.pending) continue
 
           // Look up the budget category id from our mapping
-          const categoryId = zbCategory ? catIdByLabel[zbCategory] ?? null : null
+          const categoryId = zbCategory ? catIdByLabel[normalizeLabel(zbCategory)] ?? null : null
+
+          // Temporary check (Sep 2026): shows in the function logs what the bank sent and whether it matched
+          console.log('Category match:', JSON.stringify({ primary: pfcPrimary, detailed: pfcDetailed, mappedTo: zbCategory, matched: !!categoryId }))
 
           const amount = Math.abs(txn.amount) // Plaid: positive = debit (expense)
           const isCredit = txn.amount < 0 // negative = credit (income or refund)
