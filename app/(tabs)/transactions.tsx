@@ -86,7 +86,7 @@ export default function TransactionsScreen() {
         .in('user_id', userIds)
         .order('date', { ascending: false })
         .limit(500),
-      supabase.from('budget_categories').select('id, label, icon').in('user_id', userIds),
+      supabase.from('budget_categories').select('id, label, icon, archived_at').in('user_id', userIds),
       supabase.from('accounts').select('id, label, type').in('user_id', userIds),
       supabase.from('profiles').select('subscription_tier, budget_cycle').eq('id', userId).single(),
       getSubscriptionTier(),
@@ -125,7 +125,7 @@ export default function TransactionsScreen() {
       }))
       setTransactions(txnsWithCategories as any)
     }
-    if (cats) setAllCategories(cats)
+    if (cats) setAllCategories(cats.filter((c: any) => !c.archived_at))
     setLoading(false)
   }
 

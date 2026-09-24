@@ -68,7 +68,12 @@ export default function TransactionEditSheet({ visible, transaction, categories,
     return d.toLocaleDateString('en-CA', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })
   }
 
-  const selectedCategory = categories.find(c => c.id === selectedCategoryId) || transaction?.category
+   // Include the transaction's own category even if it's archived, so the user can switch back to it
+  const pickerCategories = transaction?.category_id && transaction.category && !categories.some(c => c.id === transaction.category_id)
+    ? [{ id: transaction.category_id, label: transaction.category.label, icon: transaction.category.icon }, ...categories]
+    : categories
+
+  const selectedCategory = pickerCategories.find(c => c.id === selectedCategoryId) || transaction?.category
 
   async function handleSave() {
     if (!amount) { setError('Please enter an amount'); return }
@@ -230,7 +235,7 @@ export default function TransactionEditSheet({ visible, transaction, categories,
               </TouchableOpacity>
               {showCategoryPicker && (
                 <View style={styles.categoryList}>
-                  {categories.map(cat => (
+                  {pickerCategories.map(cat => (
                     <TouchableOpacity
                       key={cat.id}
                       style={[styles.categoryRow, selectedCategoryId === cat.id && styles.categoryRowActive]}
