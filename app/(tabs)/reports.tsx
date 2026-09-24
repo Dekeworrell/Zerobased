@@ -116,11 +116,11 @@ export default function ReportsScreen() {
         supabase.from('income_sources').select('amount, frequency, user_id').in('user_id', userIds),
         supabase.from('accounts').select('id, label, type, balance, user_id').in('user_id', userIds),
         supabase.from('transactions')
-          .select('amount, date, type, is_unexpected, category:budget_categories(label, icon)')
+          .select('amount, date, type, is_unexpected, category_id, category:budget_categories(label, icon)')
           .in('user_id', userIds)
           .gte('date', fromDate)
           .order('date', { ascending: false }),
-        supabase.from('budget_categories').select('id, label, icon, budgeted_amount, frequency').in('user_id', userIds),
+        supabase.from('budget_categories').select('id, label, icon, budgeted_amount, frequency, archived_at').in('user_id', userIds),
         supabase.from('monthly_snapshots')
           .select('month, net_worth, total_assets, total_liabilities')
           .in('user_id', userIds)
@@ -200,12 +200,13 @@ export default function ReportsScreen() {
           )
           const catSummaries = cats.map((cat: any) => {
             const spent = currentTxns
-              .filter((t: any) => t.category?.label === cat.label)
+              .filter((t: any) => t.category_id === cat.id)
               .reduce((sum: number, t: any) => sum + t.amount, 0)
             return {
               label: cat.label,
               icon: cat.icon,
-              budgeted: toMonthly(cat.budgeted_amount.toString(), cat.frequency),
+              // Archived categories are no longer in the budget, so their budget counts as $0
+              budgeted: cat.archived_at ? 0 : toMonthly(cat.budgeted_amount.toString(), cat.frequency),
               spent,
             }
           }).filter(c => c.budgeted > 0 || c.spent > 0)
@@ -611,7 +612,7 @@ export default function ReportsScreen() {
               </View>
               <View style={styles.chartCard}>
                 {categories.map((cat, i) => {
-                  const pct = cat.budgeted > 0 ? Math.min((cat.spent / cat.budgeted) * 100, 100) : 0
+                  const pct = cat.budgeted > 0 ? Math.min((cat.spent / cat.budgeted) * 100, 100) : (cat.spent > 0 ? 100 : 0)
                   const isOver = cat.spent > cat.budgeted
                   const isWarning = cat.spent >= cat.budgeted * 0.8 && !isOver
                   const barColor = isOver ? '#e05252' : isWarning ? '#d97706' : '#3db870'

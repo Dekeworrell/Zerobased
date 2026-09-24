@@ -45,6 +45,7 @@ export default function BudgetAdjustScreen() {
       .from('budget_categories')
       .select('*')
       .eq('user_id', user.id)
+      .is('archived_at', null)
 
     if (cats) {
       setCategories(cats.map((c: any) => ({
