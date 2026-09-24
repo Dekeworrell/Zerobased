@@ -4,6 +4,7 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View
 import InviteModal from '../../components/InviteModal'
 import PaydayModal from '../../components/PaydayModal'
 import { Colors } from '../../constants/colors'
+import { takeJustLogged } from '../../lib/justLogged'
 import { maybeSyncPlaid } from '../../lib/plaidSync'
 import { getSubscriptionTier } from '../../lib/purchases'
 import { calculateBudgetStatus, getPayPeriodDates, toMonthly, toPeriodAmount } from '../../lib/store'
@@ -14,7 +15,9 @@ let paydaySkippedThisSession = false
 
 export default function DashboardScreen() {
   const [loading, setLoading] = useState(true)
-  const [categoriesExpanded, setCategoriesExpanded] = useState(false)
+  const [categoriesExpanded, setCategoriesExpanded] = useState(true)
+  const [hasAnyExpense, setHasAnyExpense] = useState<boolean | null>(null)
+  const [loggedBanner, setLoggedBanner] = useState('')
   const [name, setName] = useState('')
   const [monthlyIncome, setMonthlyIncome] = useState(0)
   const [categories, setCategories] = useState<any[]>([])
@@ -47,7 +50,7 @@ export default function DashboardScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      setCategoriesExpanded(false)
+      setCategoriesExpanded(true)
       scrollRef.current?.scrollTo({ y: 0, animated: false })
       loadDashboard()
       maybeSyncPlaid()
@@ -56,6 +59,7 @@ export default function DashboardScreen() {
 
   async function loadDashboard() {
     try {
+      const loggedCategoryId = takeJustLogged()
       const userId = await getCachedUserId()
       if (!userId) { router.replace('/'); return }
 
@@ -70,6 +74,7 @@ export default function DashboardScreen() {
         { data: catDefaults },
         { data: members },
         rcTier,
+        { data: anyExpense },
       ] = await Promise.all([
         supabase.from('profiles').select('name, budget_cycle, default_account_id, last_payday_check, household_id, subscription_tier, paycheque_reminders, summary_view').eq('id', userId).single(),
         supabase.from('income_sources').select('id, label, amount, frequency, next_payday, income_type, user_id').in('user_id', userIds),
@@ -78,7 +83,10 @@ export default function DashboardScreen() {
         supabase.from('category_account_defaults').select('category_id, account_id').in('user_id', userIds),
         supabase.rpc('get_household_members'),
         getSubscriptionTier(),
+        supabase.from('transactions').select('id').in('user_id', userIds).eq('type', 'expense').limit(1),
       ])
+
+      setHasAnyExpense((anyExpense?.length ?? 0) > 0)
 
       // Profile + greeting name
       const profileName = profile?.name || 'there'
@@ -250,6 +258,27 @@ export default function DashboardScreen() {
         setTotalSpent(
           catsWithSpent.reduce((sum: number, c: any) => sum + c.spent, 0) + unexpectedTotal
         )
+
+        // Payoff message after logging an expense
+        if (loggedCategoryId) {
+          const loggedCat = catsWithSpent.find((c: any) => c.id === loggedCategoryId)
+          if (loggedCat) {
+            const view = profile?.summary_view === 'cycle' ? 'cycle' : 'monthly'
+            const monthlyAmt = toMonthly(loggedCat.budgeted_amount.toString(), loggedCat.frequency)
+            const catAmount = view === 'monthly'
+              ? monthlyAmt
+              : (cycle === 'paycycle' && periodStart && periodEnd
+                  ? toPeriodAmount(loggedCat.budgeted_amount, loggedCat.frequency, cycle, periodStart, periodEnd)
+                  : monthlyAmt / 2)
+            const left = catAmount - loggedCat.spent
+            const leftText = Math.abs(left).toLocaleString('en-CA', { maximumFractionDigits: 0 })
+            const periodText = view === 'monthly' ? 'this month' : 'this pay period'
+            setLoggedBanner(left >= 0
+              ? `✓ ${loggedCat.icon} ${loggedCat.label}: $${leftText} left ${periodText}`
+              : `⚠️ ${loggedCat.icon} ${loggedCat.label}: $${leftText} over ${periodText}`)
+            setTimeout(() => setLoggedBanner(''), 5000)
+          }
+        }
       }
 
     } catch (err: any) {
@@ -360,6 +389,21 @@ export default function DashboardScreen() {
         </View>
       </View>
 
+      {!!loggedBanner && (
+        <View style={styles.loggedBanner}>
+          <Text style={styles.loggedBannerText}>{loggedBanner}</Text>
+        </View>
+      )}
+
+      {categories.length > 0 && hasAnyExpense === false && (
+        <View style={styles.startCard}>
+          <Text style={styles.startCardTitle}>Get started</Text>
+          <Text style={styles.startCardDone}>✓  Budget built</Text>
+          <Text style={styles.startCardTodo}>☐  Log your first expense</Text>
+          <Text style={styles.startCardHint}>Tap any category below to add what you spent ↓</Text>
+        </View>
+      )}
+
       {categories.length > 0 && (
         <>
           <View style={styles.sectionHeader}>
@@ -460,6 +504,7 @@ export default function DashboardScreen() {
                         <Text style={styles.categoryBudgeted}>
                           ${displayAmount.toLocaleString('en-CA', { maximumFractionDigits: 0 })}{displayLabel}
                         </Text>
+                        <Text style={styles.categoryAddIcon}>+</Text>
                       </View>
                     </View>
                     <View style={styles.categoryProgressBar}>
@@ -494,30 +539,6 @@ export default function DashboardScreen() {
           <Text style={styles.emptySubtitle}>Tap to complete your budget setup</Text>
         </TouchableOpacity>
       )}
-
-      <View style={styles.quickActions}>
-        <Text style={styles.sectionTitle}>Quick Actions</Text>
-        <View style={styles.actionRow}>
-          <TouchableOpacity style={styles.actionBtn} onPress={() => router.push('/add-transaction')}>
-            <Text style={styles.actionIcon}>➕</Text>
-            <Text style={styles.actionLabel}>Add Transaction</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.actionBtn} onPress={() => router.push('/transactions')}>
-            <Text style={styles.actionIcon}>📋</Text>
-            <Text style={styles.actionLabel}>Transactions</Text>
-          </TouchableOpacity>
-        </View>
-        <View style={styles.actionRow}>
-          <TouchableOpacity style={styles.actionBtn} onPress={() => router.push('/accounts')}>
-            <Text style={styles.actionIcon}>🏦</Text>
-            <Text style={styles.actionLabel}>Accounts</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.actionBtn} onPress={() => router.push('/reports')}>
-            <Text style={styles.actionIcon}>📊</Text>
-            <Text style={styles.actionLabel}>Reports</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
 
     </ScrollView>
     {showInvite && (
@@ -861,5 +882,50 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 4,
+  },
+  categoryAddIcon: {
+    fontSize: 20,
+    color: Colors.primary,
+    fontWeight: '600',
+    marginLeft: 12,
+  },
+  loggedBanner: {
+    backgroundColor: '#edf7f1',
+    borderWidth: 1.5,
+    borderColor: '#b6dfc0',
+    borderRadius: 14,
+    padding: 14,
+  },
+  loggedBannerText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.text,
+  },
+  startCard: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1.5,
+    borderColor: Colors.primary,
+    borderRadius: 16,
+    padding: 16,
+    gap: 8,
+  },
+  startCardTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.text,
+  },
+  startCardDone: {
+    fontSize: 14,
+    color: Colors.success,
+  },
+  startCardTodo: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.text,
+  },
+  startCardHint: {
+    fontSize: 13,
+    color: Colors.primary,
+    marginLeft: 22,
   },
 })

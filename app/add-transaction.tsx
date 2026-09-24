@@ -7,6 +7,7 @@ import KeyboardScrollView from '../components/KeyboardScrollView'
 import TransactionEditSheet from '../components/TransactionEditSheet'
 import { balanceChangeOnExpense, balanceChangeOnIncome, balanceChangeOnTransferFrom, balanceChangeOnTransferTo, isAssetAccount, isInvestmentAccount, isPayFromLiability, isPrimaryPayable } from '../constants/categories'
 import { Colors } from '../constants/colors'
+import { setJustLogged } from '../lib/justLogged'
 import { checkBudgetAndNotify, schedulePaydayReminder } from '../lib/notifications'
 import { getSubscriptionTier } from '../lib/purchases'
 import { getPayPeriodDates, toMonthly, toPeriodAmount } from '../lib/store'
@@ -351,6 +352,7 @@ export default function AddTransactionScreen() {
         console.warn('Notification check failed (non-critical):', notifErr)
       }
 
+      if (type === 'expense' && selectedCategory) setJustLogged(selectedCategory.id)
       router.replace('/dashboard')
     } catch (err: any) {
       setError(err.message)
