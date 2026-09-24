@@ -111,7 +111,7 @@ export default function AddTransactionScreen() {
     setHouseholdUserIds(userIds)
 
     const [{ data: cats }, { data: accs }, { data: profile }, { data: catDefaults }, { data: income }] = await Promise.all([
-      supabase.from('budget_categories').select('id, label, icon').in('user_id', userIds),
+      supabase.from('budget_categories').select('id, label, icon').in('user_id', userIds).is('archived_at', null),
       supabase.from('accounts').select('id, label, type').in('user_id', userIds),
       supabase.from('profiles').select('default_account_id, budget_cycle, subscription_tier').eq('id', user.id).single(),
       supabase.from('category_account_defaults').select('category_id, account_id').eq('user_id', user.id),

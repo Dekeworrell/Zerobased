@@ -1,5 +1,5 @@
-import { router } from 'expo-router'
-import { useEffect, useState } from 'react'
+import { router, useFocusEffect } from 'expo-router'
+import { useCallback, useState } from 'react'
 import { ActivityIndicator, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist'
 import { GestureHandlerRootView, Pressable as GHPressable } from 'react-native-gesture-handler'
@@ -34,10 +34,16 @@ export default function BudgetScreen() {
   const [subscriptionTier, setSubscriptionTier] = useState<'free' | 'pro'>('free')
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+  const [loadedIds, setLoadedIds] = useState<string[]>([])
+  const [archivedCats, setArchivedCats] = useState<{ id: string; label: string }[]>([])
 
-  useEffect(() => {
-    loadBudget()
-  }, [])
+  useFocusEffect(
+    useCallback(() => {
+      setError('')
+      setSuccess(false)
+      loadBudget()
+    }, [])
+  )
 
   async function loadBudget() {
     try {
@@ -54,7 +60,7 @@ export default function BudgetScreen() {
 
       const [{ data: income }, { data: cats }] = await Promise.all([
         supabase.from('income_sources').select('amount, frequency, user_id').in('user_id', userIds),
-        supabase.from('budget_categories').select('id, label, icon, budgeted_amount, frequency, category_type, sort_order').in('user_id', userIds).order('sort_order', { ascending: true }),
+        supabase.from('budget_categories').select('id, label, icon, budgeted_amount, frequency, category_type, sort_order, archived_at').in('user_id', userIds).order('sort_order', { ascending: true }),
       ])
 
       if (income) {
@@ -64,7 +70,10 @@ export default function BudgetScreen() {
       }
 
       if (cats) {
-        setCategories(cats.map((c: any, index: number) => ({
+        const activeCats = cats.filter((c: any) => !c.archived_at)
+        setArchivedCats(cats.filter((c: any) => c.archived_at).map((c: any) => ({ id: c.id, label: c.label })))
+        setLoadedIds(activeCats.map((c: any) => c.id))
+        setCategories(activeCats.map((c: any, index: number) => ({
           id: c.id,
           label: c.label,
           icon: c.icon,
@@ -144,8 +153,20 @@ export default function BudgetScreen() {
       const newCats = categories.filter(c => c.isNew)
       const existingCats = categories.filter(c => !c.isNew)
 
+      // 1. Archive categories that were removed (whole household, based on what was loaded)
+      const keptIds = existingCats.map(c => c.id)
+      const toArchive = loadedIds.filter(id => !keptIds.includes(id))
+      if (toArchive.length > 0) {
+        const { error: archiveError } = await supabase
+          .from('budget_categories')
+          .update({ archived_at: new Date().toISOString() })
+          .in('id', toArchive)
+        if (archiveError) throw archiveError
+      }
+
+      // 2. Update existing categories
       for (const cat of existingCats) {
-        await supabase
+        const { error: updateError } = await supabase
           .from('budget_categories')
           .update({
             label: cat.label,
@@ -153,37 +174,41 @@ export default function BudgetScreen() {
             frequency: cat.frequency,
           })
           .eq('id', cat.id)
+        if (updateError) throw updateError
       }
 
-      if (newCats.length > 0) {
-        await supabase.from('budget_categories').insert(
-          newCats.map((c, i) => ({
-            user_id: user.id,
-            label: c.label,
-            icon: c.icon,
-            budgeted_amount: parseFloat(c.budgeted_amount) || 0,
-            frequency: c.frequency,
-            sort_order: existingCats.length + i,
-          }))
-        )
-      }
-
-      const { data: dbCats } = await supabase
-        .from('budget_categories')
-        .select('id')
-        .eq('user_id', user.id)
-
-      if (dbCats) {
-        const toDelete = dbCats
-          .filter((d: any) => !categories.find(c => c.id === d.id || c.isNew))
-          .map((d: any) => d.id)
-
-        if (toDelete.length > 0) {
-          await supabase
-            .from('budget_categories')
-            .delete()
-            .in('id', toDelete)
+      // 3. New categories: bring back an archived one if the label matches, otherwise add it
+      const restoredIds: string[] = []
+      const toInsert: any[] = []
+      for (let i = 0; i < newCats.length; i++) {
+        const c = newCats[i]
+        const fields = {
+          label: c.label,
+          budgeted_amount: parseFloat(c.budgeted_amount) || 0,
+          frequency: c.frequency,
+          category_type: c.category_type,
+          sort_order: existingCats.length + i,
         }
+        const match = archivedCats.find(a =>
+          !restoredIds.includes(a.id) &&
+          a.label.trim().toLowerCase() === c.label.trim().toLowerCase()
+        )
+        if (match) {
+          restoredIds.push(match.id)
+          const { error: restoreError } = await supabase
+            .from('budget_categories')
+            .update({ ...fields, archived_at: null })
+            .eq('id', match.id)
+          if (restoreError) throw restoreError
+        } else {
+          toInsert.push({ ...fields, user_id: user.id, icon: c.icon })
+        }
+      }
+      if (toInsert.length > 0) {
+        const { error: insertError } = await supabase
+          .from('budget_categories')
+          .insert(toInsert)
+        if (insertError) throw insertError
       }
 
       setSuccess(true)
@@ -193,7 +218,9 @@ export default function BudgetScreen() {
       }, 1000)
 
     } catch (err: any) {
-      setError(err.message)
+      console.error('Budget save failed:', err?.message ?? err)
+      setError("Couldn't save all your changes. We've reloaded your budget — please check it and try again.")
+      await loadBudget()
     }
     setSaving(false)
   }

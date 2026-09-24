@@ -79,7 +79,7 @@ export default function DashboardScreen() {
       ] = await Promise.all([
         supabase.from('profiles').select('name, budget_cycle, default_account_id, last_payday_check, household_id, subscription_tier, paycheque_reminders, summary_view').eq('id', userId).single(),
         supabase.from('income_sources').select('id, label, amount, frequency, next_payday, income_type, user_id').in('user_id', userIds),
-        supabase.from('budget_categories').select('id, label, icon, budgeted_amount, frequency, category_type, sort_order').in('user_id', userIds).order('sort_order', { ascending: true }),
+        supabase.from('budget_categories').select('id, label, icon, budgeted_amount, frequency, category_type, sort_order').in('user_id', userIds).is('archived_at', null).order('sort_order', { ascending: true }),
         supabase.from('accounts').select('id, label, type, balance, user_id').in('user_id', userIds),
         supabase.from('category_account_defaults').select('category_id, account_id').in('user_id', userIds),
         supabase.rpc('get_household_members'),
