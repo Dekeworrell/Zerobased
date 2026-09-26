@@ -30,8 +30,6 @@ export default function DashboardScreen() {
   const [payPeriodStart, setPayPeriodStart] = useState<Date | null>(null)
   const [payPeriodEnd, setPayPeriodEnd] = useState<Date | null>(null)
   const [summaryView, setSummaryView] = useState<'cycle' | 'monthly'>('monthly')
-  const [categoryDefaults, setCategoryDefaults] = useState<{ [categoryId: string]: string }>({})
-  const [globalDefaultAccountId, setGlobalDefaultAccountId] = useState<string | null>(null)
   const [showPaydayModal, setShowPaydayModal] = useState(false)
   const { invite } = useLocalSearchParams()
   const [showInvite, setShowInvite] = useState(false)
@@ -54,7 +52,9 @@ export default function DashboardScreen() {
       setCategoriesExpanded(true)
       scrollRef.current?.scrollTo({ y: 0, animated: false })
       loadDashboard()
-      maybeSyncPlaid()
+      // Let the dashboard load first; the bank sync starts a few seconds later
+      const syncTimer = setTimeout(() => { maybeSyncPlaid() }, 3000)
+      return () => clearTimeout(syncTimer)
     }, [])
   )
 
@@ -66,25 +66,34 @@ export default function DashboardScreen() {
 
       const userIds = await getCachedHouseholdIds(userId)
 
+      // Recent expenses, fetched in the same batch. 45 days back covers any pay period that includes today
+      const today = new Date()
+      const monthStart = new Date(today.getFullYear(), today.getMonth(), 1)
+      const fortyFiveDaysAgo = new Date(today.getTime() - 45 * 86400000)
+      const fetchStart = monthStart < fortyFiveDaysAgo ? monthStart : fortyFiveDaysAgo
+      const fetchStartStr = fetchStart.toISOString().split('T')[0]
+
       // Fire all independent queries in parallel — including household lookups
       const [
         { data: profile },
         { data: income },
         { data: cats },
         { data: accs },
-        { data: catDefaults },
         { data: members },
-        rcTier,
         { data: anyExpense },
+        { data: recentTxns },
       ] = await Promise.all([
-        supabase.from('profiles').select('name, budget_cycle, default_account_id, last_payday_check, household_id, subscription_tier, paycheque_reminders, summary_view').eq('id', userId).single(),
+        supabase.from('profiles').select('name, budget_cycle, last_payday_check, household_id, subscription_tier, paycheque_reminders, summary_view').eq('id', userId).single(),
         supabase.from('income_sources').select('id, label, amount, frequency, next_payday, income_type, user_id').in('user_id', userIds),
         supabase.from('budget_categories').select('id, label, icon, budgeted_amount, frequency, category_type, sort_order').in('user_id', userIds).is('archived_at', null).order('sort_order', { ascending: true }),
         supabase.from('accounts').select('id, label, type, balance, user_id').in('user_id', userIds),
-        supabase.from('category_account_defaults').select('category_id, account_id').in('user_id', userIds),
         supabase.rpc('get_household_members'),
-        getSubscriptionTier(),
         supabase.from('transactions').select('id').in('user_id', userIds).eq('type', 'expense').limit(1),
+        supabase.from('transactions')
+          .select('category_id, amount, type, is_unexpected, date')
+          .in('user_id', userIds)
+          .eq('type', 'expense')
+          .gte('date', fetchStartStr),
       ])
 
       setHasAnyExpense((anyExpense?.length ?? 0) > 0)
@@ -101,7 +110,6 @@ export default function DashboardScreen() {
       const cycle = profile?.budget_cycle || 'monthly'
       setBudgetCycle(cycle)
       setSummaryView(profile?.summary_view === 'cycle' ? 'cycle' : 'monthly')
-      if (profile?.default_account_id) setGlobalDefaultAccountId(profile.default_account_id)
 
       // Payday check — only fires for the current user's own income sources
       const now = new Date()
@@ -110,7 +118,7 @@ export default function DashboardScreen() {
       const myIncome = (income || []).filter((s: any) => s.user_id === userId)
       // Combine DB tier and RevenueCat tier — Pro if either says Pro
       const dbTier = (profile?.subscription_tier as string) ?? 'free'
-      const tier = dbTier === 'pro' || rcTier === 'pro' ? 'pro' : 'free'
+      const tier = dbTier === 'pro' ? 'pro' : 'free'
       const remindersOn = profile?.paycheque_reminders ?? true
 
       if (tier === 'pro' && remindersOn && !showPaydayModal && !paydayShownRef.current && !paydaySkippedThisSession && myIncome.length > 0) {
@@ -186,16 +194,13 @@ export default function DashboardScreen() {
 
       // Subscription tier — use combined result
       setSubscriptionTier(tier === 'pro' ? 'pro' : 'free')
+      // Don't wait on RevenueCat: if it says Pro a moment later, upgrade the screen (never downgrade)
+      if (tier !== 'pro') {
+        getSubscriptionTier().then(rc => { if (rc === 'pro') setSubscriptionTier('pro') })
+      }
 
       // Accounts
       if (accs) setAccounts(accs)
-
-      // Category defaults
-      if (catDefaults) {
-        const map: { [key: string]: string } = {}
-        catDefaults.forEach((d: any) => { map[d.category_id] = d.account_id })
-        setCategoryDefaults(map)
-      }
 
       // Income + pay period dates
       let periodStart: Date | null = null
@@ -232,13 +237,20 @@ export default function DashboardScreen() {
         const txnStart = periodStart ?? new Date(new Date().getFullYear(), new Date().getMonth(), 1)
         const txnEnd = periodEnd ?? new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0)
 
-        const { data: txns } = await supabase
-          .from('transactions')
-          .select('category_id, amount, type, is_unexpected, date')
-          .in('user_id', userIds)
-          .eq('type', 'expense')
-          .gte('date', txnStart.toISOString().split('T')[0])
-          .lte('date', txnEnd.toISOString().split('T')[0])
+        const txnStartStr = txnStart.toISOString().split('T')[0]
+        const txnEndStr = txnEnd.toISOString().split('T')[0]
+        let txns: any[] = (recentTxns || []).filter((t: any) => t.date >= txnStartStr && t.date <= txnEndStr)
+        // Rare: the period starts before what we fetched (e.g. an old payday date), so fetch it directly
+        if (txnStartStr < fetchStartStr) {
+          const { data: older } = await supabase
+            .from('transactions')
+            .select('category_id, amount, type, is_unexpected, date')
+            .in('user_id', userIds)
+            .eq('type', 'expense')
+            .gte('date', txnStartStr)
+            .lte('date', txnEndStr)
+          txns = older || []
+        }
 
         const catsWithSpent = cats.map((cat: any) => {
           const spent = txns
@@ -554,8 +566,6 @@ export default function DashboardScreen() {
       <PaydayModal
         visible={showPaydayModal}
         incomeSources={paydayIncomeSources}
-        accounts={accounts}
-        defaultAccountId={globalDefaultAccountId}
         userName={paydayUserName}
         paydayDate={paydayActualDate}
         isReminder={isPaydayReminder}
@@ -761,32 +771,6 @@ const styles = StyleSheet.create({
   emptySubtitle: {
     fontSize: 14,
     color: Colors.textSecondary,
-  },
-  quickActions: {
-    gap: 12,
-  },
-  actionRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  actionBtn: {
-    flex: 1,
-    backgroundColor: Colors.primaryLight,
-    borderWidth: 1,
-    borderColor: Colors.primary,
-    borderRadius: 16,
-    padding: 16,
-    alignItems: 'center',
-    gap: 8,
-  },
-  actionIcon: {
-    fontSize: 24,
-  },
-  actionLabel: {
-    fontSize: 12,
-    color: Colors.primary,
-    fontWeight: '500',
-    textAlign: 'center',
   },
   sectionHeader: {
     flexDirection: 'row',

@@ -17,17 +17,9 @@ type IncomeSource = {
   next_payday: string
 }
 
-type Account = {
-  id: string
-  label: string
-  type: string
-}
-
 type Props = {
   visible: boolean
   incomeSources: IncomeSource[]
-  accounts: Account[]
-  defaultAccountId: string | null
   userName?: string
   paydayDate: string
   isReminder?: boolean
@@ -55,7 +47,7 @@ const COIN_CONFIGS = [
   { x: 0.55, delay: 200, rise: 210, drift: -25 },
 ]
 
-export default function PaydayModal({ visible, incomeSources, accounts, defaultAccountId, userName, paydayDate, isReminder, onComplete, onSkip }: Props) {
+export default function PaydayModal({ visible, incomeSources, userName, paydayDate, isReminder, onComplete, onSkip }: Props) {
   const variableSources = incomeSources.filter(s => s.income_type === 'variable')
   const fixedSources = incomeSources.filter(s => s.income_type === 'fixed')
 
@@ -67,10 +59,6 @@ export default function PaydayModal({ visible, incomeSources, accounts, defaultA
   const [error, setError] = useState('')
   const [confirmedActual, setConfirmedActual] = useState(0)
   const [confirmedBudgeted, setConfirmedBudgeted] = useState(0)
-  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(defaultAccountId)
-  const [makeDefault, setMakeDefault] = useState(false)
-  const [showAllAccounts, setShowAllAccounts] = useState(!defaultAccountId)
-
   const emojiScale = useRef(new Animated.Value(0.1)).current
   const coinAnims = useRef(
     COIN_CONFIGS.map(() => ({
@@ -86,9 +74,6 @@ export default function PaydayModal({ visible, incomeSources, accounts, defaultA
     setStep('payday')
     setVariableAmounts({})
     setError('')
-    setSelectedAccountId(defaultAccountId)
-    setMakeDefault(false)
-    setShowAllAccounts(!defaultAccountId)
 
     // Pop the main coin icon in
     emojiScale.setValue(0.1)
@@ -116,10 +101,6 @@ export default function PaydayModal({ visible, incomeSources, accounts, defaultA
   }, [visible])
 
   async function handleConfirm() {
-    if (accounts.length > 0 && !selectedAccountId) {
-      setError('Please select an account to deposit your pay into.')
-      return
-    }
     setSaving(true)
     setError('')
 
@@ -141,15 +122,9 @@ export default function PaydayModal({ visible, incomeSources, accounts, defaultA
           await supabase.from('transactions').insert({
             user_id: user.id, label: source.label, amount: actualAmount,
             date: paydayDate, type: 'income', is_unexpected: false, category_id: null,
-            account_id: selectedAccountId,
           })
           totalActual += actualAmount
         }
-      }
-
-
-      if (makeDefault && selectedAccountId) {
-        await supabase.from('profiles').update({ default_account_id: selectedAccountId }).eq('id', user.id)
       }
 
       await supabase.from('profiles').update({ last_payday_check: paydayDate }).eq('id', user.id)
@@ -244,8 +219,6 @@ export default function PaydayModal({ visible, incomeSources, accounts, defaultA
     )
   }
 
-  const selectedAccount = accounts.find(a => a.id === selectedAccountId)
-
   return (
     <Modal visible={visible} transparent animationType="fade">
       <View style={styles.overlay}>
@@ -325,43 +298,6 @@ export default function PaydayModal({ visible, incomeSources, accounts, defaultA
                 />
               </View>
             ))}
-
-            {accounts.length > 0 && (
-              <>
-                <Text style={styles.fieldLabel}>Deposit to account</Text>
-                <View style={styles.accountList}>
-                  {(showAllAccounts ? accounts : accounts.filter(a => a.id === defaultAccountId)).map(acc => (
-                    <TouchableOpacity
-                      key={acc.id}
-                      style={[styles.accountRow, selectedAccountId === acc.id && styles.accountRowActive]}
-                      onPress={() => setSelectedAccountId(acc.id)}
-                    >
-                      <Text style={[styles.accountRowText, selectedAccountId === acc.id && styles.accountRowTextActive]}>
-                        🏦 {acc.label}
-                      </Text>
-                      {selectedAccountId === acc.id && <Text style={styles.accountRowCheck}>✓</Text>}
-                    </TouchableOpacity>
-                  ))}
-                </View>
-
-                {!showAllAccounts && (
-                  <TouchableOpacity onPress={() => setShowAllAccounts(true)}>
-                    <Text style={styles.moreAccountsLink}>More accounts</Text>
-                  </TouchableOpacity>
-                )}
-
-                {selectedAccountId && selectedAccountId !== defaultAccountId && (
-                  <TouchableOpacity style={styles.defaultToggle} onPress={() => setMakeDefault(!makeDefault)}>
-                    <View style={[styles.checkbox, makeDefault && styles.checkboxActive]}>
-                      {makeDefault && <Text style={styles.checkboxCheck}>✓</Text>}
-                    </View>
-                    <Text style={styles.defaultToggleText}>
-                      Set {selectedAccount?.label} as my default account
-                    </Text>
-                  </TouchableOpacity>
-                )}
-              </>
-            )}
 
             {error ? <Text style={styles.error}>{error}</Text> : null}
 

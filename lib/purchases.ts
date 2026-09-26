@@ -16,6 +16,12 @@ export function initRevenueCat(userId?: string): void {
   }
 }
 
+// Call right after login, so RevenueCat knows which customer this is
+export function identifyRevenueCatUser(userId: string): void {
+  if (!RC) return
+  RC.logIn(userId).catch(() => {})
+}
+
 export async function getSubscriptionTier(): Promise<'free' | 'pro'> {
   if (!RC) return 'free'
   try {

@@ -480,7 +480,6 @@ export default function TransactionsScreen() {
         visible={!!selectedTransaction}
         transaction={selectedTransaction}
         categories={allCategories}
-        accounts={allAccounts}
         onClose={() => setSelectedTransaction(null)}
         onSaved={() => { setSelectedTransaction(null); loadTransactions() }}
         onDeleted={() => { setSelectedTransaction(null); loadTransactions() }}

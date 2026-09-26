@@ -14,19 +14,15 @@ export default function WelcomeScreen() {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) return
 
-    // Pending household invite? Skip onboarding — go to the invite pop-up
-    const { data: pendingInvite } = await supabase.rpc('get_pending_invite')
+    // Check for a pending household invite and whether setup is finished — at the same time
+    const [{ data: pendingInvite }, { data: profile }] = await Promise.all([
+      supabase.rpc('get_pending_invite'),
+      supabase.from('profiles').select('onboarding_complete').eq('id', session.user.id).maybeSingle(),
+    ])
     if (pendingInvite) {
       router.replace('/dashboard?invite=1')
       return
     }
-
-    // Check if onboarding is complete — if not, resume from welcome
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('onboarding_complete')
-      .eq('id', session.user.id)
-      .maybeSingle()
 
     if (profile?.onboarding_complete) {
       router.replace('/dashboard')

@@ -2,6 +2,7 @@ import { router } from 'expo-router'
 import { useState } from 'react'
 import { Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import { Colors } from '../constants/colors'
+import { identifyRevenueCatUser } from '../lib/purchases'
 import { supabase } from '../lib/supabase'
 
 export default function LoginScreen() {
@@ -18,21 +19,18 @@ export default function LoginScreen() {
     if (error) {
       setError(error.message)
     } else {
-      // Check for a pending household invite — if one exists, land on the dashboard with the invite prompt
-      const { data: pendingInvite } = await supabase.rpc('get_pending_invite')
+      identifyRevenueCatUser(data.user.id)
+      // Check for a pending household invite and whether setup is finished — at the same time
+      const [{ data: pendingInvite }, { data: profile }] = await Promise.all([
+        supabase.rpc('get_pending_invite'),
+        supabase.from('profiles').select('onboarding_complete').eq('id', data.user.id).single(),
+      ])
       if (pendingInvite) {
         router.replace('/dashboard?invite=1')
+      } else if (profile && !profile.onboarding_complete) {
+        router.replace('/welcome')
       } else {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('onboarding_complete')
-          .eq('id', data.user.id)
-          .single()
-        if (profile && !profile.onboarding_complete) {
-          router.replace('/welcome')
-        } else {
-          router.replace('/dashboard')
-        }
+        router.replace('/dashboard')
       }
     }
     setLoading(false)

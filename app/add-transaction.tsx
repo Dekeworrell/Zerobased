@@ -5,11 +5,9 @@ import { ActivityIndicator, Alert, Platform, StyleSheet, Text, TextInput, Toucha
 import CurrencyInput from '../components/CurrencyInput'
 import KeyboardScrollView from '../components/KeyboardScrollView'
 import TransactionEditSheet from '../components/TransactionEditSheet'
-import { isAssetAccount, isPayFromLiability, isPrimaryPayable } from '../constants/categories'
 import { Colors } from '../constants/colors'
 import { setJustLogged } from '../lib/justLogged'
 import { checkBudgetAndNotify, schedulePaydayReminder } from '../lib/notifications'
-import { getSubscriptionTier } from '../lib/purchases'
 import { getPayPeriodDates, toMonthly, toPeriodAmount } from '../lib/store'
 import { supabase } from '../lib/supabase'
 
@@ -24,13 +22,8 @@ type HistoryTransaction = {
 export default function AddTransactionScreen() {
   const { categoryId, categoryLabel, categoryIcon } = useLocalSearchParams<{ categoryId?: string, categoryLabel?: string, categoryIcon?: string }>()
 
-  const [tier, setTier] = useState<'free' | 'pro'>('free')
   const [categories, setCategories] = useState<Category[]>([])
-  const [accounts, setAccounts] = useState<Account[]>([])
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null)
-  const [selectedAccount, setSelectedAccount] = useState<Account | null>(null)
-  const [globalDefaultAccountId, setGlobalDefaultAccountId] = useState<string | null>(null)
-  const [categoryDefaults, setCategoryDefaults] = useState<{ [categoryId: string]: string }>({})
   const [amount, setAmount] = useState('')
   const [label, setLabel] = useState('')
   const [date, setDate] = useState(() => {
@@ -42,7 +35,6 @@ export default function AddTransactionScreen() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const [setAsDefault, setSetAsDefault] = useState(false)
   const [categoriesExpanded, setCategoriesExpanded] = useState(!categoryId)
 
   // History tab
@@ -57,10 +49,7 @@ export default function AddTransactionScreen() {
   const [payPeriodLabel, setPayPeriodLabel] = useState('')
   const [editingTransaction, setEditingTransaction] = useState<HistoryTransaction | null>(null)
   const scrollRef = useRef<any>(null)
-  const [showMoreIncomeAccounts, setShowMoreIncomeAccounts] = useState(false)
-  const [showMoreAccounts, setShowMoreAccounts] = useState(false)
   const [householdUserIds, setHouseholdUserIds] = useState<string[]>([])
-  const [accountSectionExpanded, setAccountSectionExpanded] = useState(false)
 
   useFocusEffect(
     useCallback(() => {
@@ -69,12 +58,8 @@ export default function AddTransactionScreen() {
       setLabel('')
       setType('expense')
       setError('')
-      setSetAsDefault(false)
       setActiveTab('log')
       setCategoryHistory([])
-      setShowMoreAccounts(false)
-      setShowMoreIncomeAccounts(false)
-      setAccountSectionExpanded(false)
       scrollRef.current?.scrollTo({ y: 0, animated: false })
       setDate(new Date(now.getTime() - now.getTimezoneOffset() * 60 * 1000))
       if (categoryId && categoryLabel && categoryIcon) {
@@ -103,23 +88,13 @@ export default function AddTransactionScreen() {
     const userIds: string[] = householdIds || [user.id]
     setHouseholdUserIds(userIds)
 
-    const [{ data: cats }, { data: accs }, { data: profile }, { data: catDefaults }, { data: income }] = await Promise.all([
+    const [{ data: cats }, { data: profile }, { data: income }] = await Promise.all([
       supabase.from('budget_categories').select('id, label, icon').in('user_id', userIds).is('archived_at', null),
-      supabase.from('accounts').select('id, label, type').in('user_id', userIds),
-      supabase.from('profiles').select('default_account_id, budget_cycle, subscription_tier').eq('id', user.id).single(),
-      supabase.from('category_account_defaults').select('category_id, account_id').eq('user_id', user.id),
+      supabase.from('profiles').select('budget_cycle').eq('id', user.id).single(),
       supabase.from('income_sources').select('*').in('user_id', userIds),
     ])
 
     if (cats) setCategories(cats)
-    if (accs) setAccounts(accs)
-
-    const dbTier = (profile?.subscription_tier as 'free' | 'pro') ?? 'free'
-    const rcTier = await getSubscriptionTier()
-    setTier(dbTier === 'pro' || rcTier === 'pro' ? 'pro' : 'free')
-
-    const globalDefault = profile?.default_account_id || null
-    setGlobalDefaultAccountId(globalDefault)
 
     const cycle = profile?.budget_cycle || 'monthly'
     setBudgetCycle(cycle)
@@ -146,29 +121,8 @@ export default function AddTransactionScreen() {
       }
     }
 
-    const defaultMap: { [key: string]: string } = {}
-    if (catDefaults) catDefaults.forEach((d: any) => { defaultMap[d.category_id] = d.account_id })
-    setCategoryDefaults(defaultMap)
-
-    if (categoryId && accs) {
-      const catDefault = defaultMap[categoryId]
-      if (catDefault) {
-        const acc = accs.find((a: Account) => a.id === catDefault)
-        if (acc) { setSelectedAccount(acc); setSetAsDefault(true); setAccountSectionExpanded(false); setLoading(false); return }
-      }
-      if (globalDefault) {
-        const acc = accs.find((a: Account) => a.id === globalDefault)
-        if (acc) setSelectedAccount(acc)
-      }
-      setAccountSectionExpanded(true)
-    } else if (globalDefault && accs) {
-      const acc = accs.find((a: Account) => a.id === globalDefault)
-      if (acc) setSelectedAccount(acc)
-    }
-
     setLoading(false)
   }
-
   async function loadHistory(catId: string, view: 'cycle' | 'monthly') {
     setHistoryLoading(true)
     try {
@@ -215,18 +169,6 @@ export default function AddTransactionScreen() {
   function handleCategorySelect(cat: Category) {
     setSelectedCategory(cat)
     setCategoriesExpanded(false)
-    setShowMoreAccounts(false)
-    const catDefault = categoryDefaults[cat.id]
-    if (catDefault) {
-      const acc = accounts.find(a => a.id === catDefault)
-      if (acc) { setSelectedAccount(acc); setSetAsDefault(true); setAccountSectionExpanded(false); return }
-    }
-    setSetAsDefault(false)
-    setAccountSectionExpanded(true)
-    if (globalDefaultAccountId) {
-      const acc = accounts.find(a => a.id === globalDefaultAccountId)
-      if (acc) setSelectedAccount(acc)
-    }
   }
 
   function formatDateDisplay(d: Date) {
@@ -241,7 +183,6 @@ export default function AddTransactionScreen() {
 
   async function handleSave() {
     if (!amount) { Alert.alert('Missing amount', 'Please enter a transaction amount before saving.'); return }
-    if (tier === 'pro' && !selectedAccount) { setError('Please select a payment account before saving.'); return }
 
     setSaving(true)
     setError('')
@@ -255,7 +196,6 @@ export default function AddTransactionScreen() {
             const { error: insertError } = await supabase.from('transactions').insert({
         user_id: user.id,
         category_id: type === 'unexpected' ? null : selectedCategory?.id || null,
-        account_id: selectedAccount?.id ?? null,
         label: label || selectedCategory?.label || 'Transaction',
         amount: parsedAmount,
         date: formatDateForDB(date),
@@ -264,14 +204,6 @@ export default function AddTransactionScreen() {
       })
       if (insertError) throw insertError
 
-      if (setAsDefault && selectedCategory && selectedAccount) {
-        await supabase.from('category_account_defaults').upsert({
-          user_id: user.id,
-          category_id: selectedCategory.id,
-          account_id: selectedAccount.id,
-        }, { onConflict: 'user_id,category_id' })
-        setCategoryDefaults(prev => ({ ...prev, [selectedCategory.id]: selectedAccount!.id }))
-      }
 
       const { data: profile } = await supabase
         .from('profiles').select('notifications_enabled, notify_at_percent_1, notify_at_percent_2')
@@ -535,128 +467,7 @@ export default function AddTransactionScreen() {
                           <Text style={styles.categoryRowIcon}>{cat.icon}</Text>
                           <Text style={[styles.categoryRowText, selectedCategory?.id === cat.id && styles.categoryRowTextActive]}>{cat.label}</Text>
                         </View>
-                        {categoryDefaults[cat.id] && <Text style={styles.defaultBadge}>default ✓</Text>}
                         {selectedCategory?.id === cat.id && <Text style={styles.categoryRowCheck}>✓</Text>}
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
-              </View>
-            )}
-
-            {tier === 'pro' && (selectedCategory || type === 'unexpected') && (
-              <View style={styles.accountSection}>
-                <TouchableOpacity
-                  style={styles.sectionHeader}
-                  onPress={() => setAccountSectionExpanded(!accountSectionExpanded)}
-                >
-                  <View>
-                    <Text style={styles.sectionHeaderTitle}>Payment account</Text>
-                    {selectedAccount && !accountSectionExpanded
-                      ? <Text style={styles.sectionHeaderTitle}>🏦 {selectedAccount.label}</Text>
-                      : <Text style={styles.fieldLabelSub}>Which account are you paying this expense from?</Text>
-                    }
-                  </View>
-                  <Text style={styles.sectionChevron}>{accountSectionExpanded ? '▲' : '▼'}</Text>
-                </TouchableOpacity>
-                {accountSectionExpanded && <>
-                <View style={styles.accountList}>
-                  {accounts
-                    .filter(a => isPrimaryPayable(a.type))
-                    .filter((a, i, self) => self.findIndex(b => b.id === a.id) === i)
-                    .map(acc => (
-                      <TouchableOpacity
-                        key={acc.id}
-                        style={[styles.accountRow, selectedAccount?.id === acc.id && styles.accountRowActive]}
-                        onPress={() => setSelectedAccount(acc)}
-                      >
-                        <Text style={[styles.accountRowText, selectedAccount?.id === acc.id && styles.accountRowTextActive]}>🏦 {acc.label}</Text>
-                        {selectedAccount?.id === acc.id && <Text style={styles.accountRowCheck}>✓</Text>}
-                      </TouchableOpacity>
-                    ))}
-                </View>
-                {accounts.filter(a => isPayFromLiability(a.type)).length > 0 && (
-                  <>
-                    <TouchableOpacity
-                      style={styles.moreAccountsBtn}
-                      onPress={() => setShowMoreAccounts(!showMoreAccounts)}
-                    >
-                      <Text style={styles.moreAccountsBtnText}>
-                        {showMoreAccounts ? '▲ Hide' : '▼ More accounts'}
-                      </Text>
-                    </TouchableOpacity>
-                    {showMoreAccounts && (
-                      <View style={styles.accountList}>
-                        {accounts
-                          .filter(a => isPayFromLiability(a.type))
-                          .filter((a, i, self) => self.findIndex(b => b.id === a.id) === i)
-                          .map(acc => (
-                            <TouchableOpacity
-                              key={acc.id}
-                              style={[styles.accountRow, selectedAccount?.id === acc.id && styles.accountRowActive]}
-                              onPress={() => setSelectedAccount(acc)}
-                            >
-                              <Text style={[styles.accountRowText, selectedAccount?.id === acc.id && styles.accountRowTextActive]}>🏦 {acc.label}</Text>
-                              {selectedAccount?.id === acc.id && <Text style={styles.accountRowCheck}>✓</Text>}
-                            </TouchableOpacity>
-                          ))}
-                      </View>
-                    )}
-                  </>
-                )}
-                </>}
-                {selectedAccount && (
-                  <TouchableOpacity style={styles.defaultToggle} onPress={() => setSetAsDefault(!setAsDefault)}>
-                    <View style={[styles.checkbox, setAsDefault && styles.checkboxActive]}>
-                      {setAsDefault && <Text style={styles.checkboxCheck}>✓</Text>}
-                    </View>
-                    <Text style={styles.defaultToggleText}>Always use {selectedAccount.label} for {selectedCategory?.label || 'this category'}</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            )}
-
-            {tier === 'pro' && type === 'income' && (
-              <View style={styles.accountSection}>
-                <Text style={styles.fieldLabel}>Deposit to account</Text>
-                <View style={styles.accountList}>
-                  {accounts
-                    .filter(a => !isAssetAccount(a.type) && isPrimaryPayable(a.type))
-                    .filter((a, index, self) => self.findIndex(b => b.id === a.id) === index)
-                    .map(acc => (
-                    <TouchableOpacity
-                      key={acc.id}
-                      style={[styles.accountRow, selectedAccount?.id === acc.id && styles.accountRowActive]}
-                      onPress={() => setSelectedAccount(acc)}
-                    >
-                      <Text style={[styles.accountRowText, selectedAccount?.id === acc.id && styles.accountRowTextActive]}>🏦 {acc.label}</Text>
-                      {selectedAccount?.id === acc.id && <Text style={styles.accountRowCheck}>✓</Text>}
-                    </TouchableOpacity>
-                  ))}
-                </View>
-                {accounts.filter(a => !isAssetAccount(a.type) && !isPrimaryPayable(a.type)).length > 0 && (
-                  <TouchableOpacity
-                    style={styles.moreAccountsBtn}
-                    onPress={() => setShowMoreIncomeAccounts(!showMoreIncomeAccounts)}
-                  >
-                    <Text style={styles.moreAccountsBtnText}>
-                      {showMoreIncomeAccounts ? '▲ Hide' : '▼ More accounts'}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-                {showMoreIncomeAccounts && (
-                  <View style={styles.accountList}>
-                    {accounts
-                      .filter(a => !isAssetAccount(a.type) && !isPrimaryPayable(a.type))
-                      .filter((a, index, self) => self.findIndex(b => b.id === a.id) === index)
-                      .map(acc => (
-                      <TouchableOpacity
-                        key={acc.id}
-                        style={[styles.accountRow, selectedAccount?.id === acc.id && styles.accountRowActive]}
-                        onPress={() => setSelectedAccount(acc)}
-                      >
-                        <Text style={[styles.accountRowText, selectedAccount?.id === acc.id && styles.accountRowTextActive]}>🏦 {acc.label}</Text>
-                        {selectedAccount?.id === acc.id && <Text style={styles.accountRowCheck}>✓</Text>}
                       </TouchableOpacity>
                     ))}
                   </View>
@@ -688,7 +499,6 @@ export default function AddTransactionScreen() {
           visible={!!editingTransaction}
           transaction={editingTransaction}
           categories={categories}
-          accounts={accounts}
           onClose={() => setEditingTransaction(null)}
           onSaved={() => {
             setEditingTransaction(null)
