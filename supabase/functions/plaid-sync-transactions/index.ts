@@ -90,6 +90,9 @@ const CATEGORY_MAP: Record<string, string> = {
 // Money moving in or out that isn't spending: skipped entirely (same as before)
 const SKIP_PRIMARY = ['TRANSFER_IN', 'TRANSFER_OUT', 'INCOME']
 
+// Paying off a credit card isn't new spending (the card purchases were), so skip it
+const SKIP_DETAILED = ['LOAN_PAYMENTS_CREDIT_CARD_PAYMENT']
+
 function normalizeLabel(s: string): string {
   return s.toLowerCase().replace(/[_\s]+/g, ' ').trim()
 }
@@ -99,6 +102,7 @@ function plaidCategoryToZerobased(
   detailed: string | null | undefined
 ): string | null {
   if (primary && SKIP_PRIMARY.includes(primary)) return '__skip__'
+  if (detailed && SKIP_DETAILED.includes(detailed)) return '__skip__'
   if (detailed && CATEGORY_MAP[detailed]) return CATEGORY_MAP[detailed]
   return null // uncategorized
 }
