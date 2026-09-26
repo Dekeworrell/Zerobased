@@ -93,6 +93,31 @@ const SKIP_PRIMARY = ['TRANSFER_IN', 'TRANSFER_OUT', 'INCOME']
 // Paying off a credit card isn't new spending (the card purchases were), so skip it
 const SKIP_DETAILED = ['LOAN_PAYMENTS_CREDIT_CARD_PAYMENT']
 
+// Card payments Plaid doesn't tag as card payments (seen at CIBC, Sep 2026): skip by name
+const CARD_PAYMENT_NAMES = [/^INTERNET BILL PAY.*MASTERCARD/i, /^INTERNET TRANSFER.*TO CARD/i]
+
+function isCardPaymentName(name: string | null | undefined): boolean {
+  return !!name && CARD_PAYMENT_NAMES.some((r) => r.test(name))
+}
+
+// All of this user's bank-imported rows (in pages, since Supabase returns at most 1,000 at a time)
+async function loadExistingBankRows(supabase: any, userId: string): Promise<any[]> {
+  const rows: any[] = []
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await supabase
+      .from('transactions')
+      .select('id, date, amount, type, account_id, plaid_transaction_id')
+      .eq('user_id', userId)
+      .eq('source', 'plaid')
+      .order('id')
+      .range(from, from + 999)
+    if (error || !data || data.length === 0) break
+    rows.push(...data)
+    if (data.length < 1000) break
+  }
+  return rows
+}
+
 function normalizeLabel(s: string): string {
   return s.toLowerCase().replace(/[_\s]+/g, ' ').trim()
 }
@@ -165,14 +190,17 @@ Deno.serve(async (req) => {
     // Map Plaid's account ids → the user's app account ids
     const { data: acctLinks } = await supabase
       .from('accounts')
-      .select('id, plaid_account_id, plaid_accounts!inner(plaid_account_id)')
+      .select('id, plaid_account_id, plaid_accounts!inner(plaid_account_id, item_id)')
       .eq('user_id', user.id)
       .not('plaid_account_id', 'is', null)
 
     const appAcctByPlaidId: Record<string, string> = {}
+    const bankByAppAcct: Record<string, string> = {} // app account id → bank connection id
     for (const a of (acctLinks ?? [])) {
       const pid = (a as any).plaid_accounts?.plaid_account_id
       if (pid) appAcctByPlaidId[pid] = a.id
+      const itemId = (a as any).plaid_accounts?.item_id
+      if (itemId) bankByAppAcct[a.id] = itemId
     }
 
     // Fetch all plaid items for this user
@@ -187,12 +215,31 @@ Deno.serve(async (req) => {
       })
     }
 
-    let totalSynced = 0
+        let totalSynced = 0
 
     for (const item of items) {
       let cursor = item.cursor ?? null
+      const isFirstSync = !cursor
       let hasMore = true
       let syncFailed = false
+      const removedIds: string[] = []
+      const stats = { inserted: 0, pending: 0, posted: 0, modified: 0, reattached: 0, removed: 0 }
+
+      // First pull of a newly connected bank: purchases already in the app (e.g. the bank was
+      // removed and re-added) get the new ID attached instead of being added twice (B36).
+      // Only rows on THIS bank's accounts (or no account) can be matched.
+      const knownIds = new Set<string>()
+      const existingByKey: Record<string, string[]> = {}
+      if (isFirstSync) {
+        const existing = await loadExistingBankRows(supabase, user.id)
+        for (const e of existing) {
+          if (e.plaid_transaction_id) knownIds.add(e.plaid_transaction_id)
+          const sameBank = !e.account_id || bankByAppAcct[e.account_id] === item.id
+          if (!sameBank) continue
+          const key = `${e.date}|${Number(e.amount).toFixed(2)}|${e.type}`
+          ;(existingByKey[key] ??= []).push(e.id)
+        }
+      }
 
       while (hasMore) {
         const body: any = {
@@ -211,7 +258,7 @@ Deno.serve(async (req) => {
 
         const syncData = await syncRes.json()
         if (!syncRes.ok) {
-          console.error('Plaid sync error:', JSON.stringify(syncData))
+          console.error('Plaid sync error:', JSON.stringify({ institution: item.institution_name, ...syncData }))
           if (syncData?.error_code === 'ITEM_LOGIN_REQUIRED') {
             await supabase.from('plaid_items').update({ needs_reconnect: true }).eq('id', item.id)
           }
@@ -220,27 +267,68 @@ Deno.serve(async (req) => {
         }
 
         const added: any[] = syncData.added ?? []
+        const modified: any[] = syncData.modified ?? []
+        const removed: any[] = syncData.removed ?? []
         hasMore = syncData.has_more ?? false
         cursor = syncData.next_cursor
 
         console.log('Plaid sync page:', JSON.stringify({
           institution: item.institution_name,
-          added: (syncData.added ?? []).length,
-          modified: (syncData.modified ?? []).length,
-          removed: (syncData.removed ?? []).length,
+          added: added.length,
+          modified: modified.length,
+          removed: removed.length,
           has_more: syncData.has_more,
         }))
 
-        // Insert new transactions (skip transfers and income)
+        // ---- New transactions (pending ones too) ----
         for (const txn of added) {
           const pfcPrimary = txn.personal_finance_category?.primary ?? null
           const pfcDetailed = txn.personal_finance_category?.detailed ?? null
 
           const zbCategory = plaidCategoryToZerobased(pfcPrimary, pfcDetailed)
           if (zbCategory === '__skip__') continue
+          if (isCardPaymentName(txn.name) || isCardPaymentName(txn.merchant_name)) continue
 
-          // Skip pending
-          if (txn.pending) continue
+          const amount = Math.abs(txn.amount) // Plaid: positive = debit (expense)
+          const isCredit = txn.amount < 0 // negative = credit (income or refund)
+          const type = isCredit ? 'income' : 'expense'
+          const isPending = !!txn.pending
+
+          // Already have this exact transaction (e.g. a retry after a failed sync)
+          if (knownIds.has(txn.transaction_id)) continue
+
+          // A pending purchase has posted: update the saved pending row, keeping the user's name and category
+          if (txn.pending_transaction_id) {
+            const { data: swapped } = await supabase
+              .from('transactions')
+              .update({
+                plaid_transaction_id: txn.transaction_id,
+                amount,
+                date: txn.date,
+                pending: false,
+                merchant_name: txn.merchant_name ?? null,
+              })
+              .eq('plaid_transaction_id', txn.pending_transaction_id)
+              .select('id')
+            if (swapped && swapped.length > 0) {
+              stats.posted++
+              continue
+            }
+          }
+
+          // Re-added bank: attach the new ID to the matching existing row instead of adding a copy
+          if (isFirstSync) {
+            const key = `${txn.date}|${amount.toFixed(2)}|${type}`
+            const matchId = existingByKey[key]?.shift()
+            if (matchId) {
+              await supabase
+                .from('transactions')
+                .update({ plaid_transaction_id: txn.transaction_id, pending: isPending })
+                .eq('id', matchId)
+              stats.reattached++
+              continue
+            }
+          }
 
           // Look up the budget category id from our mapping
           const categoryId = zbCategory ? catIdByLabel[normalizeLabel(zbCategory)] ?? null : null
@@ -248,36 +336,77 @@ Deno.serve(async (req) => {
           // Temporary check (Sep 2026): shows in the function logs what the bank sent and whether it matched
           console.log('Category match:', JSON.stringify({ primary: pfcPrimary, detailed: pfcDetailed, mappedTo: zbCategory, matched: !!categoryId }))
 
-          const amount = Math.abs(txn.amount) // Plaid: positive = debit (expense)
-          const isCredit = txn.amount < 0 // negative = credit (income or refund)
-
-          await supabase.from('transactions').upsert({
+          const { data: inserted } = await supabase.from('transactions').upsert({
             user_id: user.id,
             label: txn.merchant_name ?? txn.name ?? 'Bank transaction',
             amount,
             date: txn.date,
-            type: isCredit ? 'income' : 'expense',
+            type,
             category_id: isCredit ? null : categoryId,
             source: 'plaid',
             account_id: appAcctByPlaidId[txn.account_id] ?? null,
             plaid_transaction_id: txn.transaction_id,
             merchant_name: txn.merchant_name ?? null,
-            pending: false,
-          }, { onConflict: 'plaid_transaction_id', ignoreDuplicates: true })
+            pending: isPending,
+          }, { onConflict: 'plaid_transaction_id', ignoreDuplicates: true }).select('id')
 
-          totalSynced++
+          // Only count rows that were really added (B33)
+          if (inserted && inserted.length > 0) {
+            stats.inserted++
+            if (isPending) stats.pending++
+            totalSynced++
+          }
+        }
+
+        // ---- Changed transactions: update amount/date/pending, keep the user's name and category ----
+        for (const txn of modified) {
+          const { data: changed } = await supabase
+            .from('transactions')
+            .update({
+              amount: Math.abs(txn.amount),
+              date: txn.date,
+              pending: !!txn.pending,
+              merchant_name: txn.merchant_name ?? null,
+            })
+            .eq('plaid_transaction_id', txn.transaction_id)
+            .select('id')
+          if (changed) stats.modified += changed.length
+        }
+
+        // Removals are applied after all pages, so a pending row is swapped for its posted version first
+        for (const r of removed) {
+          if (r?.transaction_id) removedIds.push(r.transaction_id)
         }
       }
 
-      // Save the new cursor and clear any reconnect flag — only if sync succeeded
       if (!syncFailed) {
+        // ---- Removed transactions (e.g. a pending hold the bank dropped) ----
+        for (let i = 0; i < removedIds.length; i += 100) {
+          const { data: gone } = await supabase
+            .from('transactions')
+            .delete()
+            .eq('user_id', user.id)
+            .eq('source', 'plaid')
+            .in('plaid_transaction_id', removedIds.slice(i, i + 100))
+            .select('id')
+          if (gone) stats.removed += gone.length
+        }
+
+        // Save the new cursor and clear any reconnect flag — only if sync succeeded
         await supabase
           .from('plaid_items')
           .update({ cursor, last_synced_at: new Date().toISOString(), needs_reconnect: false })
           .eq('id', item.id)
       }
-    }
 
+      console.log('Plaid sync summary:', JSON.stringify({
+        institution: item.institution_name,
+        first_sync: isFirstSync,
+        failed: syncFailed,
+        ...stats,
+      }))
+    }
+    
     return new Response(JSON.stringify({ synced: totalSynced }), {
       status: 200, headers: corsHeaders,
     })
