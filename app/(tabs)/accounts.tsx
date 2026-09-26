@@ -17,6 +17,7 @@ type Account = {
   type: string
   balance: number
   sort_order: number
+  balance_updated_at: string | null
 }
 
 type ListItem =
@@ -33,6 +34,7 @@ export default function AccountsScreen() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+  const [changedIds, setChangedIds] = useState<string[]>([])
 
   function buildList(assets: Account[], liabilities: Account[]): ListItem[] {
     return [
@@ -64,12 +66,13 @@ export default function AccountsScreen() {
 
     const { data } = await supabase
       .from('accounts')
-      .select('id, label, type, balance, sort_order, user_id')
+      .select('id, label, type, balance, sort_order, user_id, balance_updated_at')
       .in('user_id', userIds)
       .order('sort_order', { ascending: true })
 
     if (data) {
       const all = data.map((a: any, i: number) => ({ ...a, sort_order: a.sort_order ?? i }))
+      setChangedIds([])
       setListData(buildList(
         all.filter((a: Account) => !isLiabilityAccount(a.type)),
         all.filter((a: Account) => isLiabilityAccount(a.type)),
@@ -84,6 +87,7 @@ export default function AccountsScreen() {
 
   function updateBalance(id: string, balance: string) {
     setListData(prev => prev.map(i => i.kind === 'account' && i.id === id ? { ...i, balance: balance as any } : i))
+    setChangedIds(prev => prev.includes(id) ? prev : [...prev, id])
   }
 
   function updateLabel(id: string, label: string) {
@@ -106,9 +110,18 @@ export default function AccountsScreen() {
     setSuccess(false)
     setEditingId(null)
     try {
+      const nowIso = new Date().toISOString()
       for (const account of getAccountItems()) {
-        await supabase.from('accounts').update({ balance: account.balance, label: account.label }).eq('id', account.id)
+        const balanceChanged = changedIds.includes(account.id)
+        const { error: saveError } = await supabase.from('accounts').update(
+          balanceChanged
+            ? { balance: account.balance, label: account.label, balance_updated_at: nowIso }
+            : { label: account.label }
+        ).eq('id', account.id)
+        if (saveError) throw saveError
       }
+      setListData(prev => prev.map(i => i.kind === 'account' && changedIds.includes(i.id) ? { ...i, balance_updated_at: nowIso } : i))
+      setChangedIds([])
       setSuccess(true)
       setTimeout(() => setSuccess(false), 2000)
     } catch (err: any) {
@@ -178,7 +191,11 @@ export default function AccountsScreen() {
             ) : (
               <TouchableOpacity onPress={() => setEditingId(account.id)} style={{ flex: 1 }}>
                 <Text style={styles.accountLabel}>{account.label}</Text>
-                <Text style={styles.accountLabelHint}>tap to rename</Text>
+                <Text style={styles.accountLabelHint}>
+                  {account.balance_updated_at
+                    ? `Updated ${new Date(account.balance_updated_at).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })} · tap to rename`
+                    : 'tap to rename'}
+                </Text>
               </TouchableOpacity>
             )}
           </View>

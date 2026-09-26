@@ -1,7 +1,6 @@
 import DateTimePicker from '@react-native-community/datetimepicker'
 import { useEffect, useState } from 'react'
 import { ActivityIndicator, Alert, Dimensions, Keyboard, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
-import { balanceChangeOnExpense, balanceChangeOnIncome } from '../constants/categories'
 import { Colors } from '../constants/colors'
 import { supabase } from '../lib/supabase'
 import CurrencyInput from './CurrencyInput'
@@ -80,44 +79,14 @@ export default function TransactionEditSheet({ visible, transaction, categories,
     setSaving(true)
     setError('')
     try {
-      const newAmount = parseFloat(amount)
-      const oldAmount = transaction!.amount
-      const oldAccountId = transaction!.account_id
-      const newAccountId = selectedAccountId
-      const accountChanged = oldAccountId !== newAccountId
-      const amountChanged = newAmount !== oldAmount
-
-      await supabase.from('transactions').update({
+      const { error: updateError } = await supabase.from('transactions').update({
         label: label || transaction!.label,
-        amount: newAmount,
+        amount: parseFloat(amount),
         date: formatDateForDB(date),
         category_id: selectedCategoryId,
-        account_id: newAccountId,
+        account_id: selectedAccountId,
       }).eq('id', transaction!.id)
-
-      // Update account balances if account or amount changed
-      if (accountChanged || amountChanged) {
-        // Reverse the old delta on the old account
-        if (oldAccountId) {
-          const { data: oldAcc } = await supabase.from('accounts').select('balance, type').eq('id', oldAccountId).single()
-          if (oldAcc) {
-            const oldDelta = transaction!.type === 'income'
-              ? balanceChangeOnIncome(oldAcc.type, oldAmount)
-              : balanceChangeOnExpense(oldAcc.type, oldAmount)
-            await supabase.from('accounts').update({ balance: (parseFloat(oldAcc.balance) || 0) - oldDelta }).eq('id', oldAccountId)
-          }
-        }
-        // Apply the new delta on the new account
-        if (newAccountId) {
-          const { data: newAcc } = await supabase.from('accounts').select('balance, type').eq('id', newAccountId).single()
-          if (newAcc) {
-            const newDelta = transaction!.type === 'income'
-              ? balanceChangeOnIncome(newAcc.type, newAmount)
-              : balanceChangeOnExpense(newAcc.type, newAmount)
-            await supabase.from('accounts').update({ balance: (parseFloat(newAcc.balance) || 0) + newDelta }).eq('id', newAccountId)
-          }
-        }
-      }
+      if (updateError) throw updateError
 
       onSaved()
     } catch (err: any) {
@@ -140,18 +109,7 @@ export default function TransactionEditSheet({ visible, transaction, categories,
     setDeleting(true)
     setError('')
     try {
-      if (transaction!.account_id) {
-        const { data: acc } = await supabase
-          .from('accounts').select('balance, type').eq('id', transaction!.account_id).single()
-        if (acc) {
-          const current = parseFloat(acc.balance) || 0
-          const delta = transaction!.type === 'income'
-            ? balanceChangeOnIncome(acc.type, transaction!.amount)
-            : balanceChangeOnExpense(acc.type, transaction!.amount)
-          const newBalance = current - delta
-          await supabase.from('accounts').update({ balance: newBalance }).eq('id', transaction!.account_id)
-        }
-      }
+
       const { error: deleteError } = await supabase.from('transactions').delete().eq('id', transaction!.id)
       if (deleteError) throw deleteError
       onDeleted()

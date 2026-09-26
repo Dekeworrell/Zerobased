@@ -223,6 +223,7 @@ Deno.serve(async (req) => {
       let hasMore = true
       let syncFailed = false
       const removedIds: string[] = []
+      let latestAccounts: any[] = []
       const stats = { inserted: 0, pending: 0, posted: 0, modified: 0, reattached: 0, removed: 0 }
 
       // First pull of a newly connected bank: purchases already in the app (e.g. the bank was
@@ -271,6 +272,7 @@ Deno.serve(async (req) => {
         const removed: any[] = syncData.removed ?? []
         hasMore = syncData.has_more ?? false
         cursor = syncData.next_cursor
+        if (Array.isArray(syncData.accounts)) latestAccounts = syncData.accounts
 
         console.log('Plaid sync page:', JSON.stringify({
           institution: item.institution_name,
@@ -392,6 +394,26 @@ Deno.serve(async (req) => {
           if (gone) stats.removed += gone.length
         }
 
+        // ---- Balances: copy the bank's own figures to the bank screen and the linked budget account ----
+        // Plaid: credit cards and loans report the amount owed as a positive number, which matches how debts are stored here
+        const nowIso = new Date().toISOString()
+        for (const a of latestAccounts) {
+          const current = a?.balances?.current
+          if (current == null) continue
+          await supabase
+            .from('plaid_accounts')
+            .update({ balance_current: current, balance_available: a.balances.available ?? null })
+            .eq('item_id', item.id)
+            .eq('plaid_account_id', a.account_id)
+          const appAcctId = appAcctByPlaidId[a.account_id]
+          if (appAcctId) {
+            await supabase
+              .from('accounts')
+              .update({ balance: current, balance_updated_at: nowIso })
+              .eq('id', appAcctId)
+          }
+        }
+
         // Save the new cursor and clear any reconnect flag — only if sync succeeded
         await supabase
           .from('plaid_items')
@@ -406,7 +428,7 @@ Deno.serve(async (req) => {
         ...stats,
       }))
     }
-    
+
     return new Response(JSON.stringify({ synced: totalSynced }), {
       status: 200, headers: corsHeaders,
     })

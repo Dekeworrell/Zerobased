@@ -1,0 +1,1 @@
+alter table public.accounts add column if not exists balance_updated_at timestamptz;

@@ -130,7 +130,6 @@ export default function PaydayModal({ visible, incomeSources, accounts, defaultA
 
       let totalBudgeted = 0
       let totalActual = 0
-      let balanceDelta = 0
 
       // Expected = each source's original planned pay (from income setup).
       // Actual = what the user typed. Extra = actual − expected.
@@ -142,20 +141,12 @@ export default function PaydayModal({ visible, incomeSources, accounts, defaultA
           await supabase.from('transactions').insert({
             user_id: user.id, label: source.label, amount: actualAmount,
             date: paydayDate, type: 'income', is_unexpected: false, category_id: null,
+            account_id: selectedAccountId,
           })
           totalActual += actualAmount
-          balanceDelta += actualAmount
         }
       }
 
-      if (balanceDelta > 0 && selectedAccountId) {
-        const { data: acc } = await supabase.from('accounts').select('balance').eq('id', selectedAccountId).single()
-        if (acc) {
-          await supabase.from('accounts')
-            .update({ balance: (parseFloat(acc.balance) || 0) + balanceDelta })
-            .eq('id', selectedAccountId)
-        }
-      }
 
       if (makeDefault && selectedAccountId) {
         await supabase.from('profiles').update({ default_account_id: selectedAccountId }).eq('id', user.id)

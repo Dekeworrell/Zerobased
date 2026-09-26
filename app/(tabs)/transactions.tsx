@@ -16,6 +16,7 @@ type Transaction = {
   date: string
   type: string
   is_unexpected: boolean
+  pending: boolean | null
   category_id: string | null
   account_id: string | null
   from_account_id: string | null
@@ -80,6 +81,7 @@ export default function TransactionsScreen() {
           date,
           type,
           is_unexpected,
+          pending,
           category_id,
           account_id
         `)
@@ -452,6 +454,7 @@ export default function TransactionsScreen() {
                 <View style={styles.transactionInfo}>
                   <Text style={styles.transactionLabel}>{transaction.label}</Text>
                   <Text style={styles.transactionCategory}>
+                    {transaction.pending ? 'Pending · ' : ''}
                     {transaction.type === 'transfer'
                       ? 'Transfer'
                       : transaction.is_unexpected
